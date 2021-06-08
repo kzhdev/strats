@@ -1,10 +1,10 @@
 #ifndef VIPER_EXECUTOR_H
 #define VIPER_EXECUTOR_H
 
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 #include <stdint.h>
 #include <hf/hf.h>
-#include <hf/log.h>
+#include <util/log.h>
 #include <md/md_event.h>
 #include <om/om_event.h>
 #include <strat/Strategy.hpp>
@@ -21,9 +21,9 @@
 #include <hf/util/SocketUtils.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <signal.h>
+#include <csignal>
 #include <unordered_set>
-#include <ven/VenueUtils.h>
+#include <util/VenueUtils.h>
 #include "OrderRequestManager.h"
 #include "ViperStrategyBase.h"
 #include "ViperResource.h"
@@ -146,7 +146,7 @@ public:
 
                 const auto name = hf::ConfigManager::getString(queueConfig, "name");
 
-                auto* const ptr = dynamic_cast<md::queue::MDQueueResource*> (hf::ResourceManager::getResourceP(name));
+                auto* const ptr = dynamic_cast<md::queue::MDQueueResource*> (rhone::util::ResourceManager::getResourceP(name));
                 if (!ptr) {
                     logging::GetLogger().logErrorAndThrow(
                             boost::str(boost::format("Cannot Find MDQueue by name '%1%'") % name));
@@ -734,7 +734,7 @@ public:
     COLD
     void onOrderRecoveryFinished(om::port_gid_t port_gid, om::instance_id_t strategy_instance_id) {
         if(_slow._recoveryNotGood) {
-            hf::Service::exitAll();
+            rhone::util::Service::exitAll();
         }
 
         if (_slow._numSuccessfulRecoveredOrders) {
@@ -1694,7 +1694,7 @@ public:
 
     void handleShutdown() {
         LOG(0, "Executor - shutting down {i1}", 0)
-        hf::Service::exitAll();
+        rhone::util::Service::exitAll();
         _shutdownMDAndGateway = true;
     }
 

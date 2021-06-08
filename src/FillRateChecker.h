@@ -3,7 +3,7 @@
 //
 
 #include <hf/hf.h>
-#include <hf/log.h>
+#include <util/log.h>
 #include "logging/Coolog.h"
 #include "ViperConfig.h"
 

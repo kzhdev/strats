@@ -1,13 +1,13 @@
 #include "ViperLoggerQueue.h"
-#include <hf/ResourceManager.h>
-#include <hf/ConfigManager.h>
+#include <util/ResourceManager.h>
+#include <util/ConfigManager.h>
 
 using namespace hf;
 using namespace hf::queue;
 
 LOG_DECLARE();
 
-static hf::ResourceRegistrator<hf::queue::ViperLoggerQueueResource> s_registrator("hf::queue::ViperLoggerQueue");
+static rhone::util::ResourceRegistrator<hf::queue::ViperLoggerQueueResource> s_registrator("hf::queue::ViperLoggerQueue");
 
 void ViperLoggerQueueResource::onCreate(const libconfig::Setting &config) {
     auto queue_size = hf::ConfigManager::getULong(config, "size", 1<<22);

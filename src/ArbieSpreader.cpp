@@ -1,9 +1,9 @@
 #include "ArbieSpreader.h"
-#include <hf/ResourceManager.h>
+#include <util/ResourceManager.h>
 
 using namespace Python;
 
-static hf::ResourceRegistrator<ArbieSpreader> s_registrator("ArbieSpreader");
+static rhone::util::ResourceRegistrator<ArbieSpreader> s_registrator("ArbieSpreader");
 
 /*static*/
 const ArbieSpreader::ShortTermFairOffset ArbieSpreader::Contract::_zeroStfOffset;

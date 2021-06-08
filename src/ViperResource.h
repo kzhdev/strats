@@ -2,7 +2,7 @@
 
 #include "RingBufferQueue.h"
 #include "Common.h"
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 #include "ClockUtil.h"
 #include "ViperConfig.h"
 #include "LockFreeQueue.h"

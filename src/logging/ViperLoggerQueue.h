@@ -1,13 +1,13 @@
 #pragma once
 
-#include <hf/Resource.h>
+#include <util/Resource.h>
 #include "../LockFreeQueue.h"
 #include <om/orders/strategy_order.h>
 
 namespace hf {
 namespace queue {
 
-class ViperLoggerQueueResource final : public hf::Resource {
+class ViperLoggerQueueResource final : public rhone::util::Resource {
     hf::queue::LockFreeQueue<om::debug_t> _logQueue;
     uint_fast64_t  _logQueueCursor = 0;
 

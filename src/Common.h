@@ -1701,7 +1701,7 @@ inline bool CanModifyOrCancelOrder(hf::VENUE venue, const om::order_t& order) {
     }
 }
 
-class ViperQueue : public hf::queue::U64Queue, protected hf::mem::DataBlock {
+class ViperQueue : public hf::queue::U64Queue, protected rhone::util::DataBlock {
 public:
 
     struct my_queue_t {

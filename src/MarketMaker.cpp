@@ -1,11 +1,11 @@
 #include "MarketMaker.h"
-#include <hf/ResourceManager.h>
+#include <util/ResourceManager.h>
 #include "SimpleMarketMaker.h"
 #include "OrderRequestManager.h"
 
 using namespace Python;
 
-static hf::ResourceRegistrator<MarketMaker> s_registrator("MarketMaker");
+static rhone::util::ResourceRegistrator<MarketMaker> s_registrator("MarketMaker");
 
 void MarketMaker::init(double frequency,
                        uint64_t internalHeartbeatPeriod,

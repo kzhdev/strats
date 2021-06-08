@@ -6,7 +6,7 @@
 #include <functional>
 #include <limits>
 #include <set>
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 #include "Common.h"
 #include "ViperConfig.h"
 #include "MathStructures.h"
