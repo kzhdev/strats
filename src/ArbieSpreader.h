@@ -135,7 +135,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         }
 
         void onSTFUpdate(uint32_t contractId, hf::price_t stf);
-        void calculateShortTermFairOffset(std::unordered_set<Contract*>& updatedContracts);
+        bool calculateShortTermFairOffset();
 
         std::vector<ShortTermFair>::iterator findSTF(uint32_t contractId) noexcept {
             return std::find_if(_shortTermFairs.begin(), _shortTermFairs.end(),
@@ -314,9 +314,9 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::vector<Contract> _contracts;
     std::vector<Path> _allPaths;
     OrderRequestManager& _orderRequestMgr;
-    std::unordered_set<Contract*> _updatedContracts;
-    std::unordered_set<Contract*> _quotesUpdatedContracts;
-    std::unordered_set<Contract*> _updateContractsInNextRound;
+    RingBufferQueue<Contract*> _updatedContracts;
+    std::bitset<1024> _contractUpdatedFlag;
+    uint64_t _updatedContractCursor {0};
     std::vector<ReadyOrderRequests> _lastOrderRequests;
     std::unordered_map<uint32_t, Path*> _pathsParameters;
     std::unordered_set<Market*> _effected_markets;
@@ -324,7 +324,12 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::unordered_multimap<uint32_t, ShortTermFairOffset*> _mapShortTermFairOffset;
 
 public:
-    ArbieSpreader() : _orderRequestMgr(OrderRequestManager::get()) {
+    ArbieSpreader()
+        : _orderRequestMgr(OrderRequestManager::get())
+        , _updatedContracts(8192) {
+    }
+
+    ~ArbieSpreader() {
     }
 
     ResourceId id() const noexcept override { return ResourceId::ArbieSpreader; }
@@ -427,6 +432,8 @@ private:
 
     template<uint32_t Side>
     inline void tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, const Contract::Quote& quote, bool quoteExternally);
+
+    void pushUpdatedContract(Contract* contract);
 };
 
 template<uint32_t Side>

@@ -16,7 +16,7 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
 
     if (contract._usedInQuoting) {
         contract._forceUpdate[side] = true;
-        _updatedContracts.emplace(&contract);
+        pushUpdatedContract(&contract);
 
         auto& bidMarket = contract._markets[BID][Market::External];
         auto& askMarket = contract._markets[ASK][Market::External];
@@ -78,7 +78,7 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
         bool hedgeSent = false;
         if (isEnabled()) {
             contract._forceUpdate[fill._side] = true;
-            _updatedContracts.emplace(&contract);
+            pushUpdatedContract(&contract);
 
             LOG(0, "AS {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3} Source={i4}", contract.name(),
                 fill._side, ToDollars(fill._price), fill._qty, toUInt(fill._source))
