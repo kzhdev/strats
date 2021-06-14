@@ -1090,10 +1090,6 @@ inline std::string GetTraderName(Traders trader) {
             return "Mark";
         case Traders::Steven:
             return "Steven";
-        case Traders::Taj:
-            return "Taj";
-        case Traders::Zhi:
-            return "Zhi";
         default:
             throw std::runtime_error("unknown trader");
     }
