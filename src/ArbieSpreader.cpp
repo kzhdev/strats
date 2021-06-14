@@ -18,7 +18,9 @@ void ArbieSpreader::initializeContracts() {
     _contracts.resize(_viperConfig._allContracts.size());
     _lastOrderRequests.resize(_viperConfig._allContracts.size());
     _allPaths.reserve(65536);
-    if (_viperConfig._allContracts.size() > _contractUpdatedFlag.size())
+    if (_viperConfig._allContracts.size() > _contractUpdatedFlag.size()) {
+        logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Number of contracts > %1%") % _contractUpdatedFlag.size()));
+    }
     const auto& pricingConfig = _viperConfig._pricingConfigs;
     for (uint32_t contractIndex = 0; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
         ConfigContract& configContract = _viperConfig._allContracts[contractIndex];
