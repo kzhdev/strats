@@ -141,7 +141,9 @@ void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
     }
 
     for (auto* sftOffset : _updatedSTFOffsets) {
-        sftOffset->calculateShortTermFairOffset(_updatedContracts);
+        if (sftOffset->calculateShortTermFairOffset()) {
+            pushUpdatedContract(sftOffset->_contract);
+        }
     }
     _updatedSTFOffsets.clear();
 }
@@ -153,16 +155,16 @@ void ArbieSpreader::ShortTermFairOffset::onSTFUpdate(uint32_t contractId, hf::pr
     }
 }
 
-void ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset(std::unordered_set<Contract*>& updatedContracts) {
+bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
     if (BOOST_UNLIKELY(!_contract)) {
-        return;
+        return false;
     }
 
     hf::price_t stfOffset = 0;
     for (auto& stf : _shortTermFairs) {
         if (stf._fair == hf::NULL_PRICE) {
             assert(_stfOffset == hf::NULL_PRICE);
-            return;
+            return false;
         }
         stfOffset += stf._ratio * stf._fair;
     }
@@ -172,6 +174,7 @@ void ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset(std::unord
         for (auto path : _paths) {
             path->_dirty = true;
         }
-        updatedContracts.emplace(_contract);
+        return false;
     }
+    return true;
 }

@@ -18,6 +18,7 @@ void ArbieSpreader::initializeContracts() {
     _contracts.resize(_viperConfig._allContracts.size());
     _lastOrderRequests.resize(_viperConfig._allContracts.size());
     _allPaths.reserve(65536);
+    if (_viperConfig._allContracts.size() > _contractUpdatedFlag.size())
     const auto& pricingConfig = _viperConfig._pricingConfigs;
     for (uint32_t contractIndex = 0; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
         ConfigContract& configContract = _viperConfig._allContracts[contractIndex];
@@ -188,38 +189,27 @@ void ArbieSpreader::registerOrderClient() {
 
 void ArbieSpreader::runCycle(uint64_t now) {
     uint32_t nUpdate = 0;
-    auto iter = _updatedContracts.begin();
-    while (iter != _updatedContracts.end()) {
+    auto last = _updatedContracts.end();
+    auto size = last - _updatedContractCursor;
+    _contractUpdatedFlag.reset();
+    while (_updatedContractCursor < last) {
+        auto contract = _updatedContracts[_updatedContractCursor++];
+        if (contract->_usedInQuoting && !_contractUpdatedFlag.test(contract->_def._internalId)) {
 #ifdef IS_DEV
-        if (!nUpdate) {
-            DLOG(0, "AS. Begin update quotes. {i1} updatedContracts", _updatedContracts.size())
+            const uint64_t start = clockUtil::GetCycles();
+#endif
+            updateQuotes(*contract);
+            _contractUpdatedFlag.set(contract->_def._internalId);
+#ifdef IS_DEV
+            ILOG(0, "AS {C[i1]}. updateQuotes latency {i2}", contract->name(), (clockUtil::GetCycles() - start))
+#endif
+            ++nUpdate;
         }
-#endif
-        Contract* contract = *iter;
-        if (contract->_usedInQuoting) {
-            if (BOOST_LIKELY(_quotesUpdatedContracts.find(contract) == _quotesUpdatedContracts.end())) {
-#ifdef IS_DEV
-                const uint64_t start = clockUtil::GetCycles();
-#endif
-                updateQuotes(*contract);
-#ifdef IS_DEV
-                ILOG(0, "AS {C[i1]}. updateQuotes latency {i2}", contract->name(), (clockUtil::GetCycles() - start))
-#endif
-                ++nUpdate;
-                _quotesUpdatedContracts.emplace(contract);
-            } else {
-                logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Quote update triggered again") % contract->_def._name));
-                _updateContractsInNextRound.emplace(contract);
-            }
-        }
-        iter = _updatedContracts.erase(iter);
     }
-    _updatedContracts.swap(_updateContractsInNextRound);
-    _quotesUpdatedContracts.clear();
 
     if (nUpdate) {
         const uint64_t latency = clockUtil::GetCycles() - now;
-        ILOG(0, "AS. CalculateQuotes Latency {i1}. {i2} updated contract(s)", latency, nUpdate)
+        ILOG(0, "AS. CalculateQuotes Latency {i1}. {i2} updated contract(s). size={i3}", latency, nUpdate, size)
     }
 }
 
@@ -238,9 +228,15 @@ void ArbieSpreader::onExchangeQuoteExternalChanged(const SharedSystemState::Quot
 void ArbieSpreader::addUpdatedContract(Contract& contract) {
     for (auto* path : contract._affectedPaths) {
         if (path->_dirty) {
-            _updatedContracts.emplace(path->_contract);
+            pushUpdatedContract(path->_contract);
         }
     }
+}
+
+void ArbieSpreader::pushUpdatedContract(Contract* contract) {
+    auto index = _updatedContracts.reserve();
+    _updatedContracts[index] = contract;
+    _updatedContracts.publish(index);
 }
 
 void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket) {
