@@ -3,6 +3,12 @@
 - When disabling useGTC, put quote orders back if any strategies are enabled and quoting externally
 - [bugfix] Fix crash caused by adding a new throttler when looping through _throttlers in checkTimers.
 
+#Version 1.53.0.24
+- Remove Taj and Zhi from trader dropdown
+
+#Version 1.53.0.23
+- Properly handling orderCancelReject after the order got SMP unsolicited cancel while order cancel request in-flight.
+
 #Version 1.53.0.22
 - Fix candidate>target issue caused by an out-of-order cancel reject due to order fill.
 

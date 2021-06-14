@@ -1304,6 +1304,7 @@ public:
 
             Level *targetLevel = nullptr;
             removeOrder(order);
+
             //TODO: The only time this can be false is on ICE
             if(IsBitSet(order, STACKER_ORDER_FLAGS, SOF_IS_ACKED)) {
                 //We could have a cancel after a series of modifies, and get a cancel due to modify down, so have to check both
@@ -1329,6 +1330,11 @@ public:
                 BOOST_ASSERT(_om->_venue == hf::VENUE::ICE);
                 moveQuantity(order.leavesQty);
             }
+
+            // While order cancel in-flight, if the order canceled due to SMP cancel resting before exchange process the cancel
+            // request, the cancel request will be rejected. Set is_cancelling to false so that when handling
+            // orderCancelRejected we won't double adjust the _flight value;
+            const_cast<om::order_t&>(order).action_flags.is_cancelling = false;
 
             //Note in v1 of the stacker we did not synchrnoze in this method
             notifyIfLevelFree();
@@ -1458,9 +1464,13 @@ public:
             //There are some unit tests for this.  Enough?
             BOOST_ASSERT_MSG(_om->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");
 
-            om::order_t& mutableOrder = const_cast<om::order_t &>(order);
-            _flight += getLeavesQty(order);
-            mutableOrder.action_flags.is_cancelling = false;
+            // While order cancel in-flight, if the order canceled due to SMP cancel resting before exchange process the cancel
+            // request, the cancel request will be rejected. We set is_cancelling to false in onOrderCanceled so that we won't double
+            // adjust the _flight value here
+            if (order.action_flags.is_cancelling) {
+                _flight += getLeavesQty(order);
+                const_cast<om::order_t &>(order).action_flags.is_cancelling = false;
+            }
 
             notifyIfLevelFree();
 
