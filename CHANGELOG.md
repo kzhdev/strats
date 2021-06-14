@@ -1,3 +1,6 @@
+#Version 1.53.0.24
+- Remove Taj and Zhi from trader dropdown
+
 #Version 1.53.0.23
 - Properly handling orderCancelReject after the order got SMP unsolicited cancel while order cancel request in-flight.
 
