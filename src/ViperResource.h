@@ -131,7 +131,7 @@ public:
         return _viperConfig._allContracts[id]._name;
     }
 
-    ViperStrategyBase* getStrategy(StrategyId id) noexcept {
+    ViperStrategyBase* getStrategy(StrategyId id) const noexcept {
         return _strategies[toUInt(id)];
     }
 
