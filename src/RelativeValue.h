@@ -2652,6 +2652,10 @@ public:
                             for (auto& kvp : _shortTermFairUpdate) {
                                 data->_contractId = kvp.first;
                                 data->_fair = kvp.second->_fair;
+                                if (BOOST_UNLIKELY(!kvp.second->_firstUpdateSent)) {
+                                    kvp.second->_firstUpdateSent = true;
+                                    logging::GetLogger().logInfo(boost::str(boost::format("RV. Send %1% stf. stf=%2%") % _contracts[kvp.first]._definition._name % kvp.second->_fair));
+                                }
                                 ++data;
                             }
                         }, dataSize);
@@ -3053,6 +3057,7 @@ public:
     struct ShortTermFairs {
         hf::price_t _fair = 0;
         bool _subscribed = false;
+        bool _firstUpdateSent = false;
     };
     Vector<ShortTermFairs> _shortTermFairsForContracts;
     Vector<hf::price_t> _shortTermFairsCache;
