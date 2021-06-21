@@ -113,8 +113,12 @@ void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sen
     pathsUpdate.set_updatetype(proto::GridUpdateType::CellsType);
     auto pathCells = pathsUpdate.mutable_cells();
     for (auto& kvp : _pathsParameters) {
+        auto path = kvp.second;
+        if (BOOST_UNLIKELY(path->_stfOffset._stfOffset == hf::NULL_PRICE && getStrategy(StrategyId::RelativeValue)->isEnabled())) {
+            logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Null stf. Path %2% id=%3% stf_id=%4%") % path->_contract->_def._name % path->_name % path->_id % path->_stfOffset._id));
+        }
         guiThings.addRow(pathCells, kvp.first, {
-            rowCell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(kvp.second->_stfOffset._stfOffset)),
+            rowCell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(path->_stfOffset._stfOffset)),
         });
     }
     send(pathsUpdate);

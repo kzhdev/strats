@@ -120,9 +120,11 @@ void ArbieSpreader::handleASQuoteAdjustmentACK(uint32_t contractId, uint32_t sid
 void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
     const STFUpdate::STF* stf = msg._data;
     for (uint32_t i = 0; i < msg._numSTF; ++i) {
-#ifdef IS_DEV
-        TLOG(0, "AS {C[i1]}. stf={i2}", _viperConfig._allContracts[stf->_contractId]._name, stf->_fair)
-#endif
+//#ifdef IS_DEV
+//        TLOG(0, "AS {C[i1]}. stf={i2}", _viperConfig._allContracts[stf->_contractId]._name, stf->_fair)
+//#endif
+
+        auto& configContract = _viperConfig._allContracts[stf->_contractId];
         auto range = _mapShortTermFairOffset.equal_range(stf->_contractId);
         if(range.first != range.second) {
             for (auto iter = range.first; iter != range.second; ++iter) {
@@ -130,9 +132,10 @@ void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
                 stfOffset->onSTFUpdate(stf->_contractId, stf->_fair);
                 _updatedSTFOffsets.emplace(stfOffset);
             }
+        } else {
+            logging::GetLogger().logInfo(boost::str(boost::format("AS %1%. Not in ShortTermFairOffset map. contractId=%2%") % configContract._name % configContract._internalId));
         }
 
-        auto& configContract = _viperConfig._allContracts[stf->_contractId];
         if (!configContract._legs.empty()) {
             Contract& contract = _contracts[stf->_contractId];
             contract._stf = stf->_fair;
@@ -140,9 +143,9 @@ void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
         ++stf;
     }
 
-    for (auto* sftOffset : _updatedSTFOffsets) {
-        if (sftOffset->calculateShortTermFairOffset()) {
-            pushUpdatedContract(sftOffset->_contract);
+    for (auto* stfOffset : _updatedSTFOffsets) {
+        if (stfOffset->calculateShortTermFairOffset()) {
+            pushUpdatedContract(stfOffset->_contract);
         }
     }
     _updatedSTFOffsets.clear();
