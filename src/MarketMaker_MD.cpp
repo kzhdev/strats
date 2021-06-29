@@ -4,12 +4,18 @@
 
 using namespace Python;
 
-void MarketMaker::onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId) {
+void MarketMaker::onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId, hf::batch_id_t bid) {
     auto& mm = _marketMakers[internalId];
     if (!mm._contract._toMarketMake) {
         return;
     }
-    copyBooks(*this, mm, event, _updatedContracts);
+
+    if (BOOST_UNLIKELY(mm._lastMDbid >= bid)) {
+        logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % mm._contract._name % bid % mm._lastMDbid));
+        return;
+    }
+
+    copyBooks(*this, mm, event, _updatedContracts, bid);
 }
 
 void MarketMaker::onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
@@ -220,4 +226,11 @@ void MarketMaker::onMarketDataChange(uint32_t internalId) {
     assert(mm._contract._toMarketMake);
     mm.onMarketDataChange();
     mm.resetChangeIndices();
+}
+
+void MarketMaker::onEndMDBatch(hf::batch_id_t bid)  {
+    for (auto internalId : _updatedContracts) {
+        auto& mm = _marketMakers[internalId];
+        mm._lastMDbid = bid;
+    }
 }

@@ -429,8 +429,8 @@ public:
         const auto& bidBook = topBook<BID>();
         const auto& askBook = topBook<ASK>();
 
-        LOG(0, "MM {C[i1]}. Recalculate. Bid: {i2}({i3})@{d1} Ask={i4}({i5})@{d2} SequenceNumber={i6} priceChangeIndex={i7}/{i8} qtyChangeIndex={i9}/{i10}", getContractName(),
-            bidBook.q, bidBook.o, ToDollars(bidBook.pr), askBook.q, askBook.o, ToDollars(askBook.pr), _lastMdSeqNum,
+        LOG(0, "MM {C[i1]}. Recalculate. Bid: {i2}({i3})@{d1} Ask={i4}({i5})@{d2} lastMDbid={i6} priceChangeIndex={i7}/{i8} qtyChangeIndex={i9}/{i10}", getContractName(),
+            bidBook.q, bidBook.o, ToDollars(bidBook.pr), askBook.q, askBook.o, ToDollars(askBook.pr), _lastMDbid,
             toUInt(_mdPriceChangeIndex[BID]), toUInt(_mdPriceChangeIndex[ASK]), toUInt(_mdQtyChangeIndex[BID]), toUInt(_mdQtyChangeIndex[ASK]))
 
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
@@ -1696,9 +1696,9 @@ public:
     hf::price_t _width = 0;
     uint32_t _selfMatchCount = 0;
     hf::price_t _worsenPayupConditionAmount = 0;
-    uint_fast64_t _lastMdSeqNum = 0;
     uint32_t _orderExecutionToken = 0;
     uint32_t _queueImportance = 0;
+    hf::batch_id_t _lastMDbid = 0;
     md::top_t _books[2];
     int8_t _mdPriceChangeIndex[2] = {-1, -1};
     int8_t _mdQtyChangeIndex[2] = {-1, -1};

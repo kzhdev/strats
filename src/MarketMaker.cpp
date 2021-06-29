@@ -13,6 +13,7 @@ void MarketMaker::init(double frequency,
     ViperStrategyBase::init(frequency, internalHeartbeatPeriod, std::move(pnlLimitsChecker));
     auto contractSize = _viperConfig._allContracts.size();
     _marketMakers = new SimpleMarketMaker[contractSize];
+    _updatedContracts.reserve(contractSize);
 
     for (uint32_t i = 0; i < contractSize; ++i) {
         const ConfigContract& contract = _viperConfig._allContracts[i];

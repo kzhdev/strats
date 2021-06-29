@@ -17,7 +17,7 @@ class MarketMaker final : public ViperStrategyBaseImpl<MarketMaker> {
     friend class SimpleMarketMaker;
     friend class ViperStrategyBaseImpl<MarketMaker>;
     friend class MarketDataConsumer<MarketMaker>;
-    std::set<uint32_t> _updatedContracts;
+    std::unordered_set<uint32_t> _updatedContracts;
     uint8_t _oldMDStatus[static_cast<uint8_t>(hf::VENUE::ANY)] = {0};
     std::unordered_set<SimpleMarketMaker*> _manualFilledMarketMakers;
 
@@ -65,11 +65,11 @@ private:
     void onFill(const FillMessage& fill);
 
     // MD handing
-    void onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId);
+    void onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId, hf::batch_id_t bid);
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event);
     void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId);
     void handleUncommonMDEvent(const md::MDEvent& event, const md::MDBatch& batch) {}
-    void onEndMDBatch() {}
+    void onEndMDBatch(hf::batch_id_t bid);
 
     void handle_CME_B3_MDStatus(uint32_t internalId, hf::VENUE venue, const md::MDStatusEvent& event, SimpleMarketMaker& state);
     void handleICEMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);

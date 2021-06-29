@@ -48,6 +48,7 @@ static constexpr hf::VENUE B3_ROUTER_VENUE = hf::VENUE::B3;
 
 
 struct ContractState {
+    hf::batch_id_t _lastMDbid = 0;
     InternalMatchingEngine<Executor> _ime;
     md::top_t _books[2];
     int8_t _mdPriceChangeIndex[2] = {-1, -1};
@@ -176,12 +177,12 @@ public:
         for (uint32_t id : _updatedContracts) {
             onMarketDataChange(id);
         }
+        _updatedContracts.clear();
         processMessages();
         checkShutdownTime(now);
         checkTimers(now);
         sendInternalHeartbeat(now);
         _newOrderModifyOrderRateChecker.expireEntries(now);
-        _updatedContracts.clear();
         rhoneRouterPoll(now);
     }
 
@@ -1421,6 +1422,7 @@ public:
 
     void initialize() {
         try {
+            _updatedContracts.reserve(_viperConfig._allContracts.size());
             auto now = hf::util::TimeUtils::clock_gettime() / 1000000000;
             for (auto it = _viperConfig._mapIdEconomicNumber.begin(); it != _viperConfig._mapIdEconomicNumber.end(); ++it) {
                 if (it->second._tradeName == _tradeName) {
@@ -1805,12 +1807,34 @@ public:
     void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventLostFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
 
-#ifdef IS_DEV
     void onPreMDBatch(const md::MDBatch &batch) override {
+#ifdef IS_DEV
         DLOG(0, "EXE received MD batch. bid={i1} extSeqNum={i2} venue={i3}", batch.bid, batch.extSequenceNumber,
              toUInt(batch.venue))
-    }
 #endif
+
+        if (BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMDbid))) {
+            uint64_t eventMask = 0;
+            const auto* data = batch.data;
+            for (auto i = batch.count; i; --i) {
+                const auto& mde = reinterpret_cast<const md::MDEvent&>(*data);
+                data += mde.size;
+                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
+            }
+            logging::GetLogger().logWarning(boost::str(boost::format(
+                    "EXE DUPLICATE MD BATCH. bid=%1% count=%2% hwTS=%3% srcTS=%4% srcSentTS=%5% stratTS=%6% venue=%7% extSeqNum=%8% eventMask=%9%") %
+                batch.bid % batch.count % batch.time.hwTS % batch.time.srcTS % batch.time.srcSentTS % batch.time.stratTS %
+                static_cast<int>(batch.venue) % batch.extSequenceNumber % eventMask));
+        }
+        _lastMDbid = batch.bid;
+    }
+
+    void onPostMDBatch(const md::MDBatch &batch) override {
+        for (auto internalId : _updatedContracts) {
+            auto& state = _contractStates[internalId];
+            state._lastMDbid = batch.bid;
+        }
+    }
 
     COLD
     void logMDUpdate(const md::MDBatch& batch, const md::MDUpdateEvent& event) const {
@@ -1861,7 +1885,7 @@ public:
                  getContract(internalId), event.cleanedLevelRemoved, state._books[BID].l[0].q, state._books[BID].l[0].pr, bestBid.q, bestBid.pr, state._books[ASK].l[0].q, state._books[ASK].l[0].pr,
                  bestAsk.q, bestAsk.pr, batch.extSequenceNumber);
         }
-        if(BOOST_UNLIKELY(!copyBooks(*this, state, event, _updatedContracts, true))) {
+        if(BOOST_UNLIKELY(!copyBooks(*this, state, event, _updatedContracts, batch.bid, true))) {
             logMDUpdate(batch, event);
         }
     }
@@ -2801,6 +2825,7 @@ public:
                 auto internalId = getInternalId(order);
                 StrategyId strategy = getStrategyId(order);
                 LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid.value())
+                cleanBook(ToViperSide(order.side), internalId, order.pr);
                 sendReverseFillToStrategyExt(strategy, internalId, order, FillSource::MissedHedge, batch.bid, event.orderSnapshot.exchangeOrderId.value());
             } else {
                 if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
@@ -2824,6 +2849,48 @@ public:
         } else {
             LOG(0, "Received Order Cancelled when logged out. {i1}", event.strat_oid.value())
         }
+    }
+
+    void cleanBook(uint32_t side, uint32_t internalId, hf::price_t px) {
+        auto& state = _contractStates[internalId];
+        auto& book = state._books[side];
+        bool need_clean_up = false;
+        uint32_t i = 0;
+        for (; i < md::top_t::LEVEL_NUM; ++i) {
+            auto& l = book.l[i];
+            if (l.pr == hf::NULL_PRICE || !l.q || !IsBetterOrEqual(l.pr, px, side)) {
+                break;
+            }
+            need_clean_up = true;
+        }
+
+        if (need_clean_up) {
+            if (BOOST_LIKELY(i < md::top_t::LEVEL_NUM)) {
+                auto n = md::top_t::LEVEL_NUM - i;
+                memcpy(&book.l[0], &book.l[i], sizeof(md::top_t::level_t) * n);
+                book.l[n].pr = hf::NULL_PRICE;
+                book.l[n].q = 0;
+            } else {
+                book.l[0].pr = hf::NULL_PRICE;
+                book.l[0].q = 0;
+            }
+
+            state._mdQtyChangeIndex[side] = 0;
+            state._mdPriceChangeIndex[side] = 0;
+            _updatedContracts.emplace(internalId);
+            LOG(0, "EXE {i1}. Clean book due to FAK Miss. lastMDbid={i2}", getContract(internalId), state._lastMDbid);
+        }
+
+        foreachStrategy([&book, internalId, side, bid = state._lastMDbid](ViperStrategyBase* strategy) {
+            strategy->sendMessage<InternalBookUpdate>(ViperMessageType::InternalBookUpdate, [&book, internalId, side, bid](InternalBookUpdate& msg) {
+                msg._contractId = internalId;
+                msg._side = side;
+                msg._lastMDbid = bid;
+                memcpy(&book, &msg._book, sizeof(book));
+            });
+        });
+
+        LOG(0, "EXE {i1}. Send InternalBookUpdate. lastMDbid={i2}", getContract(internalId), state._lastMDbid);
     }
 
     void onOrderCancelRejected(const om::OMOrderCancelRejectedEvent &event, const om::order_t &order, const om::OMBatch &/*batch*/) {
@@ -3285,10 +3352,11 @@ public:
     std::string _strategyName;
     std::string _strategyVersion;
 
-    std::set<uint32_t> _updatedContracts;
+    std::unordered_set<uint32_t> _updatedContracts;
 
     int16_t _transactionCapacity[toUInt(hf::VENUE::EUREX) + 1] = {0};
     om::instance_id_t _iid;
+    hf::batch_id_t _lastMDbid = 0;
 
     uint32_t _rvHedgeRejectCount = 0;
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;

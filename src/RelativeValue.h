@@ -285,6 +285,7 @@ struct RvContract {
     }
 
     uint32_t _internalId;
+    hf::batch_id_t _lastMDbid = 0;
     bool _canTradeStatus = false;
     bool _traded = false;
     bool _usedInPricing = false;
@@ -1476,8 +1477,13 @@ public:
         }
     }
 
-    void onEndMDBatch() {
+    void onEndMDBatch(hf::batch_id_t bid) {
         _hadExternalMarketData = true;
+        for (uint32_t contractId : _mdUpdated) {
+            auto& rvContract = _contracts[contractId];
+            rvContract._lastMDbid = bid;
+        }
+        _mdUpdated.clear();
     }
 
     void onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event) {
@@ -1671,11 +1677,17 @@ public:
         }
     }
 
-    void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId) {
+    void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId, hf::batch_id_t batchBid) {
         const md::top_t::level_t& bid = event.buy.top.l[0];
         const md::top_t::level_t& ask = event.sell.top.l[0];
 
         RvContract& contract = _contracts[internalId];
+
+        if (BOOST_UNLIKELY(contract._lastMDbid >= batchBid)) {
+            logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batchBid % contract._lastMDbid));
+            return;
+        }
+
         const Market& rvBid = contract._externalMarket[BID];
         const Market& rvAsk = contract._externalMarket[ASK];
 
@@ -1695,21 +1707,20 @@ public:
             Market& ask = contract._externalMarket[ASK];
             ask.update<ASK>(askPrice, askSize);
         }
-        {
-            if (bidChanged | askChanged) {
-                _updatedContracts.insert(internalId);
-                if (contract._usedInPricing) {
-                    const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
-                    if (BOOST_UNLIKELY(missingBook)) {
-                        LOG(0, "RV {C[i1]}. Lost book for contract.", getContract(contract._internalId))
-                        disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
-                    }
+        if (bidChanged | askChanged) {
+            _mdUpdated.emplace(internalId);
+            _updatedContracts.emplace(internalId);
+            if (contract._usedInPricing) {
+                const bool missingBook = (contract._externalMarket[BID].getPrice() == hf::NULL_PRICE) | (contract._externalMarket[ASK].getPrice() == hf::NULL_PRICE);
+                if (BOOST_UNLIKELY(missingBook)) {
+                    LOG(0, "RV {C[i1]}. Lost book for contract.", getContract(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
                 }
+            }
 
-                if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
-                    LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContract(contract._internalId))
-                    disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
-                }
+            if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
+                LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContract(contract._internalId))
+                disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
             }
         }
     }
@@ -1867,6 +1878,8 @@ public:
         ViperStrategyBaseImpl<RelativeValue>::init(frequency, internalHeartbeatPeriod, pnlLimitsChecker);
         initializeModel();
         _latencyTracking.unset();
+        _mdUpdated.reserve(_viperConfig._allContracts.size());
+        _updatedContracts.reserve(_viperConfig._allContracts.size());
     }
 
     void initializeModel() {
@@ -3022,7 +3035,8 @@ public:
     Vector<SimpleSweepDefinition> _sweepDefinition;
 
 private:
-    std::set<uint32_t> _updatedContracts;
+    std::unordered_set<uint32_t> _mdUpdated;
+    std::unordered_set<uint32_t> _updatedContracts;
     UpdateSelector<RelativeValue> _updateSelector;
 
     bool _canSendQuotes = true;

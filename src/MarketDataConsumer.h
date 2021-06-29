@@ -25,9 +25,6 @@ class MarketDataConsumer : MarketDataConsumerBase {
 
     std::vector<QueueState> _queueState;
 
-    //Temporary to try to debug "Match Orders Failed"
-    hf::batch_id_t _lastMMbid = 0;
-
     T& underlying() { return static_cast<T&>(*this); }
 
 protected:
@@ -70,22 +67,6 @@ public:
         DLOG(0, "{i1} received MD batch. bid={i2} extSeqNum={i3} venue={i4}", resourceName(underlying().id()), batch.bid,
              batch.extSequenceNumber, toUInt(batch.venue))
 
-        //Attempting to debug duplicate batches
-        if (BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMMbid) &&
-                           (underlying().id() == ResourceId::Execution))) {
-            uint64_t eventMask = 0;
-            const auto* data = batch.data;
-            for (auto i = batch.count; i; --i) {
-                const auto& mde = reinterpret_cast<const md::MDEvent&>(*data);
-                data += mde.size;
-                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
-            }
-            LOG(0, "EXE DUPLICATE MD BATCH.  bid={i1} count={i2} hwTS={i3} srcTS={i4} srcSentTS={i5} stratTS={i6} venue={i7} extSeqNum={i8} eventMask={i9}",
-                batch.bid, batch.count, batch.time.hwTS, batch.time.srcTS, batch.time.srcSentTS, batch.time.stratTS,
-                static_cast<int>(batch.venue), batch.extSequenceNumber, eventMask);
-        }
-        _lastMMbid = batch.bid;
-
         const auto *data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
@@ -93,7 +74,7 @@ public:
             switch (mde.type) {
                 case md::MDEvent::TYPE::UPDATE: {
                     const auto &event = static_cast<const md::MDUpdateEvent &> (mde);
-                    onMDUpdate(event);
+                    onMDUpdate(event, batch.bid);
                     break;
                 }
                 case md::MDEvent::TYPE::TRADE: {
@@ -111,13 +92,13 @@ public:
                     break;
             }
         }
-        underlying().onEndMDBatch();
+        underlying().onEndMDBatch(batch.bid);
     }
 
-    void onMDUpdate(const md::MDUpdateEvent& event) {
+    void onMDUpdate(const md::MDUpdateEvent& event, hf::batch_id_t bid) {
         const uint32_t internalId = underlying().sidToInternalId(event.sid);
         if (internalId != INVALID_INTERNAL_ID) {
-            underlying().onMDUpdate(event, internalId);
+            underlying().onMDUpdate(event, internalId, bid);
         } else {
             logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
         }
@@ -132,7 +113,7 @@ public:
 };
 
 template<typename BookOwnerT>
-inline bool copyBooks(ViperResource& resource, BookOwnerT& owner, const md::MDUpdateEvent& event, std::set<uint32_t>& updatedContracts, bool notifyGUI = false) {
+inline bool copyBooks(ViperResource& resource, BookOwnerT& owner, const md::MDUpdateEvent& event, std::unordered_set<uint32_t>& updatedContracts, hf::batch_id_t bid, bool notifyGUI = false) {
     bool success = true;
     auto checkAndSetChangeIndex = [&resource, &owner, &success, notifyGUI](int8_t& ourChangeIndex, md::level_index_t eventUpdatedNum, const char* side, const char* which) -> bool {
         int8_t changeIndex = -1;
@@ -177,7 +158,7 @@ inline bool copyBooks(ViperResource& resource, BookOwnerT& owner, const md::MDUp
 }
 
 template<typename BookOwnerT, uint32_t Side>
-void handleMDTrade(BookOwnerT& owner, const md::MDTradeEvent::trade_t& trade, uint32_t internalId, std::set<uint32_t>& updatedContracts) {
+void handleMDTrade(BookOwnerT& owner, const md::MDTradeEvent::trade_t& trade, uint32_t internalId, std::unordered_set<uint32_t>& updatedContracts) {
     auto& best = owner._books[Side].l[0];
 
     auto copyBook = [](md::top_t::level_t& book, hf::price_t price, hf::qty_t size, md::order_count_t orderCount) {

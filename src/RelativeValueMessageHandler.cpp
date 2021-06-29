@@ -72,6 +72,23 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
             onEconomicNumberEnded((EconomicNumber::Color)msg._number_1);
             break;
         }
+        case ViperMessageType::InternalBookUpdate: {
+            const auto& msg = reinterpret_cast<const InternalBookUpdate&>(message._data[0]);
+            RvContract& contract = _contracts[msg._contractId];
+            if (msg._lastMDbid >= contract._lastMDbid) {
+                const md::top_t::level_t& l = msg._book.l[0];
+                const Market& market = contract._externalMarket[msg._side];
+                if ((market.getPrice() != l.pr) || (market.getUnAdjustedSize() != l.q)) {
+                    if (msg._side == BID) {
+                        onMarketDataUpdate(contract, msg._contractId, true, l.pr, l.q, false, contract._externalMarket[ASK].getPrice(), contract._externalMarket[ASK].getUnAdjustedSize());
+                    } else {
+                        onMarketDataUpdate(contract, msg._contractId, false, contract._externalMarket[BID].getPrice(), contract._externalMarket[BID].getUnAdjustedSize(), true, l.pr, l.q);
+                    }
+                }
+                contract._lastMDbid = msg._lastMDbid;
+            }
+            break;
+        }
         default:
 //            DLOG(0, "RV. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
