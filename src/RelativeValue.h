@@ -3022,7 +3022,6 @@ public:
     Vector<SimpleSweepDefinition> _sweepDefinition;
 
 private:
-    std::unordered_set<uint32_t> _mdUpdated;
     std::unordered_set<uint32_t> _updatedContracts;
     UpdateSelector<RelativeValue> _updateSelector;
 

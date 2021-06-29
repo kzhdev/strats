@@ -2367,7 +2367,7 @@ public:
     void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event, const md::MDBatch& batch) {
         auto internalId = sidToInternalId(event.sid);
         if (internalId != INVALID_INTERNAL_ID) {
-            _mdUpdated.emplace();
+            _mdUpdated.emplace(internalId);
         }
     }
 
