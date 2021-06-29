@@ -231,7 +231,7 @@ void MarketMaker::onMarketDataChange(uint32_t internalId) {
 }
 
 void MarketMaker::onEndMDBatch(hf::batch_id_t bid)  {
-    for (auto internalId : _updatedContracts) {
+    for (auto internalId : _mdUpdated) {
         auto& mm = _marketMakers[internalId];
         mm._lastMDbid = bid;
     }
