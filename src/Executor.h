@@ -1799,6 +1799,7 @@ public:
                 sendErrorMessage(errorMessage, ErrorType::Critical);
                 LOG_ERROR(errorMessage);
             }
+            _mdUpdated.emplace(internalId);
         }
         else {
             LOG(0, "EXE onMDFirmOrderExecutionEventBeforeFillArbitration called before with unknown contract.  oid={i1}", order.oid.value());
@@ -1830,10 +1831,11 @@ public:
     }
 
     void onPostMDBatch(const md::MDBatch &batch) override {
-        for (auto internalId : _updatedContracts) {
+        for (auto internalId : _mdUpdated) {
             auto& state = _contractStates[internalId];
             state._lastMDbid = batch.bid;
         }
+        _mdUpdated.clear();
     }
 
     COLD
@@ -1877,6 +1879,8 @@ public:
         if (!state._contract._toMarketMake) {
             return;
         }
+
+        _mdUpdated.emplace(internalId);
 
         auto& bestBid = event.buy.top.l[0];
         auto& bestAsk = event.sell.top.l[0];
@@ -1931,15 +1935,18 @@ public:
     }
 
     void onMDTrade(const md::MDTradeEvent &event, const md::MDBatch &batch) {
-        if (batch.venue == hf::VENUE::CME) {
-            for (uint32_t i = 0; i < event.num; ++i) {
-                auto& trade = event.trades[i];
-                const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-                if (internalId != INVALID_INTERNAL_ID) {
-                    ContractState& state = _contractStates[internalId];
-                    if (!state._contract._toMarketMake) {
-                        continue;
-                    }
+        const uint32_t internalId = _viperConfig.getInternalId(event.sid);
+        if (internalId != INVALID_INTERNAL_ID) {
+            _mdUpdated.emplace(internalId);
+            
+            if (batch.venue == hf::VENUE::CME) {
+                ContractState& state = _contractStates[internalId];
+                if (!state._contract._toMarketMake) {
+                    return;
+                }
+
+                for (uint32_t i = 0; i < event.num; ++i) {
+                    auto& trade = event.trades[i];
                     if (trade.side == hf::SIDE::BUY) {
                         //LOG(0, "EXE {C[i1]}. Bid book adjustment due to trade. {i2}@{d1}", getLoggingContract(internalId), trade.q, ToDollars(trade.pr))
                         handleMDTrade<ContractState, BID>(state, trade, internalId, _updatedContracts);
@@ -1954,7 +1961,7 @@ public:
 
     void onMDGap(const md::MDGapEvent &event, const md::MDBatch &batch) {
         disableSystem(boost::str(boost::format("MD feed gapped. venue=%1%") % batch.venue));
-
+        _mdUpdated.emplace(sidToInternalId(event.sid));
         for(unsigned i = 0; i < _viperConfig._allContracts.size(); ++i) {
             const auto& sym = _viperConfig._allContracts[i];
             std::string channelName = GetMDChannel(sym._venue, this->context().getSymbolInfo(sym._sid));
@@ -1994,6 +2001,7 @@ public:
         }
 
         onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId);
+        _mdUpdated.emplace(internalId);
     }
 
     void handleMDRecoveryDuringGapIfNeeded(hf::VENUE venue, hf::symbol_id_t sid) {
@@ -2356,14 +2364,21 @@ public:
         }
     }
 
-    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event, const md::MDBatch& batch) { }
+    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event, const md::MDBatch& batch) {
+        auto internalId = sidToInternalId(event.sid);
+        if (internalId != INVALID_INTERNAL_ID) {
+            _mdUpdated.emplace();
+        }
+    }
 
     void onMDPreOpenPrice(const md::MDPreOpenPriceEvent &event, const md::MDBatch &/*batch*/) {
         _slow._iopTracking.onIOPUpdate(event);
     }
 
-    void onMDUnknown(const md::MDEvent &event, const md::MDBatch& batch) { }
-    void onMDCurrencyEvent(const md::MDCurrencyEvent& event, const md::MDBatch& batch) {}
+    void onMDUnknown(const md::MDEvent &event, const md::MDBatch& batch) {
+    }
+    void onMDCurrencyEvent(const md::MDCurrencyEvent& event, const md::MDBatch& batch) {
+    }
 
     void onMDStatistics(const md::MDStatisticsEvent &event, const md::MDBatch &/*batch*/) {
         for(int i = 0; i < static_cast<int>(event.num); ++i) {
@@ -3352,6 +3367,7 @@ public:
     std::string _strategyName;
     std::string _strategyVersion;
 
+    std::unordered_set<uint32_t> _mdUpdated;
     std::unordered_set<uint32_t> _updatedContracts;
 
     int16_t _transactionCapacity[toUInt(hf::VENUE::EUREX) + 1] = {0};

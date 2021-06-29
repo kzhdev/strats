@@ -4,6 +4,7 @@
 #include <md/queue/MDQueue.h>
 #include <hf/log.h>
 #include <atomic>
+#include <unordered_set>
 
 namespace Python {
 
@@ -29,14 +30,16 @@ class MarketDataConsumer : MarketDataConsumerBase {
 
 protected:
     std::vector<md::queue::MDQueue*>& _marketDataQueues = mdQueue();
+    std::unordered_set<uint32_t> _mdUpdated;
 
 public:
-    void initMarkDataQueueState() {
+    void initMarkDataQueueState(size_t numContracts) {
         _queueState.resize(_marketDataQueues.size());
         size_t i = 0;
         for (auto q : _marketDataQueues) {
             _queueState[i++]._peekIndex = q->peekW();
         }
+        _mdUpdated.reserve(numContracts);
     }
 
     void drainAllMarketData() {
@@ -71,44 +74,35 @@ public:
         for (auto i = batch.count; i; --i) {
             const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
             data += mde.size;
-            switch (mde.type) {
-                case md::MDEvent::TYPE::UPDATE: {
-                    const auto &event = static_cast<const md::MDUpdateEvent &> (mde);
-                    onMDUpdate(event, batch.bid);
-                    break;
+            auto internalId = underlying().sidToInternalId(mde.sid);
+            if (internalId != INVALID_INTERNAL_ID) {
+                switch (mde.type) {
+                    case md::MDEvent::TYPE::UPDATE: {
+                        const auto& event = static_cast<const md::MDUpdateEvent&> (mde);
+                        underlying().onMDUpdate(event, internalId, batch.bid);
+                        break;
+                    }
+                    case md::MDEvent::TYPE::TRADE: {
+                        const auto& event = static_cast<const md::MDTradeEvent&> (mde);
+                        underlying().onMDTrade(batch, event, internalId);
+                        break;
+                    }
+                    case md::MDEvent::TYPE::STATUS: {
+                        const auto& event = static_cast<const md::MDStatusEvent&> (mde);
+                        underlying().onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId);
+                        break;
+                    }
+                    default:
+                        underlying().handleUncommonMDEvent(mde, batch, internalId);
+                        break;
                 }
-                case md::MDEvent::TYPE::TRADE: {
-                    const auto &event = static_cast<const md::MDTradeEvent &> (mde);
-                    underlying().onMDTrade(batch.venue, event);
-                    break;
-                }
-                case md::MDEvent::TYPE::STATUS: {
-                    const auto &event = static_cast<const md::MDStatusEvent &> (mde);
-                    onMDStatus(batch.venue, batch.extSequenceNumber, event);
-                    break;
-                }
-                default:
-                    underlying().handleUncommonMDEvent(mde, batch);
-                    break;
+                _mdUpdated.emplace(internalId);
+            } else {
+                logging::GetLogger().logError(boost::str(boost::format("Received md update for unrecognized SID='%1%'") % mde.sid));
             }
         }
         underlying().onEndMDBatch(batch.bid);
-    }
-
-    void onMDUpdate(const md::MDUpdateEvent& event, hf::batch_id_t bid) {
-        const uint32_t internalId = underlying().sidToInternalId(event.sid);
-        if (internalId != INVALID_INTERNAL_ID) {
-            underlying().onMDUpdate(event, internalId, bid);
-        } else {
-            logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
-        }
-    }
-
-    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent &event) {
-        const uint32_t internalId = underlying().sidToInternalId(event.sid);
-        if (internalId != INVALID_INTERNAL_ID) {
-            underlying().onMDStatus(venue, extSeqNum, event, internalId);
-        }
+        _mdUpdated.clear();
     }
 };
 

@@ -186,7 +186,7 @@ public:
             _kdbLogger->resetW();
             logging::setKdbLogger(_kdbLogger);
         }
-        this->initMarkDataQueueState();
+        this->initMarkDataQueueState(_viperConfig._allContracts.size());
         underlying().registerOrderClient();
 
         LOG(0, "Strategy {i1} thread started.", strategyName())
