@@ -76,6 +76,18 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
             mm.onEconomicNumberEnded(EconomicNumber::Color(msg._number_2));
             break;
         }
+        case ViperMessageType::InternalBookUpdate: {
+            const auto& msg = reinterpret_cast<const InternalBookUpdate&>(message._data[0]);
+            auto& mm = _marketMakers[msg._contractId];
+            if (msg._lastMDbid >= mm._lastMDbid) {
+                memcpy(&mm._books[msg._side], &msg._book, sizeof(md::top_t));
+                mm._mdPriceChangeIndex[msg._side] = 0;
+                mm._mdQtyChangeIndex[msg._side] = 0;
+                _updatedContracts.emplace(msg._contractId);
+                mm._lastMDbid = msg._lastMDbid;
+            }
+            break;
+        }
         default:
             BOOST_ASSERT_MSG(false, [&message]() { return (new std::string(
                     std::string("Unhandled ViperMessage of type=") + std::to_string(static_cast<int>(message._type))))->c_str();}());

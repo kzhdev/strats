@@ -1417,11 +1417,13 @@ enum class ViperMessageType : uint8_t {
     QuoteExternallyOn,
     CanEnableUseGTC,
     RVLatencyTracking,
+    InternalBookUpdate,
     ASInternalMatchingDone,
     ASQuoteAdjustmentACK,
     SubscribeSTFUpdate,
     STFUpdate,
     TransferPositionToRV,
+    
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1642,6 +1644,13 @@ struct STFUpdate {
     } _data[0];
 };
 #pragma pack()
+
+struct InternalBookUpdate {
+    uint32_t _contractId;
+    uint32_t _side;
+    hf::batch_id_t _lastMDbid;
+    md::top_t _book;
+};
 
 class ViperPool : public hf::pool::DataPool {
 public:

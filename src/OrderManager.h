@@ -2780,7 +2780,7 @@ public:
     }
 
     template<uint32_t Side>
-    void onMDUpdate(md::top_t book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
+    void onMDUpdate(md::top_t& book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
         if (_topLevel == nullptr) {
             // levels have not been created yet
             return;
@@ -2808,15 +2808,16 @@ public:
 
             for (uint8_t i = priceChangeIndex; i < md::top_t::LEVEL_NUM; ++i) {
                 auto& l = book.l[i];
-                if (l.pr == hf::NULL_PRICE) {
+                if (l.pr == hf::NULL_PRICE || l.q == 0) {
+                    l.pr = hf::NULL_PRICE;  // make sure pr is set to NULL_PRICE not 0
                     if (i != 0) {
                         newBottom = book.l[i - 1].pr;
                     }
                     break;
                 }
 
+                // There might be a gap between 2 book levels, clear the qty of our levels in the gap
                 while (IsBetterPrice<Side>(level, l.pr)) {
-                    // There is a gap between 2 book levels, clear the qty of our levels in the gap
                     onMDUpdate<Side>(level, 0);
                     level = GetPriorPrice<Side>(level, _contract._tickSize);
                 }
@@ -2830,7 +2831,7 @@ public:
         } else if (qtyChangeIndex >= 0 && qtyChangeIndex < md::top_t::LEVEL_NUM) {
             // only 1 level changed
             auto& l = book.l[qtyChangeIndex];
-            if (l.pr != hf::NULL_PRICE) {
+            if (l.pr != hf::NULL_PRICE && l.q > 0) {
                 newBottom = l.pr;
                 assert(_contract._venue == hf::VENUE::CME || _contract._venue == hf::VENUE::ICE ||
                        l.ext.implied.impliedQtyNotTrackedByQueuePosition == 0);
@@ -2838,7 +2839,8 @@ public:
             }
 
             for (auto i = qtyChangeIndex + 1; i < md::top_t::LEVEL_NUM; ++i) {
-                if (book.l[i].pr == hf::NULL_PRICE) {
+                if (book.l[i].pr == hf::NULL_PRICE || book.l[i].q == 0) {
+                    book.l[i].pr = hf::NULL_PRICE;
                     break;
                 }
                 newBottom = book.l[i].pr;

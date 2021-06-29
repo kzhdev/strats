@@ -2,12 +2,17 @@
 
 using namespace Python;
 
-void ArbieSpreader::onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId) {
+void ArbieSpreader::onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId, hf::batch_id_t batchId) {
     const md::top_t::level_t& bid = event.buy.top.l[0];
     const md::top_t::level_t& ask = event.sell.top.l[0];
 
     auto& contract = _contracts[internalId];
     if (!contract._usedInQuoting && !contract._usedInPath) {
+        return;
+    }
+
+    if (contract._lastMDbid >= batchId) {
+        logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._def._name % batchId % contract._lastMDbid));
         return;
     }
 
@@ -20,28 +25,32 @@ void ArbieSpreader::onMDUpdate(const md::MDUpdateEvent &event, uint32_t internal
     onMarketDataUpdate(contract, bidChanged, bid.pr, bid.q, askChanged, ask.pr, ask.q);
 }
 
-void ArbieSpreader::onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event) {
-    if (venue == hf::VENUE::CME) {
+void ArbieSpreader::onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent &event, uint32_t internalId) {
+    auto& contract = _contracts[internalId];
+    if (!contract._usedInQuoting && !contract._usedInPath) {
+        return;
+    }
+
+    if (contract._lastMDbid >= batch.bid) {
+        logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._def._name % batch.bid % contract._lastMDbid));
+        return;
+    }
+
+    if (batch.venue == hf::VENUE::CME) {
         for (uint32_t i = 0; i < event.num; ++i) {
             auto& trade = event.trades[i];
-            const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-            if (internalId != INVALID_INTERNAL_ID) {
-                auto& contract = _contracts[internalId];
-                if (!contract._usedInQuoting && !contract._usedInPath) {
-                    return;
-                }
-
-                if (trade.side == hf::SIDE::BUY) {
-                    DLOG(0, "AS: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}. OurBest: {i3}@{d2}", getContract(internalId),
-                         trade.q, ToDollars(trade.pr), contract._markets[BID][Market::External].getUnAdjustedSize(),
-                         ToDollars(contract._markets[BID][Market::External].getPrice()))
-                    onMarketDataUpdate(contract, true, trade.pr, trade.q, false, 0, 0);
-                } else if (trade.side == hf::SIDE::SELL) {
-                    DLOG(0, "AS: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}. OurBest: {i3}@{d2}", getContract(internalId),
-                         trade.q, ToDollars(trade.pr), contract._markets[ASK][Market::External].getUnAdjustedSize(),
-                         ToDollars(contract._markets[ASK][Market::External].getPrice()))
-                    onMarketDataUpdate(contract, false, 0, 0, true, trade.pr, trade.q);
-                }
+            if (trade.side == hf::SIDE::BUY) {
+                DLOG(0, "AS: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}. OurBest: {i3}@{d2}",
+                     getContract(internalId),
+                     trade.q, ToDollars(trade.pr), contract._markets[BID][Market::External].getUnAdjustedSize(),
+                     ToDollars(contract._markets[BID][Market::External].getPrice()))
+                onMarketDataUpdate(contract, true, trade.pr, trade.q, false, 0, 0);
+            } else if (trade.side == hf::SIDE::SELL) {
+                DLOG(0, "AS: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}. OurBest: {i3}@{d2}",
+                     getContract(internalId),
+                     trade.q, ToDollars(trade.pr), contract._markets[ASK][Market::External].getUnAdjustedSize(),
+                     ToDollars(contract._markets[ASK][Market::External].getPrice()))
+                onMarketDataUpdate(contract, false, 0, 0, true, trade.pr, trade.q);
             }
         }
     }
@@ -259,11 +268,11 @@ void ArbieSpreader::processInternalMarketUpdate(const MarketUpdate& marketUpdate
     _effected_markets.clear();
 }
 
-void ArbieSpreader::handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBatch& batch) {
+void ArbieSpreader::handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBatch& batch, uint32_t internalId) {
     switch (mde.type) {
         case md::MDEvent::TYPE::FAK_DONE: {
             const auto &event = static_cast<const md::MDFakDonenEvent &> (mde);
-            handleFakDone(batch.venue, event);
+            handleFakDone(batch.venue, event, internalId);
             break;
         }
         default:
@@ -271,16 +280,20 @@ void ArbieSpreader::handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBa
     }
 }
 
-void ArbieSpreader::handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event) {
-    const uint32_t internalId = _viperConfig.getInternalId(event.sid);
+void ArbieSpreader::handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event, uint32_t internalId) {
     const uint32_t side = ToViperSide(event._side);
     LOG(0, "AS {C[i1]}. Side={i2} Received FAK done. OID={i3}", internalId, side, event._oid.value())
 
-    if (internalId != INVALID_INTERNAL_ID) {
-        auto& contract = _contracts[internalId];
-        Market& market = contract._markets[side][Market::External];
-        if (BOOST_LIKELY(market.handleFakDone(event._oid.value()))) {
-            markContractDirty(contract, &market);
-        }
+    auto& contract = _contracts[internalId];
+    Market& market = contract._markets[side][Market::External];
+    if (BOOST_LIKELY(market.handleFakDone(event._oid.value()))) {
+        markContractDirty(contract, &market);
+    }
+}
+
+void ArbieSpreader::onEndMDBatch(hf::batch_id_t bid) {
+    for (auto contractId : _mdUpdated) {
+        auto& contract = _contracts[contractId];
+        contract._lastMDbid = bid;
     }
 }

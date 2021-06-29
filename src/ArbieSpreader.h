@@ -204,6 +204,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         Quote _quote[2];
         Quote _lastQuoteSent[2];
         uint32_t _hedgeId {0};
+        hf::batch_id_t _lastMDbid {0};
         bool _forceUpdate[2] {false, false};
         bool _usedInQuoting = false;
         bool _usedInPath = false;
@@ -376,10 +377,10 @@ private:
     void onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt);
 
     // MD handling
-    void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId);
-    void onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event);
-    void handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBatch& batch);
-    void onEndMDBatch() {}
+    void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId, hf::batch_id_t bid);
+    void onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent &event, uint32_t internalId);
+    void handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBatch& batch, uint32_t internalId);
+    void onEndMDBatch(hf::batch_id_t bid);
     void handleICEMDStatus(const md::MDStatusEvent& event, Contract& contract);
     void handle_CME_B3_MDStatus(const md::MDStatusEvent& event, Contract& contract);
     void handleEUREXMDStatus(const md::MDStatusEvent& event, Contract& contract);
@@ -422,7 +423,7 @@ private:
 
     void handleHedgeMarketDataAdjustmentAck(const HedgeMarketDataAdjustmentAck& hedgeAck);
 
-    void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event);
+    void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event, uint32_t internalId);
     void handleInternalHedgeDone(const InternalHedgeDone& message);
     void handleASInternalMatchingDone(uint32_t contractId);
     void handleASQuoteAdjustmentACK(uint32_t contractId, uint32_t side, hf::qty_t matchedSize);
