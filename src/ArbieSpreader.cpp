@@ -15,8 +15,10 @@ void ArbieSpreader::init(double frequency, uint64_t internalHeartbeatPeriod, std
 
 void ArbieSpreader::initializeContracts() {
     const auto& asConfig = _viperConfig._arbieSpreaderConfigs;
-    _contracts.resize(_viperConfig._allContracts.size());
-    _lastOrderRequests.resize(_viperConfig._allContracts.size());
+    auto numContracts = _viperConfig._allContracts.size();
+    _contracts.resize(numContracts);
+    _lastOrderRequests.resize(numContracts);
+    _effected_markets.reserve(numContracts);
     _allPaths.reserve(65536);
     if (_viperConfig._allContracts.size() > _contractUpdatedFlag.size()) {
         logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Number of contracts > %1%") % _contractUpdatedFlag.size()));

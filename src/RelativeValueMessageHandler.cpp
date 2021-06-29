@@ -72,6 +72,23 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
             onEconomicNumberEnded((EconomicNumber::Color)msg._number_1);
             break;
         }
+        case ViperMessageType::InternalBookUpdate: {
+            const auto& msg = reinterpret_cast<const InternalBookUpdate&>(message._data[0]);
+            RvContract& contract = _contracts[msg._contractId];
+            if (msg._lastMDbid >= contract._lastMDbid) {
+                const md::top_t::level_t& l = msg._book.l[0];
+                const Market& market = contract.externalMarket(msg._side);
+                if ((market.getPrice() != l.pr) || (market.getUnAdjustedSize() != l.q)) {
+                    if (msg._side == BID) {
+                        onMarketDataUpdate(contract, msg._contractId, true, l.pr, l.q, false, contract.externalMarket(ASK).getPrice(), contract.externalMarket(ASK).getUnAdjustedSize());
+                    } else {
+                        onMarketDataUpdate(contract, msg._contractId, false, contract.externalMarket(BID).getPrice(), contract.externalMarket(BID).getUnAdjustedSize(), true, l.pr, l.q);
+                    }
+                }
+                contract._lastMDbid = msg._lastMDbid;
+            }
+            break;
+        }
         case ViperMessageType::SubscribeSTFUpdate: {
             const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
             handleSTFSubscription(toUInt(message._source), msg._number_1);

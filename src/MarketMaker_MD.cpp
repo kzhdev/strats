@@ -4,29 +4,38 @@
 
 using namespace Python;
 
-void MarketMaker::onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId) {
+void MarketMaker::onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId, hf::batch_id_t bid) {
     auto& mm = _marketMakers[internalId];
     if (!mm._contract._toMarketMake) {
         return;
     }
+
+    if (BOOST_UNLIKELY(mm._lastMDbid >= bid)) {
+        logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % mm._contract._name % bid % mm._lastMDbid));
+        return;
+    }
+
     copyBooks(*this, mm, event, _updatedContracts);
 }
 
-void MarketMaker::onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {
-    if (venue == hf::VENUE::CME) {
+void MarketMaker::onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent& event, uint32_t internalId) {
+    auto& mm = _marketMakers[internalId];
+    if (!mm._contract._toMarketMake) {
+        return;
+    }
+
+    if (BOOST_UNLIKELY(mm._lastMDbid >= batch.bid)) {
+        logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % mm._contract._name % batch.bid % mm._lastMDbid));
+        return;
+    }
+
+    if (batch.venue == hf::VENUE::CME) {
         for (uint32_t i = 0; i < event.num; ++i) {
             auto& trade = event.trades[i];
-            const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-            if (internalId != INVALID_INTERNAL_ID) {
-                auto& mm = _marketMakers[internalId];
-                if (!mm._contract._toMarketMake) {
-                    continue;
-                }
-                if (trade.side == hf::SIDE::BUY) {
-                    handleMDTrade<SimpleMarketMaker, BID>(mm, trade, internalId, _updatedContracts);
-                } else if (trade.side == hf::SIDE::SELL) {
-                    handleMDTrade<SimpleMarketMaker, ASK>(mm, trade, internalId, _updatedContracts);
-                }
+            if (trade.side == hf::SIDE::BUY) {
+                handleMDTrade<SimpleMarketMaker, BID>(mm, trade, internalId, _updatedContracts);
+            } else if (trade.side == hf::SIDE::SELL) {
+                handleMDTrade<SimpleMarketMaker, ASK>(mm, trade, internalId, _updatedContracts);
             }
         }
     }
@@ -219,4 +228,11 @@ void MarketMaker::onMarketDataChange(uint32_t internalId) {
     assert(mm._contract._toMarketMake);
     mm.onMarketDataChange();
     mm.resetChangeIndices();
+}
+
+void MarketMaker::onEndMDBatch(hf::batch_id_t bid)  {
+    for (auto internalId : _mdUpdated) {
+        auto& mm = _marketMakers[internalId];
+        mm._lastMDbid = bid;
+    }
 }

@@ -276,6 +276,7 @@ struct RvContract {
     double _priceChangeThreshold;
     hf::qty_t _establishedLevel;
     uint32_t _internalId;
+    hf::batch_id_t _lastMDbid = 0;
     bool _canTradeStatus = false;
     bool _traded = false;
     bool _usedInPricing = false;
@@ -1488,34 +1489,28 @@ public:
         logging::GetLogger().logError("RV Queue_threshold_exceeded");
     }
 
-    void handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBatch& batch) {
+    void handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBatch& batch, uint32_t internalId) {
         switch (mde.type) {
             case md::MDEvent::TYPE::FAK_DONE: {
                 const auto &event = static_cast<const md::MDFakDonenEvent &> (mde);
-                handleFakDone(batch.venue, event);
+                handleFakDone(batch.venue, event, internalId);
                 break;
             }
             case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
                 const auto &event = static_cast<const md::MDIntraEventSweepEvent &> (mde);
-                const uint32_t internalId = _viperConfig.getInternalId(event.sid);
 
-                if(BOOST_UNLIKELY(internalId == INVALID_INTERNAL_ID)) {
-                    LOG(0, "EXE Sweep detected in unknown product.  sid={i1} extSeqNum={i2} diff={i3} qty={i4}", event.sid, batch.extSequenceNumber, event.diff, event.qty);
-                }
-                else {
-                    LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
-                    const auto &sweepLimits = _sweepDefinition.getRef(internalId);
-                    if (sweepLimits.sweepDetected(event)) {
-                        if (BOOST_LIKELY(isEnabled())) {
-                            LOG(0, "RV {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
-                                getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
-                            disableRelativeValue("Sweep detected by RV (more info to follow)", true);
-                            disableQuoteExternal();
-                            sendErrorMessage("Sweep info: disabling RV, disabling RV external quoting.  Contract=" + getContractName(internalId) + " PriceLimit=" +
-                                             std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
-                                             " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
-                        }
-                    } 
+                LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
+                const auto &sweepLimits = _sweepDefinition.getRef(internalId);
+                if (sweepLimits.sweepDetected(event)) {
+                    if (BOOST_LIKELY(isEnabled())) {
+                        LOG(0, "RV {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
+                            getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
+                        disableRelativeValue("Sweep detected by RV (more info to follow)", true);
+                        disableQuoteExternal();
+                        sendErrorMessage("Sweep info: disabling RV, disabling RV external quoting.  Contract=" + getContractName(internalId) + " PriceLimit=" +
+                                         std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
+                                         " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
+                    }
                 }
                 break;
             }
@@ -1524,23 +1519,31 @@ public:
         }
     }
 
-    void onEndMDBatch() {
+    void onEndMDBatch(hf::batch_id_t bid) {
         _hadExternalMarketData = true;
+        for (uint32_t contractId : _mdUpdated) {
+            auto& rvContract = _contracts[contractId];
+            rvContract._lastMDbid = bid;
+        }
     }
 
-    void onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event) {
-        if (venue == hf::VENUE::CME) {
+    void onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent &event, uint32_t internalId) {
+        RvContract& contract = _contracts[internalId];
+
+        if (BOOST_UNLIKELY(contract._lastMDbid >= batch.bid)) {
+            logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batch.bid % contract._lastMDbid));
+            return;
+        }
+
+        if (batch.venue == hf::VENUE::CME) {
             for (uint32_t i = 0; i < event.num; ++i) {
                 auto& trade = event.trades[i];
-                const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-                if (internalId != INVALID_INTERNAL_ID) {
-                    if (trade.side == hf::SIDE::BUY) {
-                        //LOG(0, "RV: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        onMarketDataUpdate(internalId, true, trade.pr, trade.q, false, 0, 0);
-                    } else if (trade.side == hf::SIDE::SELL) {
-                        //LOG(0, "RV: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        onMarketDataUpdate(internalId, false, 0, 0, true, trade.pr, trade.q);
-                    }
+                if (trade.side == hf::SIDE::BUY) {
+                    //LOG(0, "RV: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
+                    onMarketDataUpdate(contract, internalId, true, trade.pr, trade.q, false, 0, 0);
+                } else if (trade.side == hf::SIDE::SELL) {
+                    //LOG(0, "RV: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
+                    onMarketDataUpdate(contract, internalId, false, 0, 0, true, trade.pr, trade.q);
                 }
             }
         }
@@ -1718,22 +1721,25 @@ public:
         }
     }
 
-    void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event) {
-        const uint32_t internalId = _viperConfig.getInternalId(event.sid);
+    void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event, uint32_t internalId) {
         LOG(0, "RV {C[i1]}. Received FAK done.", internalId)
-        if (internalId != INVALID_INTERNAL_ID) {
-            RvContract& contract = _contracts[internalId];
-            const uint32_t side = ToViperSide(event._side);
-            Market& book = contract.externalMarket(side);
-            book.handleFakDone(event._oid.value());
-        }
+        RvContract& contract = _contracts[internalId];
+        const uint32_t side = ToViperSide(event._side);
+        Market& book = contract.externalMarket(side);
+        book.handleFakDone(event._oid.value());
     }
 
-    void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId) {
+    void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId, hf::batch_id_t batchBid) {
         const md::top_t::level_t& bid = event.buy.top.l[0];
         const md::top_t::level_t& ask = event.sell.top.l[0];
 
         RvContract& contract = _contracts[internalId];
+
+        if (BOOST_UNLIKELY(contract._lastMDbid >= batchBid)) {
+            logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batchBid % contract._lastMDbid));
+            return;
+        }
+
         const Market& rvBid = contract.externalMarket<BID>();
         const Market& rvAsk = contract.externalMarket<ASK>();
 
@@ -1753,28 +1759,21 @@ public:
             Market& ask = contract.externalMarket<ASK>();
             ask.update(askPrice, askSize);
         }
-        {
-            if (bidChanged | askChanged) {
-                _updatedContracts.insert(internalId);
-                if (contract._usedInPricing) {
-                    const bool missingBook = (contract.externalMarket<BID>().getPrice() == hf::NULL_PRICE) | (contract.externalMarket<ASK>().getPrice() == hf::NULL_PRICE);
-                    if (BOOST_UNLIKELY(missingBook)) {
-                        LOG(0, "RV {C[i1]}. Lost book for contract.", getContract(contract._internalId))
-                        disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
-                    }
-                }
-
-                if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
-                    LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContract(contract._internalId))
-                    disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
+        if (bidChanged | askChanged) {
+            _updatedContracts.emplace(internalId);
+            if (contract._usedInPricing) {
+                const bool missingBook = (contract.externalMarket<BID>().getPrice() == hf::NULL_PRICE) | (contract.externalMarket<ASK>().getPrice() == hf::NULL_PRICE);
+                if (BOOST_UNLIKELY(missingBook)) {
+                    LOG(0, "RV {C[i1]}. Lost book for contract.", getContract(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
                 }
             }
-        }
-    }
 
-    void onMarketDataUpdate(uint32_t internalId, bool bidChanged, hf::price_t bidPrice, hf::qty_t bidSize, bool askChanged, hf::price_t askPrice, hf::qty_t askSize) {
-        RvContract& contract = _contracts[internalId];
-        onMarketDataUpdate(contract, internalId, bidChanged, bidPrice, bidSize, askChanged, askPrice, askSize);
+            if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
+                LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContract(contract._internalId))
+                disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
+            }
+        }
     }
 
     bool canActOnMarketData() const {
@@ -1927,6 +1926,7 @@ public:
         ViperStrategyBaseImpl<RelativeValue>::init(frequency, internalHeartbeatPeriod, pnlLimitsChecker);
         initializeModel();
         _latencyTracking.unset();
+        _updatedContracts.reserve(_viperConfig._allContracts.size());
     }
 
     void initializeModel() {

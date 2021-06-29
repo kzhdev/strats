@@ -61,6 +61,24 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
             handleSTFUpdate(msg);
             break;
         }
+        case ViperMessageType::InternalBookUpdate: {
+            const auto& msg = reinterpret_cast<const InternalBookUpdate&>(message._data[0]);
+            auto& contract = _contracts[msg._contractId];
+            if (msg._lastMDbid >= contract._lastMDbid) {
+                auto& market = contract._markets[msg._side][Market::External];
+                auto& otherSideMarket = contract._markets[1 - msg._side][Market::External];
+                auto& tob = msg._book.l[0];
+                if (market.getPrice() != tob.pr || market.getUnAdjustedSize() != tob.q) {
+                    if (msg._side == BID) {
+                        onMarketDataUpdate(contract, true, tob.pr, tob.q, false, otherSideMarket.getPrice(), otherSideMarket.getUnAdjustedSize());
+                    } else {
+                        onMarketDataUpdate(contract, false, otherSideMarket.getPrice(), otherSideMarket.getUnAdjustedSize(), true, tob.pr, tob.q);
+                    }
+                }
+                contract._lastMDbid = msg._lastMDbid;
+            }
+            break;
+        }
         default:
             TLOG(0, "AS. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
