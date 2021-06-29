@@ -1885,7 +1885,7 @@ public:
                  getContract(internalId), event.cleanedLevelRemoved, state._books[BID].l[0].q, state._books[BID].l[0].pr, bestBid.q, bestBid.pr, state._books[ASK].l[0].q, state._books[ASK].l[0].pr,
                  bestAsk.q, bestAsk.pr, batch.extSequenceNumber);
         }
-        if(BOOST_UNLIKELY(!copyBooks(*this, state, event, _updatedContracts, batch.bid, true))) {
+        if(BOOST_UNLIKELY(!copyBooks(*this, state, event, _updatedContracts, true))) {
             logMDUpdate(batch, event);
         }
     }

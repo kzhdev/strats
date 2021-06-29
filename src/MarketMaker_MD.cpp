@@ -15,7 +15,7 @@ void MarketMaker::onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId
         return;
     }
 
-    copyBooks(*this, mm, event, _updatedContracts, bid);
+    copyBooks(*this, mm, event, _updatedContracts);
 }
 
 void MarketMaker::onMDTrade(hf::VENUE venue, const md::MDTradeEvent& event) {

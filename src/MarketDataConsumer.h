@@ -113,7 +113,7 @@ public:
 };
 
 template<typename BookOwnerT>
-inline bool copyBooks(ViperResource& resource, BookOwnerT& owner, const md::MDUpdateEvent& event, std::unordered_set<uint32_t>& updatedContracts, hf::batch_id_t bid, bool notifyGUI = false) {
+inline bool copyBooks(ViperResource& resource, BookOwnerT& owner, const md::MDUpdateEvent& event, std::unordered_set<uint32_t>& updatedContracts, bool notifyGUI = false) {
     bool success = true;
     auto checkAndSetChangeIndex = [&resource, &owner, &success, notifyGUI](int8_t& ourChangeIndex, md::level_index_t eventUpdatedNum, const char* side, const char* which) -> bool {
         int8_t changeIndex = -1;
