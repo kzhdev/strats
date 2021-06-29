@@ -1950,6 +1950,8 @@ public:
     void onMDTrade(const md::MDTradeEvent &event, const md::MDBatch &batch) {
         const uint32_t internalId = _viperConfig.getInternalId(event.sid);
         if (internalId != INVALID_INTERNAL_ID) {
+            _mdUpdated.emplace(internalId);
+            
             if (batch.venue == hf::VENUE::CME) {
                 ContractState& state = _contractStates[internalId];
                 if (!state._contract._toMarketMake) {
@@ -1967,7 +1969,6 @@ public:
                     }
                 }
             }
-            _mdUpdated.emplace(internalId);
         }
     }
 
@@ -2377,19 +2378,19 @@ public:
     }
 
     void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event, const md::MDBatch& batch) {
-        _mdUpdated.emplace(sidToInternalId(event.sid));
+        auto internalId = sidToInternalId(event.sid);
+        if (internalId != INVALID_INTERNAL_ID) {
+            _mdUpdated.emplace(internalId);
+        }
     }
 
     void onMDPreOpenPrice(const md::MDPreOpenPriceEvent &event, const md::MDBatch &/*batch*/) {
         _slow._iopTracking.onIOPUpdate(event);
-        _mdUpdated.emplace(sidToInternalId(event.sid));
     }
 
     void onMDUnknown(const md::MDEvent &event, const md::MDBatch& batch) {
-        _mdUpdated.emplace(sidToInternalId(event.sid));
     }
     void onMDCurrencyEvent(const md::MDCurrencyEvent& event, const md::MDBatch& batch) {
-        _mdUpdated.emplace(sidToInternalId(event.sid));
     }
 
     void onMDStatistics(const md::MDStatisticsEvent &event, const md::MDBatch &/*batch*/) {
@@ -2399,7 +2400,6 @@ public:
                 _slow._iopTracking.onIOPUpdate(event.sid, stat.price, stat.price);
             }
         }
-        _mdUpdated.emplace(sidToInternalId(event.sid));
     }
 
     void onMDQueuePositionUpdate(const md::MDQueuePositionUpdateEvent &event, const md::MDBatch &/*batch*/) {
