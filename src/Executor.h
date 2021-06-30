@@ -2882,19 +2882,19 @@ public:
         if (need_clean_up) {
             if (BOOST_LIKELY(i < md::top_t::LEVEL_NUM)) {
                 auto n = md::top_t::LEVEL_NUM - i;
-                TLOG(0, "EXE {i1}. Side {i2} before clean book", getContract(internalId), side)
-                for (uint32_t i = 0; i < md::top_t::LEVEL_NUM; ++i) {
-                    auto& l = book.l[i];
-                    TLOG(0, "    - {i1}@{d1}", l.q, ToDollars(l.pr))
-                }
+//                TLOG(0, "EXE {i1}. Side {i2} before clean book", getContract(internalId), side)
+//                for (uint32_t i = 0; i < md::top_t::LEVEL_NUM; ++i) {
+//                    auto& l = book.l[i];
+//                    TLOG(0, "    - {i1}@{d1}", l.q, ToDollars(l.pr))
+//                }
                 memcpy(&book.l[0], &book.l[i], sizeof(md::top_t::level_t) * n);
                 book.l[n].pr = hf::NULL_PRICE;
                 book.l[n].q = 0;
-                TLOG(0, "EXE {i1}. Side {i2} after clean book", getContract(internalId), side)
-                for (uint32_t i = 0; i < md::top_t::LEVEL_NUM; ++i) {
-                    auto& l = book.l[i];
-                    TLOG(0, "    - {i1}@{d1}", l.q, ToDollars(l.pr))
-                }
+//                TLOG(0, "EXE {i1}. Side {i2} after clean book", getContract(internalId), side)
+//                for (uint32_t i = 0; i < md::top_t::LEVEL_NUM; ++i) {
+//                    auto& l = book.l[i];
+//                    TLOG(0, "    - {i1}@{d1}", l.q, ToDollars(l.pr))
+//                }
             } else {
                 book.l[0].pr = hf::NULL_PRICE;
                 book.l[0].q = 0;
@@ -2903,7 +2903,6 @@ public:
             state._mdQtyChangeIndex[side] = 0;
             state._mdPriceChangeIndex[side] = 0;
             _updatedContracts.emplace(internalId);
-            LOG(0, "EXE {i1}. Clean book due to FAK Miss. lastMDbid={i2}", getContract(internalId), state._lastMDbid);
         }
 
         foreachStrategy([&book, internalId, side, bid = state._lastMDbid](ViperStrategyBase* strategy) {
