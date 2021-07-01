@@ -1033,27 +1033,29 @@ public:
                 }
             }
 
-            auto* levelToReduce = this;
             if (isModifying(order)) {
                 modifyWorkingQuantityInChain(mutableOrder, event.filledQty);
-                auto* targetLevel = levelToReduce = getTargetLevel(order);
+                auto* targetLevel = getTargetLevel(order);
 
-                hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
-                if (potentialOverfillQty > 0) {
-                    if (!mutableOrder.leavesQty) { //If full fill, we won't get the MO/CO so we're in a terminal state
-                        targetLevel->_potentialOverfill -= GetQuantity(order, POTENTIAL_OVERFILL_QTY);
-                    }
-                    else {
-                        hf::qty_t diff = potentialOverfillQty - GetQuantity(order, POTENTIAL_OVERFILL_QTY);
-                        targetLevel->_potentialOverfill += diff;
-                        SetQuantity(order, potentialOverfillQty, POTENTIAL_OVERFILL_QTY);
+                // add potentialOverfill only when the order modify down on same level
+                if (targetLevel == this) {
+                    hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
+                    if (potentialOverfillQty > 0) {
+                        if (!mutableOrder.leavesQty) { //If full fill, we won't get the MO/CO so we're in a terminal state
+                            targetLevel->_potentialOverfill -= GetQuantity(order, POTENTIAL_OVERFILL_QTY);
+                        }
+                        else {
+                            hf::qty_t diff = potentialOverfillQty - GetQuantity(order, POTENTIAL_OVERFILL_QTY);
+                            targetLevel->_potentialOverfill += diff;
+                            SetQuantity(order, potentialOverfillQty, POTENTIAL_OVERFILL_QTY);
+                        }
                     }
                 }
 
                 if (order.action_flags.is_cancelling && targetLevel != this) {
                     targetLevel->notifyIfLevelFree(); //Fencepost, since we don't have a way to check this in the above call
                 }
-            } else if (order.action_flags.is_cancelling) {
+            } else if (order.action_flags.is_cancelling) {  // TODO: Should we remove the "else"?
                 //We need to deal with an implicit node on the end of the modify tracker
                 _flight += event.filledQty;             
             }
@@ -1061,8 +1063,8 @@ public:
             notifyIfLevelFree();
 
             // Reduce target
-            hf::qty_t remainingQty = reduceTargetOnFill(*levelToReduce, event.filledQty);
-            if(remainingQty) {
+            hf::qty_t remainingQty = reduceTargetOnFill(*this, event.filledQty);
+            if (remainingQty) {
                 LOG(0, "OM {C[i1]}. Level {d1} over filled {i2}", getContractName(), _dollar, remainingQty)
             }
 

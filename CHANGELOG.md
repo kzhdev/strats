@@ -1,3 +1,6 @@
+#Version 1.53.0.26
+- Apply potential over fill only when the order is modifying down at the same level. 
+
 #Version 1.53.0.25
 - [rhonepublic] Implement ICE FAK removal 
 - When FAK missed, remove the level on the opposite side of Viper's internal book to prevent RV from sending hedge to the same price again
