@@ -97,9 +97,12 @@ public:
                         break;
                 }
                 _mdUpdated.emplace(internalId);
-            } else {
+            }
+#ifdef IS_DEV
+            else {
                 logging::GetLogger().logError(boost::str(boost::format("Received md update for unrecognized SID='%1%'") % mde.sid));
             }
+#endif
         }
         underlying().onEndMDBatch(batch.bid);
         _mdUpdated.clear();
