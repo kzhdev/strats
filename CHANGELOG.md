@@ -3,6 +3,10 @@
 - When disabling useGTC, put quote orders back if any strategies are enabled and quoting externally
 - [bugfix] Fix crash caused by adding a new throttler when looping through _throttlers in checkTimers.
 
+#Version 1.53.0.25
+- [rhonepublic] Implement ICE FAK removal 
+- When FAK missed, remove the level on the opposite side of Viper's internal book to prevent RV sending hedge to the same price again
+
 #Version 1.53.0.24
 - Remove Taj and Zhi from trader dropdown
 
