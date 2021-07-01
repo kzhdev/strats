@@ -1827,7 +1827,7 @@ public:
              toUInt(batch.venue))
 #endif
 
-        if (BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMDbid))) {
+        if (BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMDbid[toUInt(batch.venue)]))) {
             uint64_t eventMask = 0;
             const auto* data = batch.data;
             for (auto i = batch.count; i; --i) {
@@ -1840,7 +1840,7 @@ public:
                 batch.bid % batch.count % batch.time.hwTS % batch.time.srcTS % batch.time.srcSentTS % batch.time.stratTS %
                 static_cast<int>(batch.venue) % batch.extSequenceNumber % eventMask));
         }
-        _lastMDbid = batch.bid;
+        _lastMDbid[toUInt(batch.venue)] = batch.bid;
     }
 
     void onPostMDBatch(const md::MDBatch &batch) override {
@@ -3129,8 +3129,7 @@ public:
 
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
-        om::order_t* order = nullptr;
-        order =  this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, state._contract._orderIncrementQty, 0, om::STP_ACTION::CANCEL_PASSIVE);
+        om::order_t* order = this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, state._contract._orderIncrementQty, 0, om::STP_ACTION::CANCEL_PASSIVE);
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
         } else {
@@ -3411,7 +3410,7 @@ public:
 
     int16_t _transactionCapacity[toUInt(hf::VENUE::EUREX) + 1] = {0};
     om::instance_id_t _iid;
-    hf::batch_id_t _lastMDbid = 0;
+    hf::batch_id_t _lastMDbid[toUInt(hf::VENUE::LAST)] = {0};
 
     uint32_t _rvHedgeRejectCount = 0;
     const uint32_t RV_HEDGE_REJECT_COUNT_LIMIT = 20;
