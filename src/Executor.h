@@ -1850,7 +1850,7 @@ public:
         _lastMDbid[toUInt(batch.venue)] = batch.bid;
     }
 
-    void onPostMDBatch(const md::MDBatch &batch) override {
+    void onPostMDBatch(const md::MDBatch &batch, bool) override {
         for (auto internalId : _mdUpdated) {
             auto& state = _contractStates[internalId];
             state._lastMDbid = batch.bid;
