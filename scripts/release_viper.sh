@@ -8,6 +8,14 @@ fi
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
+shopt -s lastpipe
+tag=$( git tag -l | grep "release/${VERSION}" )
+
+if [ "$tag" == "" ]; then
+  echo "Tag release/$VERSION doesn't exist"
+  exit 1
+fi
+
 if ssh -x pythonsvc@corlsp003 [ ! -f "/home/pythonsvc/releases/RhoneDs_$VERSION" ]; then
   echo "Release RhoneDs_$VERSION to logging server ..."
   cd ..
@@ -17,53 +25,3 @@ if ssh -x pythonsvc@corlsp003 [ ! -f "/home/pythonsvc/releases/RhoneDs_$VERSION"
   fi
   cd $DIR || return
 fi
-
-function choose_server() {
-  declare -A servers
-  servers[b3]="brzlsp002"
-  servers[BACK_CRUDE]="icelsp023"
-  servers[BRENT]="icelsp035"
-  servers[KITCHEN_SINK]="cmelsp050"
-  servers[FED_FUNDS]="cmelsp029"
-  servers[HOGO_TERM]="icelsp032"
-  servers[US_RATE]="cmelsp043"
-  servers[WTI]="cmelsp034"
-  servers[RBOB]="cmelsp040"
-  servers[EUREX_RATE]="frklsp019"
-  servers[NG]="cmelsp051"
-  servers[STERLING]="baslsp013"
-
-  MAX_IDX=${#servers[@]}
-  IDX=1
-  for server in "${!servers[@]}"; do
-    echo "  $IDX. $server"
-    IDX=$((IDX+1))
-  done
-
-  IDX=0
-  while [ $IDX -lt 1 ] || [ $IDX -gt $MAX_IDX ]; do
-    read -p "Which server [1-$MAX_IDX]: " IDX
-    if [[ ! $IDX =~ ^[0-9]+$ ]]; then
-      IDX=0
-    fi
-  done
-  IDX=$((IDX-1))
-
-  KEYS=("${!servers[@]}")
-  SELECTED_SERVER=${servers[${KEYS[$IDX]}]}
-}
-
-choose_server
-
-echo "Deploy RhoneDs_$VERSION to" ${KEYS[$IDX]} - $SELECTED_SERVER
-ssh -x pythonsvc@$SELECTED_SERVER "
-  if [ ! -f '/home/pythonsvc/RhoneDs_$VERSION' ]; then
-    scp pythonsvc@corlsp003:/home/pythonsvc/releases/RhoneDs_$VERSION .
-  fi
-  if [ '`readlink /home/pythonsvc/RhoneDs`' != 'RhoneDs_$VERSION' ]; then
-    ln -sf RhoneDs_$VERSION RhoneDs
-    git add RhoneDs
-    git commit -m 'Update to Viper $VERSION'
-    git push
-  fi
-"
