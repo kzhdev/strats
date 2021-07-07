@@ -2641,6 +2641,12 @@ public:
             }
         }
 
+        // logShortTermFairsForVectors();
+        logShortTermFairsForContracts();
+        _hasDataForCharts = true;
+    }
+
+    void sendSTFUpdates() {
         if (!_shortTermFairUpdate.empty()) {
             if (isEnabled()) {
                 uint32_t dataSize = _shortTermFairUpdate.size() * sizeof(STFUpdate::STF);
@@ -2659,13 +2665,9 @@ public:
                                 ++data;
                             }
                         }, dataSize);
+                _shortTermFairUpdate.clear();
             }
-            _shortTermFairUpdate.clear();
         }
-
-        // logShortTermFairsForVectors();
-        logShortTermFairsForContracts();
-        _hasDataForCharts = true;
     }
 
     void logShortTermFairsForVectors() {
@@ -2837,6 +2839,10 @@ public:
             LOG(0, "RV Start of internal fills transaction {i1}", _fillsTransactionNumber);
             _withinInternalFillsOfCycle = true;
             sendGenericMessageToExecutor(ViperMessageType::EndOfQuotes, _fillsTransactionNumber++);
+        }
+
+        if (noErrorsOnCreateQuote) {
+            sendSTFUpdates();
         }
         return noErrorsOnCreateQuote;
     }
@@ -3103,7 +3109,6 @@ private:
     bool _calculateDueToFront = false;
     bool _hadInternalMarketData = false;
     bool _hadExternalMarketData = false;
-
     uint32_t _numberOfFills = 0;
 
     om::client_id_t _id;
