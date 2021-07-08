@@ -1531,7 +1531,7 @@ public:
         RvContract& contract = _contracts[internalId];
 
         if (BOOST_UNLIKELY(contract._lastMDbid >= batch.bid)) {
-            logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batch.bid % contract._lastMDbid));
+            logging::GetLogger().logWarning(boost::str(boost::format("RV %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batch.bid % contract._lastMDbid));
             return;
         }
 
@@ -1736,7 +1736,7 @@ public:
         RvContract& contract = _contracts[internalId];
 
         if (BOOST_UNLIKELY(contract._lastMDbid >= batchBid)) {
-            logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batchBid % contract._lastMDbid));
+            logging::GetLogger().logWarning(boost::str(boost::format("RV %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batchBid % contract._lastMDbid));
             return;
         }
 
