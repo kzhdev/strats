@@ -297,7 +297,7 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
                     orderId(StrategyId::ArbieSpreader, Order::Type::Quoting), BID,
                     quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
                     canQuoteExternal, pBestBid->_leanOnRV, 0);
-            LOG(0, "AS {[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV={i6}", contract.name(),
+            LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV={i6}", contract.name(),
                 BID, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
                 ToDollars(quote._externalPrice), quote._hedgePath, pBestBid->_leanOnRV)
             contract._lastQuoteSent[BID] = quote;
@@ -314,7 +314,7 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
                     orderId(StrategyId::ArbieSpreader, Order::Type::Quoting), BID,
                     quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
                     canQuoteExternal, false,0);
-            LOG(0, "AS {[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV=0", contract.name(),
+            LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV=0", contract.name(),
                 BID, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
                 ToDollars(quote._externalPrice), quote._hedgePath)
             contract._lastQuoteSent[BID] = quote;
@@ -342,7 +342,7 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
                     orderId(StrategyId::ArbieSpreader, Order::Type::Quoting), ASK,
                     quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
                     canQuoteExternal, pBestAsk->_leanOnRV, 0);
-            LOG(0, "AS {[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV={i6}", contract.name(),
+            LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV={i6}", contract.name(),
                 ASK, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
                 ToDollars(quote._externalPrice), quote._hedgePath, pBestAsk->_leanOnRV)
             contract._lastQuoteSent[ASK] = quote;
@@ -359,7 +359,7 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
                     orderId(StrategyId::ArbieSpreader, Order::Type::Quoting), ASK,
                     quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
                     canQuoteExternal, false,0);
-            LOG(0, "AS {[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV=0", contract.name(),
+            LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV=0", contract.name(),
                 ASK, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
                 ToDollars(quote._externalPrice), quote._hedgePath)
             contract._lastQuoteSent[ASK] = quote;
