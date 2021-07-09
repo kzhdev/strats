@@ -3,6 +3,7 @@
 - Not sending Fill sound for fills transferred from AS to RV
 - Fixed potential crash caused by an invalid internal instrument id
 - Fixed log message
+- Check RV position limit after all AS to RV fills received
 
 #Version 1.54.0.0
 - Implemented ArbieSpreader strategy

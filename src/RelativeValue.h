@@ -722,13 +722,13 @@ public:
         market.ackFAKAdjustment(hedgeAck._hedgeId, hedgeAck._size, hedgeAck._orderId);
     }
 
-    void handleFill(const FillMessage& fill) {
+    void handleFill(const FillMessage& fill, bool checkLimit = true) {
         RvContract& contract = _contracts[fill._contractId];
         if (fill._source == FillSource::AsToRv) {
             const_cast<FillMessage&>(fill)._rvStf = _shortTermFairsForContracts.getRef(fill._contractId)._fair;
             sendFillToFront(fill);
             LOG(0, "RV {C[i1]}. got AS filled. Side={i2} Price={d1} Qty={i3}", getContract(contract._internalId), fill._side, ToDollars(fill._price), fill._qty)
-            addPosition(contract, (fill._side == BID ? fill._qty : -fill._qty), true, false);
+            addPosition(contract, (fill._side == BID ? fill._qty : -fill._qty), checkLimit, false);
             return;
         }
 
