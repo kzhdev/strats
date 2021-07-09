@@ -728,7 +728,7 @@ inline void ArbieSpreader::Contract::updatePaths(bool force) {
 
         auto bestPath = _paths[Side][0];
         if (oldBest != bestPath) {
-            LOG(0, "AS {{C[i1]}. Lean on path {i2} {i3}@{d1}", bestPath->_contract->name(),
+            LOG(0, "AS {C[i1]}. Lean on path {i2} {i3}@{d1}", bestPath->_contract->name(),
                 bestPath->_id, bestPath->_priceSize._size, ToDollars(bestPath->_priceSize._price))
         }
     }
