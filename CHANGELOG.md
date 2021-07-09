@@ -2,6 +2,7 @@
 - Batching Fill Sound every 1 second
 - Not sending Fill sound for fills transferred from AS to RV
 - Fixed potential crash caused by an invalid internal instrument id
+- Fixed log message
 
 #Version 1.54.0.0
 - Implemented ArbieSpreader strategy
