@@ -235,7 +235,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         template<uint32_t Side>
         bool updateMarket(MarketIds marketId, hf::price_t price, hf::qty_t qty, std::unordered_set<Market*>& affected_markets) {
-            LOG(0, "AS {C[i1]}. MD update Side={i2} marketId={i3} {i4}@{d1}", name(), Side, marketId, qty, ToDollars(price))
+            LOG(0, "AS {C[i1]}. MD update Side={i2} marketId={i3} {i4}@{d1}", name(), Side, toUInt(marketId), qty, ToDollars(price))
             Market* updated;
             if (marketId == MarketIds::MARKET_ID_EXTERNAL) {
                 _markets[Side][Market::Type::External].update(price, qty, affected_markets);
