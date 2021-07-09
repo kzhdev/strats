@@ -173,6 +173,7 @@ public:
         _chartRefreshInterval = GetCyclesFromMilliSeconds(200, _frequency);
         _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
         _versionSendingTime = GetCyclesFromSeconds(20, _frequency);
+        _fillSoundThreshold = GetCyclesFromSeconds(1, _frequency);
 
         for(unsigned i = 0; i < _viperConfig._marketMakerConfigs.size(); ++i) {
             const auto& sym = _viperConfig._marketMakerConfigs[i]._contract;
@@ -1056,7 +1057,13 @@ public:
             // int64_t time, double edgeStf, double edgeMkt
             auto [time, edgeStf, edgeMkt] = sendFillToGUI(fill);
             sendFillToKDB(fill, time, edgeStf, edgeMkt);
-            sendPlaySound(SoundId::Fill);
+            if (fill._source != FillSource::AsToRv) {
+                auto now = clockUtil::GetCycles();
+                if (now >= _nextFillSoundTime) {
+                    sendPlaySound(SoundId::Fill);
+                    _nextFillSoundTime = now + _fillSoundThreshold;
+                }
+            }
         }
         doPnl(fill);
         if (BOOST_LIKELY(realFill)) {
@@ -1881,6 +1888,8 @@ public:
 
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;
+    uint64_t _fillSoundThreshold = 0;
+    uint64_t _nextFillSoundTime = 0;
 
     uint64_t _nextChartRefreshTime = 0;
     uint64_t _chartRefreshInterval;

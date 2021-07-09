@@ -1,3 +1,8 @@
+#Version 1.54.0.1
+- Batching Fill Sound every 1 second
+- Not sending Fill sound for fills transferred from AS to RV
+- Fixed potential crash caused by an invalid internal instrument id
+
 #Version 1.54.0.0
 - Implemented ArbieSpreader strategy
 - When disabling useGTC, put quote orders back if any strategies are enabled and quoting externally

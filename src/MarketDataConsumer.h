@@ -80,23 +80,25 @@ public:
                     case md::MDEvent::TYPE::UPDATE: {
                         const auto& event = static_cast<const md::MDUpdateEvent&> (mde);
                         underlying().onMDUpdate(event, internalId, batch.bid);
+                        _mdUpdated.emplace(internalId);
                         break;
                     }
                     case md::MDEvent::TYPE::TRADE: {
                         const auto& event = static_cast<const md::MDTradeEvent&> (mde);
                         underlying().onMDTrade(batch, event, internalId);
+                        _mdUpdated.emplace(internalId);
                         break;
                     }
                     case md::MDEvent::TYPE::STATUS: {
                         const auto& event = static_cast<const md::MDStatusEvent&> (mde);
                         underlying().onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId);
+                        _mdUpdated.emplace(internalId);
                         break;
                     }
                     default:
                         underlying().handleUncommonMDEvent(mde, batch, internalId);
                         break;
                 }
-                _mdUpdated.emplace(internalId);
             }
 #ifdef IS_DEV
             else {
