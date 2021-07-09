@@ -145,13 +145,15 @@ struct Quote {
             _bestSize = contracts[contractId]._definition.toValidQty(static_cast<hf::qty_t>(bestLean._size + 0.0001));
             _bestLeanIndex = bestLean._instrumentIndex;
 
+            bool hasChange = false;
+
             auto& contract = contracts[contractId];
             bool internalPriceChanged = std::abs(oldBestPrice - _bestPrice) > contract._priceChangeThreshold;
-            _hasChange |= internalPriceChanged | (oldBestSize != _bestSize);
+            hasChange |= (internalPriceChanged | (oldBestSize != _bestSize));
 
-            auto checkExternalChange = [this, &contract, oldExtPrice, oldExtSize]() {
+            auto checkExternalChange = [this, &contract, oldExtPrice, oldExtSize]() -> bool {
                 bool externalPriceChanged = std::abs(oldExtPrice - _externalPrice) > contract._priceChangeThreshold;
-                _hasChange |= externalPriceChanged | (oldExtSize != _externalSize);
+                return (externalPriceChanged | (oldExtSize != _externalSize));
             };
 
             hf::price_t roundedPrice = hf::NULL_PRICE;
@@ -182,19 +184,18 @@ struct Quote {
                                                                   logErrorFunc);
                             _externalPrice = roundedPrice;
                             _externalSize = 0;
-                            checkExternalChange();
                             return false;
                         }
                     }
                 }
                 _externalPrice = roundedPrice;
                 _externalSize = contracts[contractId]._definition.toValidQty(staticQuote ? quoteSize : std::max(_bestSize, static_cast<hf::qty_t>(clubSize / clubCount + 0.0001)));
-                checkExternalChange();
+                hasChange |= checkExternalChange();
             }
             else {
                 _externalPrice = hf::NULL_PRICE;
                 _externalSize = 0;
-                checkExternalChange();
+                hasChange |= checkExternalChange();
                 if(BOOST_LIKELY(isEnabled)) {
                     const auto &validationResult = validateMaxTicksThroughMarketFunc(bestLean._price, bestLean._instrumentIndex);
                     if (BOOST_UNLIKELY(!validationResult.isValid)) {
@@ -204,10 +205,12 @@ struct Quote {
                 }
             }
 
+            _hasChange |= hasChange;
             auto& leanContract = contracts[bestLean._instrumentIndex];
             auto& market = bestLean._isExternal ? leanContract.externalMarket(side) : leanContract.internalMarket(side);
 
-            if (_hasChange || _previousBestLeanIndex != bestLean._instrumentIndex) {
+
+            if (hasChange || (_previousBestLeanIndex != bestLean._instrumentIndex)) {
                 LOG(0, "RV {C[i1]}. Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} Lean={C[i5]} {i6}@{d3} MarketId={i7}",
                     getContract(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice), getContract(bestLean._instrumentIndex, contracts),
                     market.getAdjustedSize(), ToDollars(market.getPrice()), market.getId())
@@ -564,13 +567,26 @@ public:
     void handleHardShutdown() {}
 
     void handleDisabled() {
+        for (uint32_t contractIndex = 0; contractIndex < _numberOfPricingContracts; ++contractIndex) {
+            auto& stf = _shortTermFairsForContracts.getRef(contractIndex);
+            if (stf._subscribed) {
+                _shortTermFairUpdate.emplace(contractIndex, &stf);
+            }
+        }
+
         for (uint32_t contractIndex = _indexOfFirstTradedContract; contractIndex < _numberOfAllContracts; ++contractIndex) {
             RvContract &contract = _contracts[contractIndex];
             if (contract._traded) {
                 contract._quotes[BID].resetBest();
                 contract._quotes[ASK].resetBest();
             }
+
+            auto& stf = _shortTermFairsForContracts.getRef(contractIndex);
+            if (stf._subscribed) {
+                _shortTermFairUpdate.emplace(contractIndex, &stf);
+            }
         }
+        sendSTFUpdates(true);
         _orderRequestMgr.sendCancelRequest(StrategyId::RelativeValue);
     }
 
@@ -2646,18 +2662,18 @@ public:
         _hasDataForCharts = true;
     }
 
-    void sendSTFUpdates() {
+    void sendSTFUpdates(bool reset = false) {
         if (!_shortTermFairUpdate.empty()) {
-            if (isEnabled()) {
+            if (isEnabled() || reset) {
                 uint32_t dataSize = _shortTermFairUpdate.size() * sizeof(STFUpdate::STF);
                 getStrategy(StrategyId::ArbieSpreader)->sendMessage<STFUpdate>(
                         ViperMessageType::STFUpdate,
-                        [this](STFUpdate& msg) {
+                        [this, reset](STFUpdate& msg) {
                             msg._numSTF = _shortTermFairUpdate.size();
                             STFUpdate::STF* data = msg._data;
                             for (auto& kvp : _shortTermFairUpdate) {
                                 data->_contractId = kvp.first;
-                                data->_fair = kvp.second->_fair;
+                                data->_fair = reset ? hf::NULL_PRICE : kvp.second->_fair;
                                 if (BOOST_UNLIKELY(!kvp.second->_firstUpdateSent)) {
                                     kvp.second->_firstUpdateSent = true;
                                     logging::GetLogger().logInfo(boost::str(boost::format("RV. Send %1% stf. stf=%2%") % _contracts[kvp.first]._definition._name % kvp.second->_fair));

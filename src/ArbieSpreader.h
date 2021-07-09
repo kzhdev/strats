@@ -277,7 +277,12 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
             }
 
             // Best market updated or best market changed
-            return (_bestMarket[Side] == updated || oldBest == updated);
+            auto changed =  (_bestMarket[Side] == updated || oldBest == updated);
+            if (changed) {
+                LOG(0, "AS {C[i1]}. {i2} BestMarket MarketId={i3} {i4}({i5})@{d1}", name(), Side, _bestMarket[Side]->getId(),
+                    _bestMarket[Side]->getUnAdjustedSize(), _bestMarket[Side]->getAdjustedSize(), ToDollars(_bestMarket[Side]->getPrice()))
+            }
+            return changed;
         }
 
         template<uint32_t Side>
@@ -623,7 +628,7 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
         }
 
         if (BOOST_UNLIKELY(!_stfOffset._id.empty() && _stfOffset._stfOffset == hf::NULL_PRICE)) {
-            // STF hasn't received from RV yet
+            // STF hasn't received from RV yet or reset when RV disabled
             if (BOOST_UNLIKELY(_priceSize.valid())) {
                 _priceSize.reset();
                 return true;

@@ -184,7 +184,10 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
     hf::price_t stfOffset = 0;
     for (auto& stf : _shortTermFairs) {
         if (stf._fair == hf::NULL_PRICE) {
-            assert(_stfOffset == hf::NULL_PRICE);
+            if (_stfOffset != hf::NULL_PRICE) {
+                LOG(0, "AS {C[i1]}. Received STF reset.", stf._contractId)
+            }
+            _stfOffset = hf::NULL_PRICE;
             return false;
         }
         stfOffset += stf._ratio * stf._fair;
