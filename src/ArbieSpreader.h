@@ -383,7 +383,7 @@ private:
     bool handleEnabled() {
         if (canEnable()) {
             updateQuotes(true);
-            return true;
+            return isEnabled();
         }
         return false;
     }
@@ -678,11 +678,6 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
                 // apply commission to external market
                 marketPrice = applyPriceOffset<Side>(marketPrice, -pathContract._contract->_extCommission);
             }
-//            DLOG(0, "AS {C[i1]}. Update Path {i2} Side={i3} lean={C[i4]} marketId={i5} side={i6} {i7}({i8})@{d1}({d2})", _contract->name(),
-//                 _id, _side, pathContract._contract->name(), _bestHedgeMarket[i]->getId(),
-//                 _bestHedgeMarket[i]->getSide(), _bestHedgeMarket[i]->getUnAdjustedSize(),
-//                 _bestHedgeMarket[i]->getAdjustedSize(), ToDollars(_bestHedgeMarket[i]->getPrice()),
-//                 ToDollars(marketPrice))
 
             if (marketPrice == hf::NULL_PRICE) {
                 _priceSize.reset();
@@ -705,6 +700,14 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
                     break;
                 }
             }
+
+#ifdef IS_DEV
+            DLOG(0, "AS {C[i1]}. Update Path {i2} Side={i3} lean={C[i4]} marketId={i5} side={i6} {i7}({i8})@{d1}({d2})", _contract->name(),
+                 _id, _side, pathContract._contract->name(), _bestHedgeMarket[i]->getId(),
+                 _bestHedgeMarket[i]->getSide(), _bestHedgeMarket[i]->getUnAdjustedSize(),
+                 _bestHedgeMarket[i]->getAdjustedSize(), ToDollars(_bestHedgeMarket[i]->getPrice()),
+                 ToDollars(marketPrice))
+#endif
 
             _priceSize._price += pathContract._multiplier * marketPrice;
             _priceSize._size = std::min<hf::qty_t>(_priceSize._size, size);
@@ -735,24 +738,24 @@ inline void ArbieSpreader::Contract::updatePaths(bool force) {
         auto oldBest = _paths[Side][0];
         std::sort(_paths[Side].begin(), _paths[Side].end(), PathSorter<Side>());
 
-//#ifdef IS_DEV
-//        for (auto* path : _paths[Side]) {
-//            LOG(0, " - AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", path->_contract->name(), path->_id, Side,
-//                path->_priceSize._size, ToDollars(path->_priceSize._price))
-//            for (auto& contract : path->_leanContracts) {
-//                LOG(0, " - LeanContract={C[i1]}", contract._contract->name())
-//                auto markets = getLeanMarkets<Side>(contract);
-//                LOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
-//                    markets[Market::Internal].getId(), markets[Market::Internal].getSide(),
-//                    ToDollars(markets[Market::Internal].getPrice()), markets[Market::Internal].getUnAdjustedSize(),
-//                    markets[Market::Internal].getAdjustedSize())
-//                LOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
-//                    markets[Market::External].getId(), markets[Market::Internal].getSide(),
-//                    ToDollars(markets[Market::External].getPrice()), markets[Market::External].getUnAdjustedSize(),
-//                    markets[Market::External].getAdjustedSize())
-//            }
-//        }
-//#endif
+#ifdef IS_DEV
+        for (auto* path : _paths[Side]) {
+            TLOG(0, " - AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", path->_contract->name(), path->_id, Side,
+                path->_priceSize._size, ToDollars(path->_priceSize._price))
+            for (auto& contract : path->_leanContracts) {
+                TLOG(0, " - LeanContract={C[i1]}", contract._contract->name())
+                auto markets = getLeanMarkets<Side>(contract);
+                TLOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
+                    markets[Market::Internal].getId(), markets[Market::Internal].getSide(),
+                    ToDollars(markets[Market::Internal].getPrice()), markets[Market::Internal].getUnAdjustedSize(),
+                    markets[Market::Internal].getAdjustedSize())
+                TLOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
+                    markets[Market::External].getId(), markets[Market::Internal].getSide(),
+                    ToDollars(markets[Market::External].getPrice()), markets[Market::External].getUnAdjustedSize(),
+                    markets[Market::External].getAdjustedSize())
+            }
+        }
+#endif
 
         auto bestPath = _paths[Side][0];
         if (oldBest != bestPath) {
@@ -822,7 +825,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
     auto& quote = contract._quote[Side];
     if (pBestPath->_priceSize.valid()) {
         quote._leanPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, pBestPath->_commission);
-        quote._internalPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, ((double)-contract._edge * _edgeMultiplier));
+        quote._internalPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, -contract._edge);
         quote._internalSize = std::min<hf::qty_t>(pBestPath->_priceSize._size, contract._quoteSize);
         quote._hedgePath = pBestPath->_id;
         if (canQuoteExternal) {
@@ -883,6 +886,9 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
 template<uint32_t Side>
 inline bool ArbieSpreader::checkMaxTicksThroughMarket(Contract& contract, Contract::Quote& quote) {
     auto otherSideBestMarket = contract.template getBestMarket<GetOtherSide<Side>()>();
+    if (quote._externalPrice == hf::NULL_PRICE ||  otherSideBestMarket->getPrice() == hf::NULL_PRICE) {
+        return true;
+    }
     return calculateTicksThroughMarket<Side>(quote._externalPrice, otherSideBestMarket->getPrice()) < contract._maxTicksThroughMarket;
 }
 

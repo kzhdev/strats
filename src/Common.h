@@ -135,6 +135,7 @@ enum class MarketMakerParametersColumns {
 enum class ArbieSpreaderParameterColumns {
     QuoteExternal,
     Edge,
+    ActualEdge,
     QuoteSize,
     STF,
     HedgeOffset,

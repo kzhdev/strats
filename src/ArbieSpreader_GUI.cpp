@@ -18,6 +18,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
     guiThings.addHeader(definition, {
         headerCell(ArbieSpreaderParameterColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type),
         headerCell(ArbieSpreaderParameterColumns::Edge, "Edge", false, proto::DataType::double_type),
+        headerCell(ArbieSpreaderParameterColumns::ActualEdge, "ActualEdge", true, proto::DataType::double_type),
         headerCell(ArbieSpreaderParameterColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type),
         headerCell(ArbieSpreaderParameterColumns::STF, "STF", true, proto::DataType::rhone_price),
         headerCell(ArbieSpreaderParameterColumns::HedgeOffset, "hedgeOffset", false, proto::DataType::double_type),
@@ -44,6 +45,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
         guiThings.addRow(cells, internalId, {
             rowCell(ArbieSpreaderParameterColumns::QuoteExternal, std::to_string(config._quoteExternal)),
             rowCell(ArbieSpreaderParameterColumns::Edge, std::to_string(config._edge)),
+            rowCell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(config._edge * _edgeMultiplier)),
             rowCell(ArbieSpreaderParameterColumns::QuoteSize, std::to_string(config._quoteSize)),
             rowCell(ArbieSpreaderParameterColumns::STF, std::to_string(hf::NULL_PRICE)),
             rowCell(ArbieSpreaderParameterColumns::HedgeOffset, std::to_string(config._hedgeOffset)),
@@ -104,8 +106,7 @@ void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sen
 
         YesNoType bidCrossed = YesNoType::Unknown;
         YesNoType askCrossed = YesNoType::Unknown;
-        auto s = state();
-        if (s == SystemState::CheckQuotes || s == SystemState::Enabled) {
+        if (state() == SystemState::CheckQuotes) {
             auto extBid = contract._markets[BID][Market::External].getPrice();
             auto extAsk = contract._markets[ASK][Market::External].getPrice();
             if (contract._quote[BID]._externalPrice != hf::NULL_PRICE && extAsk != hf::NULL_PRICE) {
@@ -117,6 +118,7 @@ void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sen
         }
 
         guiThings.addRow(cells, contract._def._internalId, {
+                rowCell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(contract._edge)),
                 rowCell(ArbieSpreaderParameterColumns::STF, std::to_string(contract._stf)),
                 rowCell(ArbieSpreaderParameterColumns::BidLeanPath, contract._quote[BID]._hedgePath == -1 ? "" : contract._paths[BID][0]->_name),
                 rowCell(ArbieSpreaderParameterColumns::AskLeanPath, contract._quote[ASK]._hedgePath == -1 ? "" : contract._paths[ASK][0]->_name),
