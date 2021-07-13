@@ -38,9 +38,11 @@ void ArbieSpreader::initializeContracts() {
             contract._usedInQuoting = true;
             auto& config = *iter;
             contract._quoteExternally = config._quoteExternal;
-            contract._edge = ToRhonePrice(config._edge);
+            _edgeMultiplier = boost::lexical_cast<double>(_viperConfig.getGlobal(AS_EDGE_MULTIPLIER));
+            contract._edge = ToRhonePrice(config._edge * _edgeMultiplier);
             contract._quoteSize = config._quoteSize;
             contract._hedgeOffset = config._hedgeOffset;
+            contract._maxTicksThroughMarket = config._maxTicksThroughMarket * configContract._tickSize;
             contract._hedgeOffsetPrice = config._hedgeOffset * configContract._tickSize;
             contract._shortTermFairOffsets.reserve(config._paths.size());
             uint32_t id = 0;
@@ -217,16 +219,29 @@ void ArbieSpreader::runCycle(uint64_t now) {
     }
 }
 
+bool ArbieSpreader::canEnable() const noexcept {
+    if (!isEdgeMultiplierWithinLimits(_edgeMultiplier)) {
+        sendErrorMessage(boost::str(boost::format("AS width multiplier not within limits. Value must be > 1 and < 10 Value=%1%") % _edgeMultiplier), ErrorType::Critical);
+        return false;
+    }
+    return true;
+}
+
+void ArbieSpreader::handleCheckQuotes() {
+    LOG(0, "AS check quotes {i1}", 0);
+    updateQuotes(false, true);
+}
+
 bool ArbieSpreader::isContractQuoteExternal(uint32_t contractId) const noexcept {
     return _contracts[contractId]._quoteExternally;
 }
 
 void ArbieSpreader::onQuoteExternalChanged(SystemState quoteExt) {
-    updateQuotes(true);
+    updateQuotes(true, state() == SystemState::CheckQuotes);
 }
 
 void ArbieSpreader::onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
-    updateQuotes(true);
+    updateQuotes(true, state() == SystemState::CheckQuotes);
 }
 
 void ArbieSpreader::addUpdatedContract(Contract& contract) {
@@ -256,120 +271,28 @@ void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket)
     }
 }
 
-void ArbieSpreader::updateQuotes(bool force) {
+void ArbieSpreader::updateQuotes(bool force, bool checkQuote) {
     for (auto& contract : _contracts) {
         if (contract._usedInQuoting) {
-            updateQuotes(contract, force);
+            updateQuotes(contract, force, checkQuote);
         }
     }
 }
 
-bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
-    contract.updatePaths();
+bool ArbieSpreader::updateQuotes(Contract& contract, bool force, bool checkQuote) {
+    contract.updatePaths(force);
 
-    if (!isEnabled()) {
+    if (!isEnabled() && !checkQuote) {
         return false;
     }
 
-    auto& lastRequest = _lastOrderRequests[contract._def._internalId];
-    auto* pBestBid = contract._paths[BID][0];
-    auto* pBestAsk = contract._paths[ASK][0];
-    bool quoteUpdated = false;
     bool canQuoteExternal = canQuoteExternally() && canExchangeQuoteExternally(contract._def._venue) && contract._quoteExternally;
-    if (pBestBid->_priceSize.valid()) {
-        auto& quote = contract._quote[BID];
-        quote._leanPrice = pBestBid->_priceSize._price + pBestBid->_commission;
-        quote._internalPrice = pBestBid->_priceSize._price - contract._edge;
-        quote._internalSize = std::min<hf::qty_t>(pBestBid->_priceSize._size, contract._quoteSize);
-        quote._hedgePath = pBestBid->_id;
-        if (canQuoteExternal) {
-            quote._externalPrice = RoundToTickSize(quote._internalPrice, contract._def._tickSize, BID);
-            quote._externalSize = contract.getExternalQuoteSize<BID>(quote);
-        } else {
-            quote._externalPrice = hf::NULL_PRICE;
-            quote._externalSize = 0;
-        }
-
-        if (contract._lastQuoteSent[BID] != quote || contract._forceUpdate[BID] || force) {
-            quoteUpdated = true;
-            lastRequest._quote[BID] = _orderRequestMgr.sendQuoteRequest(
-                    contract._def._internalId,
-                    orderId(StrategyId::ArbieSpreader, Order::Type::Quoting), BID,
-                    quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
-                    canQuoteExternal, pBestBid->_leanOnRV, 0);
-            LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanPrice={d3} LeanOnRV={i6}", contract.name(),
-                BID, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
-                ToDollars(quote._externalPrice), quote._hedgePath, ToDollars(quote._leanPrice), pBestBid->_leanOnRV)
-            contract._lastQuoteSent[BID] = quote;
-            contract._forceUpdate[BID] = false;
-            tryAddAggressiveQuoteAdjustment<BID>(contract, pBestBid, quote, canQuoteExternal);
-        }
-    } else {
-        auto& quote = contract._quote[BID];
-        if (quote._hedgePath != -1) {
-            quote.reset();
-            quoteUpdated = true;
-            lastRequest._quote[BID] = _orderRequestMgr.sendQuoteRequest(
-                    contract._def._internalId,
-                    orderId(StrategyId::ArbieSpreader, Order::Type::Quoting), BID,
-                    quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
-                    canQuoteExternal, false,0);
-            LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV=0", contract.name(),
-                BID, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
-                ToDollars(quote._externalPrice), quote._hedgePath)
-            contract._lastQuoteSent[BID] = quote;
-            contract._forceUpdate[BID] = false;
-        }
-    }
-
-    if (pBestAsk->_priceSize.valid()) {
-        auto& quote = contract._quote[ASK];
-        quote._leanPrice = pBestAsk->_priceSize._price - pBestAsk->_commission;
-        quote._internalPrice = pBestAsk->_priceSize._price + contract._edge;
-        quote._internalSize = std::min<hf::qty_t>(pBestAsk->_priceSize._size, contract._quoteSize);
-        quote._hedgePath = pBestAsk->_id;
-        if (canQuoteExternal) {
-            quote._externalPrice = RoundToTickSize(quote._internalPrice, contract._def._tickSize, ASK);
-            quote._externalSize = contract.getExternalQuoteSize<ASK>(quote);
-        } else {
-            quote._externalPrice = hf::NULL_PRICE;
-            quote._externalSize = 0;
-        }
-        if (contract._lastQuoteSent[ASK] != quote || contract._forceUpdate[ASK] || force) {
-            quoteUpdated = true;
-            lastRequest._quote[ASK] = _orderRequestMgr.sendQuoteRequest(
-                    contract._def._internalId,
-                    orderId(StrategyId::ArbieSpreader, Order::Type::Quoting), ASK,
-                    quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
-                    canQuoteExternal, pBestAsk->_leanOnRV, 0);
-            LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanPrice={d3} LeanOnRV={i6}", contract.name(),
-                ASK, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
-                ToDollars(quote._externalPrice), quote._hedgePath, ToDollars(quote._leanPrice), pBestAsk->_leanOnRV)
-            contract._lastQuoteSent[ASK] = quote;
-            contract._forceUpdate[ASK] = false;
-            tryAddAggressiveQuoteAdjustment<ASK>(contract, pBestAsk, quote, canQuoteExternal);
-        }
-    } else {
-        auto& quote = contract._quote[ASK];
-        if (quote._hedgePath != -1) {
-            quote.reset();
-            quoteUpdated = true;
-            lastRequest._quote[ASK] = _orderRequestMgr.sendQuoteRequest(
-                    contract._def._internalId,
-                    orderId(StrategyId::ArbieSpreader, Order::Type::Quoting), ASK,
-                    quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
-                    canQuoteExternal, false,0);
-            LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV=0", contract.name(),
-                ASK, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
-                ToDollars(quote._externalPrice), quote._hedgePath)
-            contract._lastQuoteSent[ASK] = quote;
-            contract._forceUpdate[ASK] = false;
-        }
-    }
+    auto& lastRequest = _lastOrderRequests[contract._def._internalId];
+    bool quoteUpdated = updateQuote<BID>(contract, force, canQuoteExternal, lastRequest);
+    quoteUpdated |= updateQuote<ASK>(contract, force, canQuoteExternal, lastRequest);
 
     if (quoteUpdated) {
         _orderRequestMgr.notifyOrderRequest(contract._def._internalId, StrategyId::ArbieSpreader, lastRequest);
-
     }
     return quoteUpdated;
 }

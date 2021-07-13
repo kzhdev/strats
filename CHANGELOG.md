@@ -4,6 +4,12 @@
 - Fixed potential crash caused by an invalid internal instrument id
 - Fixed log message
 - Check RV position limit after all AS to RV fills received
+- Reset AS STFs when RV disabled
+- Implemented AS MaxTicksThroughMarket check
+- Added CheckQuote handing in AS  
+- Added BidCross, AskCross columns in AS grid
+- Added ASEdgeMultiplier global config
+- [optimization] Optimized RV MaxTicksThroughMarket check by reducing unnecessary calculation
 
 #Version 1.54.0.0
 - Implemented ArbieSpreader strategy

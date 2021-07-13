@@ -5,6 +5,11 @@ using namespace Python;
 
 namespace {
 GUIThings& guiThings = GUIThings::get();
+
+inline uint32_t crossedColor(YesNoType ynt) {
+    constexpr Color colors[] = {Color::TRANSPARENT, Color::TRANSPARENT_RED, Color::TRANSPARENT_GREEN};
+    return toUInt(colors[toUInt(ynt)]);
+}
 }
 
 void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) {
@@ -16,6 +21,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
         headerCell(ArbieSpreaderParameterColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type),
         headerCell(ArbieSpreaderParameterColumns::STF, "STF", true, proto::DataType::rhone_price),
         headerCell(ArbieSpreaderParameterColumns::HedgeOffset, "hedgeOffset", false, proto::DataType::double_type),
+        headerCell(ArbieSpreaderParameterColumns::MaxTicksThroughMarket, "MaxTicksThroughMarket", false, proto::DataType::double_type),
         headerCell(ArbieSpreaderParameterColumns::BidLeanPath, "BidLeanPath", true, proto::DataType::string_type),
         headerCell(ArbieSpreaderParameterColumns::AskLeanPath, "AskLeanPath", true, proto::DataType::string_type),
         headerCell(ArbieSpreaderParameterColumns::BidLeanPrice, "BidLeanPrice", true, proto::DataType::rhone_price),
@@ -28,6 +34,8 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
         headerCell(ArbieSpreaderParameterColumns::BidExternalSize, "BidExternalSize", true, proto::DataType::unsigned_type),
         headerCell(ArbieSpreaderParameterColumns::AskInternalSize, "AskInternalSize", true, proto::DataType::unsigned_type),
         headerCell(ArbieSpreaderParameterColumns::AskExternalSize, "AskExternalSize", true, proto::DataType::unsigned_type),
+        headerCell(ArbieSpreaderParameterColumns::BidCross, "BidCross", true, proto::DataType::enum_type, "YesNo"),
+        headerCell(ArbieSpreaderParameterColumns::AskCross, "AskCross", true, proto::DataType::enum_type, "YesNo"),
     });
 
     for (const auto& config : _viperConfig._arbieSpreaderConfigs) {
@@ -39,6 +47,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
             rowCell(ArbieSpreaderParameterColumns::QuoteSize, std::to_string(config._quoteSize)),
             rowCell(ArbieSpreaderParameterColumns::STF, std::to_string(hf::NULL_PRICE)),
             rowCell(ArbieSpreaderParameterColumns::HedgeOffset, std::to_string(config._hedgeOffset)),
+            rowCell(ArbieSpreaderParameterColumns::MaxTicksThroughMarket, std::to_string(config._maxTicksThroughMarket)),
             rowCell(ArbieSpreaderParameterColumns::BidLeanPath, ""),
             rowCell(ArbieSpreaderParameterColumns::AskLeanPath, ""),
             rowCell(ArbieSpreaderParameterColumns::BidLeanPrice, std::to_string(hf::NULL_PRICE)),
@@ -51,6 +60,8 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
             rowCell(ArbieSpreaderParameterColumns::BidExternalSize, "0"),
             rowCell(ArbieSpreaderParameterColumns::AskInternalSize, "0"),
             rowCell(ArbieSpreaderParameterColumns::AskExternalSize, "0"),
+            rowCell(ArbieSpreaderParameterColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown))),
+            rowCell(ArbieSpreaderParameterColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown))),
         });
     }
 
@@ -90,6 +101,21 @@ void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sen
         if (!contract._usedInQuoting) {
             continue;
         }
+
+        YesNoType bidCrossed = YesNoType::Unknown;
+        YesNoType askCrossed = YesNoType::Unknown;
+        auto s = state();
+        if (s == SystemState::CheckQuotes || s == SystemState::Enabled) {
+            auto extBid = contract._markets[BID][Market::External].getPrice();
+            auto extAsk = contract._markets[ASK][Market::External].getPrice();
+            if (contract._quote[BID]._externalPrice != hf::NULL_PRICE && extAsk != hf::NULL_PRICE) {
+                bidCrossed = contract._quote[BID]._externalPrice >= extAsk ? YesNoType::Yes : YesNoType::No;
+            }
+            if (contract._quote[ASK]._externalPrice != hf::NULL_PRICE && extBid != hf::NULL_PRICE) {
+                askCrossed = contract._quote[ASK]._externalPrice <= extBid ? YesNoType::Yes : YesNoType::No;
+            }
+        }
+
         guiThings.addRow(cells, contract._def._internalId, {
                 rowCell(ArbieSpreaderParameterColumns::STF, std::to_string(contract._stf)),
                 rowCell(ArbieSpreaderParameterColumns::BidLeanPath, contract._quote[BID]._hedgePath == -1 ? "" : contract._paths[BID][0]->_name),
@@ -104,6 +130,8 @@ void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sen
                 rowCell(ArbieSpreaderParameterColumns::BidExternalSize, std::to_string(contract._quote[BID]._externalSize)),
                 rowCell(ArbieSpreaderParameterColumns::AskInternalSize, std::to_string(contract._quote[ASK]._internalSize)),
                 rowCell(ArbieSpreaderParameterColumns::AskExternalSize, std::to_string(contract._quote[ASK]._externalSize)),
+                rowCell(ArbieSpreaderParameterColumns::BidCross, std::to_string(toUInt(bidCrossed)), crossedColor(bidCrossed)),
+                rowCell(ArbieSpreaderParameterColumns::AskCross, std::to_string(toUInt(askCrossed)), crossedColor(askCrossed)),
         });
     }
     send(message);
@@ -126,6 +154,7 @@ void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sen
 
 void ArbieSpreader::processGridChange(GridUpdate& update) {
     std::vector<Contract*> updatedContracts;
+    bool edgeMultiplierChanged = false;
     auto gridId = update._update.gridid();
     if (gridId == toUInt(WindowIds::ArbieSpreaderParameters)) {
         for (proto::GridCell& cell : *update._update.mutable_cells()) {
@@ -143,7 +172,7 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                 case ArbieSpreaderParameterColumns::Edge: {
                     auto value = boost::lexical_cast<double>(cell.value());
                     LOG(0, "AS {C[i1]}. Edge changed. {d1}->{d2}", contract.name(), ToDollars(contract._edge), value)
-                    contract._edge = ToRhonePrice(value);
+                    contract._edge = ToRhonePrice(value * _edgeMultiplier);
                     updatedContracts.emplace_back(&contract);
                     break;
                 }
@@ -165,6 +194,26 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                         contract._hedgeOffset = value;
                         contract._hedgeOffsetPrice = value * contract._def._tickSize;
                         updatedContracts.emplace_back(&contract);
+                    }
+                    break;
+                }
+                case ArbieSpreaderParameterColumns::MaxTicksThroughMarket: {
+                    try {
+                        auto value = boost::lexical_cast<double>(cell.value());
+                        if (value < 0.0) {
+                            double oldValue = (double)contract._maxTicksThroughMarket / contract._def._tickSize;
+                            LOG(0, "AS {C[i1]}. MaxTicksThroughMarket must be >= 0. Set Value back to {d1}", contract.name(), oldValue)
+                            sendErrorMessage(boost::str(boost::format("AS MaxTicksThroughMarket must be >= 0.  Contract=%1% Value=%2%") % contract._def._name % cell.value()), ErrorType::Critical);
+                            cell.set_value(std::to_string(oldValue));
+                        } else {
+                            LOG(0, "AS {C[i1]}. MaxTicksThroughMarket changed. {d1}->{d2}", contract.name(), (contract._maxTicksThroughMarket / contract._def._tickSize), value)
+                            contract._maxTicksThroughMarket = value * contract._def._tickSize;
+                            updatedContracts.emplace_back(&contract);
+                        }
+                    }
+                    catch(boost::bad_lexical_cast& blc) {
+                        sendErrorMessage(boost::str(boost::format("maxTicksThroughmarket not parsable (too big?).  Contract=%1% Value=%2%") % contract._def._name % cell.value()), ErrorType::Critical);
+                        cell.set_value(std::to_string((double)contract._maxTicksThroughMarket / contract._def._tickSize));
                     }
                     break;
                 }
@@ -229,9 +278,51 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
         }
     } else if (gridId == toUInt(WindowIds::ManualFillsEntry)) {
         onManualFills(update);
+    } else if (gridId == toUInt(WindowIds::GlobalConfigs)) {
+        for (int i = 0; i < update._update.cells_size(); ++i) {
+            proto::GridCell& gridCell = *update._update.mutable_cells(i);
+            auto& config = _viperConfig._globalConfigs[gridCell.row()];
+            if (config._key == AS_EDGE_MULTIPLIER) {
+                auto shift = static_cast<Shifts>(gridCell.col() - 1);
+                try {
+                    double value = boost::lexical_cast<double>(gridCell.value());
+                    if (!isEdgeMultiplierWithinLimits(value)) {
+                        LOG(0, "AS could not change edge multiplier. Value must be > 1 and < 10 Value={d1}", value)
+                        sendErrorMessage(boost::str(boost::format(
+                                "AS could not change edge multiplier. Value must be > 1 and < 10 Value=%1%") %
+                                                    value), ErrorType::Critical);
+                        gridCell.set_value(config._shifts[toUInt(shift)]);
+                    } else {
+                        if (_viperConfig._currentShift == shift) {
+                            _edgeMultiplier = value;
+                            edgeMultiplierChanged = true;
+                            LOG(0, "AS EdgeMultiplier changed. Value={d1}", _edgeMultiplier)
+                        }
+                    }
+                }
+                catch (const boost::bad_lexical_cast&) {
+                    LOG(0, "AS. Invalid edge multiplier value {i1}", 0)
+                    gridCell.set_value(config._shifts[toUInt(shift)]);
+                    sendErrorMessage(boost::str(boost::format("Invalid AS edge multiplier value %1%") % gridCell.value()), ErrorType::Critical);
+                }
+            }
+        }
     }
 
-    for (auto contract : updatedContracts) {
-        updateQuotes(*contract, true);
+    if (edgeMultiplierChanged) {
+        for (auto& asConfig : _viperConfig._arbieSpreaderConfigs) {
+            auto configContract = _viperConfig.getContract(asConfig._contract);
+            if (configContract) {
+                auto& contract = _contracts[configContract->_internalId];
+                contract._edge = ToRhonePrice(asConfig._edge * _edgeMultiplier);
+                updateQuotes(contract, true, state() == SystemState::CheckQuotes);
+            } else {
+                assert(false);
+            }
+        }
+    } else {
+        for (auto contract : updatedContracts) {
+            updateQuotes(*contract, true, state() == SystemState::CheckQuotes);
+        }
     }
 }

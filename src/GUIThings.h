@@ -118,7 +118,7 @@ public:
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(relativeValue->_maxTicksThroughMarket.getValue(contractIndex)));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(relativeValue->_maxTicksThroughMarket.getValue(contractIndex) / contract._definition._tickSize));
         }
     }
 
