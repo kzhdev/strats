@@ -1799,7 +1799,6 @@ public:
                 sendErrorMessage(errorMessage, ErrorType::Critical);
                 LOG_ERROR(errorMessage);
             }
-            _mdUpdated.emplace(internalId);
         }
         else {
             LOG(0, "EXE onMDFirmOrderExecutionEventBeforeFillArbitration called before with unknown contract.  oid={i1}", order.oid.value());
