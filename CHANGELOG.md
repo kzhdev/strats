@@ -1,3 +1,6 @@
+#Version 1.53.0.27
+- Disable MM contract when 2x maxTicksWide breached.
+
 #Version 1.53.0.26
 - Apply potential over fill only when the order is modifying down at the same level. 
 

@@ -100,7 +100,7 @@ public:
             }
 #ifdef IS_DEV
             else {
-                logging::GetLogger().logError(boost::str(boost::format("Received md update for unrecognized SID='%1%'") % mde.sid));
+                logging::GetLogger().logWarning(boost::str(boost::format("Received md update for unrecognized SID='%1%' Type=%2%") % mde.sid % toUInt(mde.type)));
             }
 #endif
         }
