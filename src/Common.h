@@ -135,9 +135,11 @@ enum class MarketMakerParametersColumns {
 enum class ArbieSpreaderParameterColumns {
     QuoteExternal,
     Edge,
+    ActualEdge,
     QuoteSize,
     STF,
     HedgeOffset,
+    MaxTicksThroughMarket,
     BidLeanPath,
     AskLeanPath,
     BidLeanPrice,
@@ -150,6 +152,8 @@ enum class ArbieSpreaderParameterColumns {
     BidExternalSize,
     AskInternalSize,
     AskExternalSize,
+    BidCross,
+    AskCross,
 };
 enum class ArbieSpreaderPathsColumns { Commission, Enabled, STFOffset};
 enum class PositionsColumns {RV, AS, MMInternal, MMExternal, Total};
@@ -432,6 +436,19 @@ inline hf::price_t applyPriceOffset<Python::BID>(hf::price_t price, hf::price_t 
 
 template<>
 inline hf::price_t applyPriceOffset<Python::ASK>(hf::price_t price, hf::price_t offset) { return price - offset; }
+
+template<uint32_t Side>
+inline hf::price_t calculateTicksThroughMarket(hf::price_t calculatedPrice, hf::price_t otherSideBest) noexcept;
+
+template<>
+inline hf::price_t calculateTicksThroughMarket<BID>(hf::price_t calculatedPrice, hf::price_t otherSideBest) noexcept {
+    return calculatedPrice - otherSideBest;
+}
+
+template<>
+inline hf::price_t calculateTicksThroughMarket<ASK>(hf::price_t calculatedPrice, hf::price_t otherSideBest) noexcept {
+    return otherSideBest - calculatedPrice;
+}
 
 enum ice_rejects : uint8_t {
     TOO_LATE_TO_CANCEL = 0,
@@ -963,6 +980,7 @@ enum class FillSource : uint8_t {
     ViperOff,
     ViperStart,
     Manual,
+
     AsDisable,
     AsHedgeReject,
     ASUnableToHedge,

@@ -219,6 +219,7 @@ public:
         _hedgeOffset = config._hedgeOffset;
         _hedgeOffsetPrice = _hedgeOffset * _tickSize;
         _maxTicksWide = config._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config._maxTicksWide * _tickSize;
+        _TwoTimesMaxTicksWide = _maxTicksWide * 2;
         _internallyInitiatedPosition = config._internalPosition;
         _externallyInitiatedPosition = config._externalPosition;
         _worsenPayupConditionAmount = config._worsenPayupCondPercent * _tickSize;
@@ -448,9 +449,20 @@ public:
         }
 
         bool maxTickWideAlreadyBreached = _maxTicksWideBreached;
+        if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _TwoTimesMaxTicksWide)) {
+            _maxTicksWideBreached = true;
+            LOG(0, "MM {C[i1]}. 2x MaxTicksWidth breached, disable contract; disable external quoting; disable GTC.", getContractName())
+            disable(true, false, true);
+            disableExternalQuoting(true);
+            _marketMaker->sendErrorMessage(boost::str(boost::format(
+                    "MM - 2x MaxTicksWidth breached, disable contract, disable external quoting, disable GTC. Contract=%1%")
+                    % _contract._name), ErrorType::Critical);
+            return;
+        }
+
         if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _maxTicksWide)) {
             if (!_maxTicksWideBreached) {
-                LOG(0, "MM {C[i1]}. MaxTicksWidth breached, disable external quoting, disable GTC.", getContractName())
+                LOG(0, "MM {C[i1]}. MaxTicksWidth breached, disable external quoting; disable GTC.", getContractName())
                 std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
                 disableExternalQuotingAndUseGTC(msg);
                 _maxTicksWideBreached = true;
@@ -981,7 +993,7 @@ public:
     void onFill(const FillMessage& fill) {
         if (fill._source != FillSource::Quote && fill._source != FillSource::Hedge) {
             if (fill._strategy != StrategyId::MarketMaker) {
-                LOG(0, "MM {C[i1]}. Handling fill returned from strategy {i2}. Side={i3} Price={d1} Size={i4}",
+                LOG(0, "MM {C[i1]}. Handling fill transferred from strategy {i2}. Side={i3} Price={d1} Size={i4}",
                     getContractName(), strategyName(fill._strategy), fill._side, ToDollars(fill._price), fill._qty)
                 forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, true);
                 onEndOfFills(_orderExecutionToken);
@@ -1226,6 +1238,15 @@ public:
                 disable();
                 return false;
             }
+
+            if (BOOST_UNLIKELY((topBook<ASK>().pr - topBook<BID>().pr) > _TwoTimesMaxTicksWide)) {
+                _maxTicksWideBreached = true;
+                disable();
+                LOG(0, "MM {C[i1]}. Not enabling. 2x MaxTicksWidth breached", getContractName())
+                _marketMaker->sendErrorMessage(boost::str(boost::format("Not enabling MM %1% - 2x MaxTicksWidth breached")
+                    % _contract._name), ErrorType::Critical);
+                return false;
+            }
             return true;
         }
         return false;
@@ -1463,9 +1484,11 @@ public:
                 LOG(0, "MM {C[i1]}. MaxTicksWide changed. Value={i2}", getContractName(), value)
                 if (value  < 0) {
                     _maxTicksWide = std::numeric_limits<int64_t>::max();
+                    _TwoTimesMaxTicksWide = _maxTicksWide;
                     LOG(0, "MM {C[i1]}. Ignore MaxTicksWide checking.", getContractName())
                 } else {
                     _maxTicksWide = value * _tickSize;
+                    _TwoTimesMaxTicksWide = _maxTicksWide * 2;
                 }
                 break;
             }
@@ -1684,6 +1707,7 @@ public:
     hf::price_t _tickSize;
     hf::price_t _hedgeOffsetPrice;
     hf::price_t _maxTicksWide;
+    hf::price_t _TwoTimesMaxTicksWide;
     double _hedgeOffset;
     hf::qty_t _internallyInitiatedPosition = 0;
     hf::qty_t _externallyInitiatedPosition = 0;

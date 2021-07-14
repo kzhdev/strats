@@ -1819,7 +1819,6 @@ public:
                 sendErrorMessage(errorMessage, ErrorType::Critical);
                 LOG_ERROR(errorMessage);
             }
-            _mdUpdated.emplace(internalId);
         }
         else {
             LOG(0, "EXE onMDFirmOrderExecutionEventBeforeFillArbitration called before with unknown contract.  oid={i1}", order.oid.value());
@@ -1852,8 +1851,10 @@ public:
 
     void onPostMDBatch(const md::MDBatch &batch, bool) override {
         for (auto internalId : _mdUpdated) {
-            auto& state = _contractStates[internalId];
-            state._lastMDbid = batch.bid;
+            if (internalId < _contractStates.size()) {
+                auto& state = _contractStates[internalId];
+                state._lastMDbid = batch.bid;
+            }
         }
         _mdUpdated.clear();
     }
@@ -1981,7 +1982,6 @@ public:
 
     void onMDGap(const md::MDGapEvent &event, const md::MDBatch &batch) {
         disableSystem(boost::str(boost::format("MD feed gapped. venue=%1%") % batch.venue));
-        _mdUpdated.emplace(sidToInternalId(event.sid));
         for(unsigned i = 0; i < _viperConfig._allContracts.size(); ++i) {
             const auto& sym = _viperConfig._allContracts[i];
             std::string channelName = GetMDChannel(sym._venue, this->context().getSymbolInfo(sym._sid));
@@ -2384,12 +2384,7 @@ public:
         }
     }
 
-    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event, const md::MDBatch& batch) {
-        auto internalId = sidToInternalId(event.sid);
-        if (internalId != INVALID_INTERNAL_ID) {
-            _mdUpdated.emplace(internalId);
-        }
-    }
+    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event, const md::MDBatch& batch) {}
 
     void onMDPreOpenPrice(const md::MDPreOpenPriceEvent &event, const md::MDBatch &/*batch*/) {
         _slow._iopTracking.onIOPUpdate(event);
@@ -2446,7 +2441,6 @@ public:
                     ToDollars(ord.pr), ToDollars(event.orders[i].price))
             }
         }
-        _mdUpdated.emplace(sidToInternalId(event.sid));
     }
 
     // Order Events

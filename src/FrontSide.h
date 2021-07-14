@@ -187,6 +187,7 @@ public:
         _chartRefreshInterval = GetCyclesFromMilliSeconds(200, _frequency);
         _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
         _versionSendingTime = GetCyclesFromSeconds(20, _frequency);
+        _fillSoundThreshold = GetCyclesFromSeconds(1, _frequency);
 
         for(unsigned i = 0; i < _viperConfig._marketMakerConfigs.size(); ++i) {
             const auto& sym = _viperConfig._marketMakerConfigs[i]._contract;
@@ -1070,7 +1071,13 @@ public:
             // int64_t time, double edgeStf, double edgeMkt
             auto [time, edgeStf, edgeMkt] = sendFillToGUI(fill);
             sendFillToKDB(fill, time, edgeStf, edgeMkt);
-            sendPlaySound(SoundId::Fill);
+            if (fill._source != FillSource::AsToRv) {
+                auto now = clockUtil::GetCycles();
+                if (now >= _nextFillSoundTime) {
+                    sendPlaySound(SoundId::Fill);
+                    _nextFillSoundTime = now + _fillSoundThreshold;
+                }
+            }
         }
         doPnl(fill);
         if (BOOST_LIKELY(realFill)) {
@@ -1305,15 +1312,29 @@ public:
                     sendErrorMessage(boost::str(boost::format("Invalid Shift %1%, set Shift to %2%") % shift % to_string(_viperConfig._currentShift)), ErrorType::Critical);
                     gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
                 } else if (shift != toUInt(_viperConfig._currentShift)) {
+                    uint32_t checked = 0;
                     for (auto& config : _viperConfig._globalConfigs) {
-                        if (config._key == RV_WIDTH_MULTIPLIER) {
-                            auto currentWidthMultiplier = boost::lexical_cast<double>(config._shifts[toUInt(_viperConfig._currentShift)]);
-                            auto newWidthMultiplier = boost::lexical_cast<double>(config._shifts[shift]);
-                            if ((currentWidthMultiplier - newWidthMultiplier) > 0.5) {
-                                LOG(0, "Reject shift change. shift={i1}. RV width tightens up by more than 0.5", shift)
-                                sendErrorMessage(boost::str(boost::format("Reject Shift Change. RV width tightens up by more than 0.5, set Shift back to %1%") % to_string(_viperConfig._currentShift)), ErrorType::Critical);
+                        if (config._key == RV_WIDTH_MULTIPLIER || config._key == AS_EDGE_MULTIPLIER) {
+                            auto currentMultiplier = boost::lexical_cast<double>(config._shifts[toUInt(_viperConfig._currentShift)]);
+                            auto newMultiplier = boost::lexical_cast<double>(config._shifts[shift]);
+                            if ((currentMultiplier - newMultiplier) > 0.5) {
+                                std::string what;
+                                if (config._key == RV_WIDTH_MULTIPLIER) {
+                                    what = "RV width";
+                                    LOG(0, "Reject shift change. shift={i1}. RV width tightens up by more than 0.5", shift)
+                                } else {
+                                    what = "AS edge";
+                                    LOG(0, "Reject shift change. shift={i1}. AS edge tightens up by more than 0.5", shift)
+                                }
+                                sendErrorMessage(boost::str(boost::format("Reject Shift Change. %1% tightens up by more than 0.5, set Shift back to %2%")
+                                    % what % to_string(_viperConfig._currentShift)), ErrorType::Critical);
                                 gridCell.set_value(std::to_string(toUInt(_viperConfig._currentShift)));
+                                break;
                             }
+                            ++checked;
+                        }
+
+                        if (checked == 2) {
                             break;
                         }
                     }
@@ -1429,6 +1450,9 @@ public:
             }
             else if (config._key == RV_WIDTH_MULTIPLIER) {
                 _strategies[toUInt(StrategyId::RelativeValue)]->sendGridUpdate(update);
+            }
+            else if (config._key == AS_EDGE_MULTIPLIER) {
+                _strategies[toUInt(StrategyId::ArbieSpreader)]->sendGridUpdate(update);
             }
             else if (config._key == QUOTE_BANNER_PERIOD || config._key == FILL_BANNER_PERIOD ||
                      config._key == HEDGE_BANNER_MICS || config._key == PERCENT_MSG_HEDGES ||
@@ -1739,17 +1763,18 @@ public:
 
     void onSystemStateChange(SystemState newState, const std::string& reason) {
         for (auto strategy : _strategies) {
+            auto strategyId = strategy->strategyId();
             if (newState == SystemState::CheckQuotes) {
-                if (strategy->strategyId() == StrategyId::RelativeValue) {
-                    SystemState rvState = strategy->state();
-                    if (rvState == SystemState::Disabled || rvState == SystemState::LoggedIn || rvState == SystemState::CancelGtcAndDisable) {
+                if (strategyId == StrategyId::RelativeValue || strategyId == StrategyId::ArbieSpreader) {
+                    SystemState state = strategy->state();
+                    if (state == SystemState::Disabled || state == SystemState::LoggedIn || state == SystemState::CancelGtcAndDisable) {
                         onStrategySystemStateChange(newState, strategy->_state,
-                                                    s_systemState.strategyEnableBlocked(strategy->strategyId()), reason,
-                                                    toString(strategy->strategyId()));
+                                                    s_systemState.strategyEnableBlocked(strategyId), reason,
+                                                    toString(strategyId));
                     }
                 }
             } else {
-                onStrategySystemStateChange(newState, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()), reason, toString(strategy->strategyId()));
+                onStrategySystemStateChange(newState, strategy->_state, s_systemState.strategyEnableBlocked(strategyId), reason, toString(strategyId));
             }
         }
     }
@@ -1895,6 +1920,8 @@ private:
 
     uint64_t _nextRefreshTime = 0;
     uint64_t _refreshInterval;
+    uint64_t _fillSoundThreshold = 0;
+    uint64_t _nextFillSoundTime = 0;
 
     uint64_t _nextChartRefreshTime = 0;
     uint64_t _chartRefreshInterval;

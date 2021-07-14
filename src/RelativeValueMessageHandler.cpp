@@ -96,9 +96,10 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
         }
         case ViperMessageType::TransferPositionToRV: {
             const auto& msg = reinterpret_cast<const ASFillsToRV&>(message._data[0]);
+            auto last = msg._numFills - 1;
             for (uint32_t i = 0; i < msg._numFills; ++i) {
                 auto& fill = msg._fills[i];
-                handleFill(fill);
+                handleFill(fill, i == last);
             }
             break;
         }

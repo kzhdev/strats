@@ -1,3 +1,19 @@
+#Version 1.53.0.27
+- Disable MM contract when 2x maxTicksWide breached.
+
+#Version 1.54.0.1
+- Batching Fill Sound every 1 second
+- Not sending Fill sound for fills transferred from AS to RV
+- Fixed potential crash caused by an invalid internal instrument id
+- Fixed log message
+- Check RV position limit after all AS to RV fills received
+- Reset AS STFs when RV disabled
+- Implemented AS MaxTicksThroughMarket check
+- Added CheckQuote handing in AS  
+- Added BidCross, AskCross columns in AS grid
+- Added ASEdgeMultiplier global config
+- [optimization] Optimized RV MaxTicksThroughMarket check by reducing unnecessary calculation
+
 #Version 1.54.0.0
 - Implemented ArbieSpreader strategy
 - When disabling useGTC, put quote orders back if any strategies are enabled and quoting externally
