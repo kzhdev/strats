@@ -1,3 +1,6 @@
+#Version 1.53.0.27
+- Disable MM contract when 2x maxTicksWide breached.
+
 #Version 1.54.0.1
 - Batching Fill Sound every 1 second
 - Not sending Fill sound for fills transferred from AS to RV

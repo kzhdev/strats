@@ -1844,8 +1844,10 @@ public:
 
     void onPostMDBatch(const md::MDBatch &batch) override {
         for (auto internalId : _mdUpdated) {
-            auto& state = _contractStates[internalId];
-            state._lastMDbid = batch.bid;
+            if (internalId < _contractStates.size()) {
+                auto& state = _contractStates[internalId];
+                state._lastMDbid = batch.bid;
+            }
         }
         _mdUpdated.clear();
     }
