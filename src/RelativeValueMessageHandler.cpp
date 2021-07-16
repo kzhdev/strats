@@ -167,7 +167,7 @@ void RelativeValue::onEconomicNumberEnded(EconomicNumber::Color color) {
                 crossed = true;
                 LOG(0, "RV {C[i1]}. ASK crossed externalPrice={d1} marketAskPrice={d2}", getContract(contract._internalId),
                     ToDollars(bidQuote._externalPrice), ToDollars(mktAskPrice))
-                sendErrorMessage(boost::str(boost::format("RV %1% ASK crossed. externalPrice=%2% marketAskPrice=%3%") % contract._definition._name
+                sendErrorMessage(boost::str(boost::format("RV %1% ASK crossed. externalPrice=%2% marketBidPrice=%3%") % contract._definition._name
                     % ToDollars(bidQuote._externalPrice) % ToDollars(mktAskPrice)), ErrorType::Critical);
             }
         }

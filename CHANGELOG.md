@@ -1,3 +1,10 @@
+#Version 1.54.0.2
+- Fix actualEdge display issue
+- Added more logging details
+- Added Economic Number handling in AS
+- Added Shift change handling in AS
+- Skip RV quote request to the last in IME to avoid self match.
+
 #Version 1.53.0.28
 - Fix 2x maxTickWide check not ignore -1.
 - Add asDuration column in economic numbers

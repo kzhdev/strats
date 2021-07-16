@@ -1270,7 +1270,6 @@ struct ViperConfig {
             return false;
         }
 
-        //Expected header: RVContract,position
         auto unexpectedColError = [this, &it](int colNum) {
             logging::GetLogger().logError(std::string("Unexpected column in economic number file.  expected=") + _economicNumberHeader[colNum] + " discovered=" + *it);
         };

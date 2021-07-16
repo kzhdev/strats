@@ -463,6 +463,8 @@ private:
     inline void tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, const Contract::Quote& quote, bool quoteExternally);
 
     void pushUpdatedContract(Contract* contract);
+    void onEconomicNumberEnded(EconomicNumber::Color color);
+    void onShiftUpdate(uint32_t shift);
 };
 
 template<uint32_t Side>
@@ -759,8 +761,8 @@ inline void ArbieSpreader::Contract::updatePaths(bool force) {
 
         auto bestPath = _paths[Side][0];
         if (oldBest != bestPath) {
-            LOG(0, "AS {C[i1]}. Lean on path {i2} {i3}@{d1}", bestPath->_contract->name(),
-                bestPath->_id, bestPath->_priceSize._size, ToDollars(bestPath->_priceSize._price))
+            LOG(0, "AS {C[i1]}. {i2} Lean on path {i3} {i4}@{d1}", bestPath->_contract->name(),
+                Side, bestPath->_id, bestPath->_priceSize._size, ToDollars(bestPath->_priceSize._price))
         }
     }
 }
@@ -829,7 +831,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
         quote._internalSize = std::min<hf::qty_t>(pBestPath->_priceSize._size, contract._quoteSize);
         quote._hedgePath = pBestPath->_id;
         if (canQuoteExternal) {
-            quote._externalPrice = RoundToTickSize(quote._internalPrice, contract._def._tickSize, Side);
+            quote._externalPrice = (quote._internalPrice != hf::NULL_PRICE) ? RoundToTickSize(quote._internalPrice, contract._def._tickSize, Side) : hf::NULL_PRICE;
             quote._externalSize = contract.getExternalQuoteSize<Side>(quote);
         } else {
             quote._externalPrice = hf::NULL_PRICE;
@@ -838,8 +840,10 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
 
         if (isEnabled()) {
             if (!checkMaxTicksThroughMarket<Side>(contract, quote)) {
-                LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed. Disable AS and Disable AS External Quoting. Side={i2} CalculatedQuote={d1} otherSideBest={d2}", contract.name(),
-                    Side, ToDollars(quote._externalPrice), ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice()))
+                LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed. Disable AS and Disable AS External Quoting. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanPrice={d3} LeanOnRV={i6} OtherSideBestPrice={d4}", contract.name(),
+                    Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
+                    ToDollars(quote._externalPrice), quote._hedgePath, ToDollars(quote._leanPrice), pBestPath->_leanOnRV,
+                    ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice()))
                 sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=AS MaxTicksThroughMarketCheckFailed. OffendingContract=%1% Side=%2% calculatedQuote=%3% otherSideBest=%4%")
                     % contract._def._name % Side % ToDollars(quote._externalPrice)
                     % ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice())), ErrorType::Critical);

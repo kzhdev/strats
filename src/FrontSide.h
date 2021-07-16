@@ -173,7 +173,7 @@ public:
         _chartRefreshInterval = GetCyclesFromMilliSeconds(200, _frequency);
         _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
         _versionSendingTime = GetCyclesFromSeconds(20, _frequency);
-        _fillSoundThreshold = GetCyclesFromSeconds(1, _frequency);
+        _fillSoundThreshold = GetCyclesFromMilliSeconds(250, _frequency);
 
         for(unsigned i = 0; i < _viperConfig._marketMakerConfigs.size(); ++i) {
             const auto& sym = _viperConfig._marketMakerConfigs[i]._contract;
@@ -280,11 +280,9 @@ public:
                 }
 
                 for (auto& economicNumber : _executor->_economicNumbers) {
-                    // TODO: add ASDuration in 1.54
-                    sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% MMDuration=%4%Sec RVDuration=%5%Sec")
-//                    sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% MMDuration=%4%Sec RVDuration=%5%Sec ASDuration=%6%Sec")
+                    sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% MMDuration=%4%Sec RVDuration=%5%Sec ASDuration=%6%Sec")
                         % to_string(economicNumber->_color) % economicNumber->_datetimeString % economicNumber->_id
-                        % economicNumber->_mmDuration % economicNumber->_rvDuration/* % economicNumber->_asDuration*/),
+                        % economicNumber->_mmDuration % economicNumber->_rvDuration % economicNumber->_asDuration),
                         ErrorType::Normal);
                 }
                 if (_executor->_economicNumbers.empty()) {

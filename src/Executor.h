@@ -220,7 +220,6 @@ public:
 
             if (now >= en->_asEndTime) {
                 enableASAfterEconomicNumber(*en);
-                _economicNumbers.erase(it);
                 en->_asEndTime = std::numeric_limits<uint64_t>::max();
             }
 
@@ -341,10 +340,13 @@ public:
         enableStrategyAfterEconomicNumber(en, StrategyId::RelativeValue);
     }
 
-    void enableASAfterEconomicNumber(EconomicNumber& en) {}
+    void enableASAfterEconomicNumber(EconomicNumber& en) {
+        LOG(0, "EXE. {i1} EconomicNumber AS duration reached. Id={i2}", toUInt(en._color), en._id)
+        enableStrategyAfterEconomicNumber(en, StrategyId::ArbieSpreader);
+    }
 
     void enableStrategyAfterEconomicNumber(EconomicNumber& en, StrategyId strategy) {
-        sendErrorMessage(boost::str(boost::format("%1% economic number RV duration reached. Id=%2%") % to_string(en._color) % en._id), ErrorType::Critical);
+        sendErrorMessage(boost::str(boost::format("%1% economic number %2% duration reached. Id=%3%") % to_string(en._color) % toString(strategy) % en._id), ErrorType::Critical);
 
         if (en._color == EconomicNumber::DarkRed) {
             sendErrorMessage(boost::str(boost::format("Not re-enable %1% on DartRed EconomicNumber") % toString(strategy)), ErrorType::Normal);
@@ -352,7 +354,7 @@ public:
         }
 
         for (auto iter = en._strategyQuoteExtDisabled.begin(); iter != en._strategyQuoteExtDisabled.end();) {
-            if ((*iter)->strategyId() == StrategyId::RelativeValue) {
+            if ((*iter)->strategyId() == strategy) {
                 (*iter)->enableQuoteExternal();
                 iter = en._strategyQuoteExtDisabled.erase(iter);
                 break;
@@ -361,7 +363,7 @@ public:
         }
 
         for (auto iter = en._strategyDisabled.begin(); iter != en._strategyDisabled.end();) {
-            if ((*iter)->strategyId() == StrategyId::RelativeValue) {
+            if ((*iter)->strategyId() == strategy) {
                 (*iter)->sendGenericMessage(ViperMessageType::EconomicNumberEnded, toUInt(en._color));
                 break;
             }
@@ -1467,15 +1469,12 @@ public:
             economicNumber._beginTime = clockUtil::GetCycles() + GetCyclesFromSeconds(diff, _frequency);
             economicNumber._mmEndTime = economicNumber._beginTime + GetCyclesFromSeconds(economicNumber._mmDuration, _frequency);
             economicNumber._rvEndTime = economicNumber._beginTime + GetCyclesFromSeconds(economicNumber._rvDuration, _frequency);
-//            economicNumber._asEndTime = economicNumber._beginTime + GetCyclesFromSeconds(economicNumber._asDuration, _frequency);
-            economicNumber._asEndTime = std::numeric_limits<uint64_t>::max();
+            economicNumber._asEndTime = economicNumber._beginTime + GetCyclesFromSeconds(economicNumber._asDuration, _frequency);
             if (_shutdownTime == (uint64_t)-1 || economicNumber._beginTime < _shutdownTime) {
-                // TODO: check asDuration in 1.54
-                if (economicNumber._mmDuration > economicNumber._rvDuration /*||
-                    economicNumber._mmDuration > economicNumber._asDuration*/) {
-                    sendErrorMessage(boost::str(boost::format("Not adding economic number %1%. mmDuration must be <= rv Duration. mmDuration=%2% rvDuration=%3%")
-//                    sendErrorMessage(boost::str(boost::format("Not adding economic number %1%. mmDuration must be <= rv/as Duration. mmDuration=%2% rvDuration=%3% asDuration=%4%")
-                        % economicNumber._id % economicNumber._mmDuration % economicNumber._rvDuration /*% economicNumber._asDuration*/),
+                if (economicNumber._mmDuration > economicNumber._rvDuration ||
+                    economicNumber._mmDuration > economicNumber._asDuration) {
+                    sendErrorMessage(boost::str(boost::format("Not adding economic number %1%. mmDuration must be <= rv/as Duration. mmDuration=%2% rvDuration=%3% asDuration=%4%")
+                        % economicNumber._id % economicNumber._mmDuration % economicNumber._rvDuration % economicNumber._asDuration),
                         ErrorType::Critical);
                     return false;
                 }
@@ -1493,11 +1492,9 @@ public:
             for (auto it = _viperConfig._mapIdEconomicNumber.begin(); it != _viperConfig._mapIdEconomicNumber.end(); ++it) {
                 if (it->second._tradeName == _tradeName) {
                     auto& en = it->second;
-                    // TODO: add asDuration in 1.54
-                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% mmDuration=%4%Sec rvDuration=%5%Sec dateTime=%6% now=%7%")
-//                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% mmDuration=%4%Sec rvDuration=%5%Sec asDuration=%6%Sec dateTime=%7% now=%8%")
+                    logging::GetLogger().logInfo(boost::str(boost::format("EconomicNumber %1%. Id=%2% at %3% mmDuration=%4%Sec rvDuration=%5%Sec asDuration=%6%Sec dateTime=%7% now=%8%")
                         % to_string(en._color) % en._id % en._datetimeString % en._mmDuration % en._rvDuration
-                        % /*en._asDuration %*/ en._datetime % now));
+                        % en._asDuration % en._datetime % now));
                     en._strategyDisabled.reserve(_strategies.size());
                     en._strategyQuoteExtDisabled.reserve(_strategies.size());
                     addEconomicNumber(en, now);
@@ -2989,7 +2986,7 @@ public:
             });
         });
 
-        LOG(0, "EXE {i1}. Send InternalBookUpdate. lastMDbid={i2} Side={i3} Price={d1} book={i4}@{d2} levelRemoved={i5}", getContract(internalId),
+        LOG(0, "EXE {C[i1]}. Send InternalBookUpdate. lastMDbid={i2} Side={i3} Price={d1} book={i4}@{d2} levelRemoved={i5}", getContract(internalId),
             state._lastMDbid, side, ToDollars(px), book.l[0].q, ToDollars(book.l[0].pr), need_clean_up);
     }
 
@@ -3428,6 +3425,7 @@ public:
         }
         getStrategy(StrategyId::MarketMaker)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
         getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
+        getStrategy(StrategyId::ArbieSpreader)->sendGenericMessage(ViperMessageType::ShiftUpdate, shift);
 
         auto shutdownTime = boost::lexical_cast<uint32_t>(_viperConfig.getGlobalByShift(AUTO_SHUTDOWN_TIME, toUInt(_viperConfig._currentShift)));
         uint32_t hour, min, sec;

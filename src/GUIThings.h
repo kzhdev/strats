@@ -2021,8 +2021,7 @@ public:
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Time, "Time (HH::MM::SS)", false, proto::DataType::string_type);
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::MMDuration, "MM duration (sec)", false, proto::DataType::string_type);
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::RVDuration, "RV duration (sec)", false, proto::DataType::string_type);
-        // TODO: add column in 1.54
-//        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::ASDuration, "AS duration (sec)", false, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::ASDuration, "AS duration (sec)", false, proto::DataType::string_type);
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Color, "color", false, proto::DataType::enum_type, "economic_number_color");
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Description, "description", false, proto::DataType::string_type);
 
@@ -2035,8 +2034,7 @@ public:
             setCell(cells, en->_id, EconomicNumberColumns::Time, en->_datetimeString.substr(11));
             setCell(cells, en->_id, EconomicNumberColumns::MMDuration, std::to_string(en->_mmDuration));
             setCell(cells, en->_id, EconomicNumberColumns::RVDuration, std::to_string(en->_rvDuration));
-            // TODO: add column in 1.54
-//            setCell(cells, en->_id, EconomicNumberColumns::ASDuration, std::to_string(en->_asDuration));
+            setCell(cells, en->_id, EconomicNumberColumns::ASDuration, std::to_string(en->_asDuration));
             setCell(cells, en->_id, EconomicNumberColumns::Color, std::to_string(toUInt(en->_color)));
             setCell(cells, en->_id, EconomicNumberColumns::Description, en->_description);
         }
@@ -2048,8 +2046,7 @@ public:
             setCell(cells, i, EconomicNumberColumns::Time, "");
             setCell(cells, i, EconomicNumberColumns::MMDuration, "");
             setCell(cells, i, EconomicNumberColumns::RVDuration, "");
-            // TODO: add column in 1.54
-//            setCell(cells, i, EconomicNumberColumns::ASDuration, "");
+            setCell(cells, i, EconomicNumberColumns::ASDuration, "");
             setCell(cells, i, EconomicNumberColumns::Color, "");
             setCell(cells, i, EconomicNumberColumns::Description, "");
         }
