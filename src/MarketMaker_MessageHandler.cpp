@@ -85,6 +85,8 @@ void MarketMaker::handleViperMessage(const ViperMessage& message) {
                 mm._mdQtyChangeIndex[msg._side] = 0;
                 _updatedContracts.emplace(msg._contractId);
                 mm._lastMDbid = msg._lastMDbid;
+            } else {
+                LOG(0, "MM {C[i1]}. ignore stale internal book update. MDbid={i2} mm._lastMDbid={i3}", mm.getContractName(), msg._lastMDbid, mm._lastMDbid)
             }
             break;
         }
