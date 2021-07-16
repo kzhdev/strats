@@ -1,3 +1,7 @@
+#Version 1.53.0.28
+- Fix 2x maxTickWide check not ignore -1.
+- Add asDuration column in economic numbers
+
 #Version 1.53.0.27
 - Disable MM contract when 2x maxTicksWide breached.
 

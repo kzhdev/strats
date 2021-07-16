@@ -170,10 +170,12 @@ struct EconomicNumber {
     uint64_t _beginTime;
     uint64_t _mmEndTime = std::numeric_limits<uint64_t>::max();
     uint64_t _rvEndTime = std::numeric_limits<uint64_t>::max();
+    uint64_t _asEndTime = std::numeric_limits<uint64_t>::max();
     time_t _datetime = std::numeric_limits<uint64_t>::max();
     uint32_t _id;
     uint32_t _mmDuration;
     uint32_t _rvDuration;
+    uint32_t _asDuration;
     enum Color {
         DarkRed,
         Red,
@@ -188,6 +190,10 @@ struct EconomicNumber {
     std::vector<ViperStrategyBase*> _strategyDisabled;
     std::vector<ViperStrategyBase*> _strategyQuoteExtDisabled;
     Shifts _currentShift;
+
+    uint64_t nextCheckPoint() const noexcept {
+        return std::min<uint64_t>(std::min<uint64_t>(std::min<uint64_t>(_asEndTime, _rvEndTime), _mmEndTime), _beginTime);
+    }
 };
 
 inline const char* to_string(EconomicNumber::Color color) {
@@ -1118,9 +1124,11 @@ struct ViperConfig {
             economicNumber._datetimeString = values[i++];
             economicNumber._mmDuration = boost::lexical_cast<uint32_t>(values[i++]);
             economicNumber._rvDuration = boost::lexical_cast<uint32_t>(values[i++]);
+            economicNumber._asDuration = boost::lexical_cast<uint32_t>(values[i++]);
             economicNumber._beginTime = std::numeric_limits<uint64_t>::max();
             economicNumber._mmEndTime = std::numeric_limits<uint64_t>::max();
             economicNumber._rvEndTime = std::numeric_limits<uint64_t>::max();
+            economicNumber._asEndTime = std::numeric_limits<uint64_t>::max();
             economicNumber._datetime = datetime;
             economicNumber._id = id++;
             economicNumber._tradeName = values[i++];
@@ -2171,7 +2179,7 @@ struct ViperConfig {
             "autoMMDisableTime"};
 
 
-    std::vector<std::string> _economicNumberHeader = {"datetime", "mmDuration", "rvDuration", "trade", "color", "description"};
+    std::vector<std::string> _economicNumberHeader = {"datetime", "mmDuration", "rvDuration", "asDuration", "trade", "color", "description"};
     std::unordered_map<uint32_t, EconomicNumber> _mapIdEconomicNumber;
 
     std::vector<ConfigContract> _allContracts;

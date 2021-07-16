@@ -146,7 +146,7 @@ enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer,
 enum class StatusDebugColumns { Contract, StatusEvent };
 enum class LoggingLevelColumns {LoggingLevel};
 enum class NegativeScalpCheckerColumns { Period, ClipCount, Pnl };
-enum class EconomicNumberColumns {Time, MMDuration, RVDuration, Color, Description};
+enum class EconomicNumberColumns {Time, MMDuration, RVDuration, ASDuration, Color, Description};
 
 enum class WindowIds {
     VectorParameters = 1,

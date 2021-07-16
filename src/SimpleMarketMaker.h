@@ -228,7 +228,7 @@ public:
         _hedgeOffset = config._hedgeOffset;
         _hedgeOffsetPrice = _hedgeOffset * _tickSize;
         _maxTicksWide = config._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config._maxTicksWide * _tickSize;
-        _TwoTimesMaxTicksWide = _maxTicksWide * 2;
+        _TwoTimesMaxTicksWide = config._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : _maxTicksWide * 2;
         _internallyInitiatedPosition = config._internalPosition;
         _externallyInitiatedPosition = config._externalPosition;
         _worsenPayupConditionAmount = config._worsenPayupCondPercent * _tickSize;
