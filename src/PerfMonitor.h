@@ -192,6 +192,11 @@ struct ScopedPerfPoint {
 
 #else   // ENABLE_PERF
 
+class PerfMonitor : public virtual hf::Service {
+public:
+    void onRun() {}
+};
+
 #define SCOPED_PERF_POINT(...) do {} while(0)
 #define ADD_PERF_POINT(...) do {} while(0)
 

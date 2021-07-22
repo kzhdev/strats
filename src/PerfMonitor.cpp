@@ -1,12 +1,15 @@
-#ifdef ENABLE_PERF
-
 #include "PerfMonitor.h"
 #include <hf/ResourceManager.h>
+
+#ifdef ENABLE_PERF
 #include <hf/ConfigManager.h>
+#endif
 
 using namespace Python;
 
 static hf::ResourceRegistrator<PerfMonitor> s_registrator("PerfMonitor");
+
+#ifdef ENABLE_PERF
 
 PerfMonitor* PerfMonitor::_instance = nullptr;
 
