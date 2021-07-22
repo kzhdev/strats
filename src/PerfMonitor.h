@@ -15,7 +15,17 @@ enum PerfId : uint8_t {
     AS_Path_Calculation,
     AS_UpdatePaths,
     AS_UpdateHedge,
+    AS_UpdateQuotes,
+    AS_RunCycle,
+    AS_UpdateContractCount,
     __PerfId_END__,
+};
+
+enum class PerfType {
+    Begin,
+    End,
+    Point,
+    Discard,
 };
 
 #ifdef ENABLE_PERF
@@ -26,17 +36,14 @@ inline const char* to_string(PerfId id) noexcept {
             "AS_Path_Calculation",
             "AS_UpdatePaths",
             "AS_UpdateHedge",
+            "AS_UpdateQuotes",
+            "AS_RunCycle",
+            "AS_UpdateContractCount",
     };
     static_assert(sizeof(strPerfId) / sizeof(const char*) == std::underlying_type_t<PerfId>(PerfId::__PerfId_END__),
                   "Update to_string for new PerfId element.");
     return strPerfId[id];
 }
-
-enum class PerfType {
-    Begin,
-    End,
-    Point,
-};
 
 #pragma pack(1)
 struct PerfPoint {
@@ -73,6 +80,11 @@ class PerfMonitor : public virtual hf::Service {
             if (point._type == PerfType::Begin) {
                 assert(beginTime == 0);
                 beginTime = point._timestamp;
+                return;
+            }
+
+            if (point._type == PerfType::Discard) {
+                beginTime = 0;
                 return;
             }
 
@@ -165,12 +177,19 @@ private:
             for (std::underlying_type_t<PerfId> i = 0; i < std::underlying_type_t<PerfId>(PerfId::__PerfId_END__); ++i) {
                 auto& stat = _statistics[i];
                 if (stat.n > 100) {
-                    log << to_string(static_cast<PerfId>(i)) << std::endl;
+                    log << to_string(static_cast<PerfId>(i)) << ":" << std::endl;
                     log << std::setw(25) << "num_observation" << ":" << stat.n << std::endl;
-                    log << std::setw(25) << "average_latency(us)" << ":" << GetMicrosFromCycles(stat.mean, _frequency) << std::endl;
-                    log << std::setw(25) << "min_latency(us)" << ":" << GetMicrosFromCycles(stat.min, _frequency) << std::endl;
-                    log << std::setw(25) << "max_latency(us)" << ":" << GetMicrosFromCycles(stat.max, _frequency) << std::endl;
-                    log << std::setw(25) << "std_div" << ":" << sqrt(stat.variance) << std::endl;
+                    if (i != toUInt(PerfId::AS_UpdateContractCount)) {
+                        log << std::setw(25) << "avg_latency(ns)" << ":" << stat.mean / _frequency << std::endl;
+                        log << std::setw(25) << "min_latency(ns)" << ":" << stat.min / _frequency << std::endl;
+                        log << std::setw(25) << "max_latency(ns)" << ":" << stat.max / _frequency << std::endl;
+                        log << std::setw(25) << "std_div" << ":" << sqrt(stat.variance) / _frequency << std::endl;
+                    } else {
+                        log << std::setw(25) << "avg" << ":" << stat.mean << std::endl;
+                        log << std::setw(25) << "min" << ":" << stat.min << std::endl;
+                        log << std::setw(25) << "max" << ":" << stat.max << std::endl;
+                        log << std::setw(25) << "std_div" << ":" << sqrt(stat.variance) << std::endl;
+                    }
                     log << std::endl;
                 }
             }
@@ -193,6 +212,7 @@ struct ScopedPerfPoint {
 
 #define SCOPED_PERF_POINT(id) ScopedPerfPoint pef(id)
 #define ADD_PERF_POINT(id, type) PerfMonitor::get()->addPerfPoint(id, type)
+#define ADD_PERF_VALUE(id, type, value) PerfMonitor::get()->addPerfPoint(id, type, value)
 
 #else   // ENABLE_PERF
 

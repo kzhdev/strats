@@ -283,6 +283,7 @@ void ArbieSpreader::registerOrderClient() {
 }
 
 void ArbieSpreader::runCycle(uint64_t now) {
+    ADD_PERF_POINT(PerfId::AS_RunCycle, PerfType::Begin);
     uint32_t nUpdate = 0;
     auto last = _updatedContracts.end();
     auto size = last - _updatedContractCursor;
@@ -303,8 +304,12 @@ void ArbieSpreader::runCycle(uint64_t now) {
     }
 
     if (nUpdate) {
+        ADD_PERF_POINT(PerfId::AS_RunCycle, PerfType::End);
+        ADD_PERF_VALUE(PerfId::AS_UpdateContractCount, PerfType::Point, nUpdate);
         const uint64_t latency = clockUtil::GetCycles() - now;
         ILOG(0, "AS. CalculateQuotes Latency {i1}. {i2} updated contract(s). size={i3}", latency, nUpdate, size)
+    } else {
+        ADD_PERF_POINT(PerfId::AS_RunCycle, PerfType::Discard);
     }
 }
 
@@ -369,6 +374,7 @@ void ArbieSpreader::updateQuotes(bool force, bool checkQuote) {
 }
 
 bool ArbieSpreader::updateQuotes(Contract& contract, bool force, bool checkQuote) {
+    SCOPED_PERF_POINT(PerfId::AS_UpdateQuotes);
     contract.updatePaths(force);
 
     if (!isEnabled() && !checkQuote) {
