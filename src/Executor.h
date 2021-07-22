@@ -523,8 +523,7 @@ public:
                                          hf::price_t price,
                                          hf::qty_t size,
                                          hf::price_t stf) {
-        sendFillToFront(internalId, side, price, size, strategy, FillType::Internal, FillSource::Hedge,
-                        0, 0, stf);
+        sendFillToFront(internalId, side, price, size, strategy, FillType::Internal, FillSource::Hedge, stf);
     }
 
     void onInternalFill(uint32_t internalId, Order* order, hf::price_t price, hf::qty_t size) {
@@ -537,8 +536,6 @@ public:
             message._type = FillType::NegativeScalpCheck;
             message._price = price;
             message._source = FillSource::Quote;    // not used
-            message._internalAllocation = 0;
-            message._externalAllocation = 0;
             message._rvStf = 0;
         });
 
@@ -565,8 +562,8 @@ public:
         sendFillToStrategyExt(internalId, side, price, size, strategy, FillType::External, source, extid, oid, bid);
     }
 
-    void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId, FillType type, FillSource source,
-                         hf::qty_t internalAllocation, hf::qty_t externalAllocation, hf::price_t stf, uint32_t hedgeId = 0) {
+    void sendFillToFront(uint32_t contractIndex, uint32_t side, hf::price_t price, hf::qty_t size, StrategyId strategyId,
+                         FillType type, FillSource source, hf::price_t stf, uint32_t hedgeId = 0) {
         sendMessageToFront<FillMessage>(ViperMessageType::Fill, [=](FillMessage& message) {
             message._contractId = contractIndex;
             message._side = side;
@@ -575,8 +572,6 @@ public:
             message._type = type;
             message._price = price;
             message._source = source;
-            message._internalAllocation = internalAllocation;
-            message._externalAllocation = externalAllocation;
             message._rvStf = stf;
             message._latencyTracking._extid = hedgeId;
         });
@@ -606,7 +601,7 @@ public:
             return false;
         }
         sendHedgeMarketDataAdjustmentAck(strategy, hedge._hedgeId, internalId, GetOtherSide(side), rhoneOrder->oid.value(), hedge._size);
-        sendFillToFront(internalId, side, hedge._externalPrice, hedge._size, strategy, FillType::External, FillSource::Hedge, 0,0, hedge._stf, hedge._hedgeId);
+        sendFillToFront(internalId, side, hedge._externalPrice, hedge._size, strategy, FillType::External, FillSource::Hedge, hedge._stf, hedge._hedgeId);
         return true;
     }
 

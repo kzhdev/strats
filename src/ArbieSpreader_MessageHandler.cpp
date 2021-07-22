@@ -95,6 +95,11 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
             onShiftUpdate(shift);
             break;
         }
+        case ViperMessageType::VectorParameterUpdate: {
+            const auto& msg = reinterpret_cast<const VectorParameterUpdate&>(message._data[0]);
+            handleVectorParameterUpdate(msg);
+            break;
+        }
         default:
             TLOG(0, "AS. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
@@ -289,4 +294,24 @@ void ArbieSpreader::onShiftUpdate(uint32_t shift) {
     }
     auto disableTime = boost::lexical_cast<int32_t>(_viperConfig.getGlobalByShift(AUTO_AS_DISABLE_TIME, toUInt(_viperConfig._currentShift)));
     setAutoDisableTime(disableTime, clockUtil::GetCycles());
+}
+
+void ArbieSpreader::handleVectorParameterUpdate(const VectorParameterUpdate& msg) {
+    const VectorParameterUpdate::Update* update = msg._data;
+    for (uint32_t i = 0; i < msg._numUpdate; ++i) {
+        if (update->_type == VectorParametersColumns::Range) {
+            _vectorsRange[update->_vectorIndex] = update->_value;
+        } else {
+            _vectorsMaxPosition[update->_vectorIndex] = update->_value;
+        }
+        ++update;
+    }
+
+    for (auto& contract : _contracts) {
+        if (contract._usedInQuoting) {
+            for (auto& stfOffset : contract._shortTermFairOffsets) {
+                calculateRVSTFMove(contract, stfOffset, true);
+            }
+        }
+    }
 }

@@ -1441,7 +1441,8 @@ enum class ViperMessageType : uint8_t {
     SubscribeSTFUpdate,
     STFUpdate,
     TransferPositionToRV,
-    
+
+    VectorParameterUpdate,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1492,10 +1493,14 @@ struct RVLatencyTrackingMessage {
 struct FillMessage {
     uint64_t _timestamp;
     hf::price_t _price;
-    hf::price_t _rvStf;
     hf::qty_t _qty;
-    uint32_t _internalAllocation;
-    uint32_t _externalAllocation;
+    union {
+        hf::price_t _rvStf;
+        struct {
+            uint32_t _internalAllocation;
+            uint32_t _externalAllocation;
+        };
+    };
     uint32_t _contractId;
     uint32_t _side;
     StrategyId _strategy;
@@ -1503,6 +1508,7 @@ struct FillMessage {
     FillSource _source;
     bool _forceOverFill;
     bool _checkLimit;
+
     LatencyTrackingFields _latencyTracking;
 };
 
@@ -1668,6 +1674,15 @@ struct InternalBookUpdate {
     uint32_t _side;
     hf::batch_id_t _lastMDbid;
     md::top_t _book;
+};
+
+struct VectorParameterUpdate {
+    uint32_t _numUpdate;
+    struct Update {
+        VectorParametersColumns _type;
+        uint32_t _vectorIndex;
+        double _value;
+    } _data[0];
 };
 
 class ViperPool : public hf::pool::DataPool {

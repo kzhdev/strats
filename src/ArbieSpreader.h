@@ -2,6 +2,7 @@
 
 #include "ViperStrategyBase.h"
 #include "OrderRequestManager.h"
+#include "PerfMonitor.h"
 
 namespace Python {
 template<uint32_t>
@@ -67,6 +68,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         ArbieSpreaderPath* _config;
         Path* _otherSidePath = nullptr;
         const ShortTermFairOffset& _stfOffset;
+        hf::price_t _rvSTFMove = 0;
         hf::price_t _commission;
         std::vector<PathContract> _leanContracts;
         PriceQtyPair _priceSize;
@@ -112,6 +114,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         std::string _id;
         Contract* _contract = nullptr;
         hf::price_t _stfOffset = 0;
+        hf::price_t _rvSTFMove = 0;
 
         struct ShortTermFair {
             hf::price_t _fair = hf::NULL_PRICE;
@@ -330,6 +333,9 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::unordered_set<Market*> _effected_markets;
     std::unordered_set<ShortTermFairOffset*> _updatedSTFOffsets;
     std::unordered_multimap<uint32_t, ShortTermFairOffset*> _mapShortTermFairOffset;
+    Matrix _riskMatrix; // x,y - vectors - square
+    std::vector<double> _vectorsRange;
+    std::vector<double> _vectorsMaxPosition;
 
 public:
     ArbieSpreader()
@@ -359,6 +365,7 @@ public:
     void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sendingFunc) const override;
 
 private:
+    void calculateRVSTFMove(Contract& contract, ShortTermFairOffset& stfOffset, bool force = false);
     void initializeContracts();
     void runCycle(uint64_t now);
     // System State handling
@@ -465,10 +472,12 @@ private:
     void pushUpdatedContract(Contract* contract);
     void onEconomicNumberEnded(EconomicNumber::Color color);
     void onShiftUpdate(uint32_t shift);
+    void handleVectorParameterUpdate(const VectorParameterUpdate& msg);
 };
 
 template<uint32_t Side>
 inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const std::function<void()>& sendFillToFront) {
+    SCOPED_PERF_POINT(PerfId::AS_UpdateHedge);
     auto otherSide = GetOtherSide<Side>();
     if (contract._markets[otherSide][Market::External].getASQuoteAdjustment()) {
         // the aggressor quote filled?
@@ -518,8 +527,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                                                 message._type = FillType::Internal;
                                                 message._source = FillSource::AsToRv;
                                                 message._checkLimit = false;
-                                                message._internalAllocation = 0;
-                                                message._externalAllocation = 0;
                                                 message._timestamp = now;
                                                 message._forceOverFill = false;
                                                 message._rvStf = hf::NULL_PRICE;
@@ -530,18 +537,17 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
             rv->template sendMessage<ASFillsToRV>(
                     ViperMessageType::TransferPositionToRV,
                     [this, &contract, qty, now, pBest, otherSide](ASFillsToRV& message) {
+                        auto quoteAdjustedFillPrice = contract._stf + pBest->_stfOffset._rvSTFMove * qty;
                         message._numFills = pBest->_leanContracts.size() + 1;
                         FillMessage* fill = message._fills;
                         fill->_contractId = contract._def._internalId;
                         fill->_strategy = StrategyId::RelativeValue;
-                        fill->_price = contract._stf;
+                        fill->_price = quoteAdjustedFillPrice;
                         fill->_qty = qty;
                         fill->_side = Side;
                         fill->_type = FillType::Internal;
                         fill->_source = FillSource::AsToRv;
                         fill->_checkLimit = false;
-                        fill->_internalAllocation = 0;
-                        fill->_externalAllocation = 0;
                         fill->_timestamp = now;
                         fill->_forceOverFill = false;
                         fill->_rvStf = hf::NULL_PRICE;
@@ -558,8 +564,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                                                                 message._type = FillType::Internal;
                                                                 message._source = FillSource::AsToRv;
                                                                 message._checkLimit = false;
-                                                                message._internalAllocation = 0;
-                                                                message._externalAllocation = 0;
                                                                 message._timestamp = now;
                                                                 message._forceOverFill = false;
                                                                 message._rvStf = hf::NULL_PRICE;
@@ -574,8 +578,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                             fill->_type = FillType::Internal;
                             fill->_source = FillSource::AsToRv;
                             fill->_checkLimit = false;
-                            fill->_internalAllocation = 0;
-                            fill->_externalAllocation = 0;
                             fill->_timestamp = now;
                             fill->_forceOverFill = false;
                             fill->_rvStf = hf::NULL_PRICE;
@@ -661,6 +663,8 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
             return false;
         }
 
+        SCOPED_PERF_POINT(PerfId::AS_Path_Calculation);
+
         auto oldPriceSize = _priceSize;
         _priceSize._price = 0;
         _priceSize._size = std::numeric_limits<hf::qty_t>::max();
@@ -732,6 +736,7 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
 
 template<uint32_t Side>
 inline void ArbieSpreader::Contract::updatePaths(bool force) {
+    SCOPED_PERF_POINT(PerfId::AS_UpdatePaths);
     bool sort = false;
     for (auto path : _paths[Side]) {
         sort |= path->calculate<Side>(force);

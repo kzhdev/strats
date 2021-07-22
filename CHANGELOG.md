@@ -1,3 +1,7 @@
+#Version 1.54.0.3
+- Implemented a PerfMonitor
+- Implemented RV STF Move in AS switch Paths; Adjust the move to the fill price of the ASToRV quote fill.
+
 #Version 1.54.0.2
 - Fix actualEdge display issue
 - Added more logging details

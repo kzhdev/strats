@@ -9,6 +9,10 @@ SET_SOURCE_FILES_PROPERTIES(
 add_executable(${BINARY_NAME} ${SOURCE_FILES_APP} ${SOURCE_FILES_LIB} ${PROTO})
 target_compile_options(${BINARY_NAME} PUBLIC -Wno-write-strings)
 
+if (${ENABLE_PERF})
+    target_compile_definitions(${BINARY_NAME} PRIVATE -DENABLE_PERF)
+endif()
+
 target_include_directories(${BINARY_NAME} PUBLIC
         ${RHONE_INCLUDES}
         ${RHONEPUBLIC_DIR}/rhonelogging/src
