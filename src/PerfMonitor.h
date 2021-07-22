@@ -178,17 +178,17 @@ private:
                 auto& stat = _statistics[i];
                 if (stat.n > 100) {
                     log << to_string(static_cast<PerfId>(i)) << ":" << std::endl;
-                    log << std::setw(25) << "num_observation" << ":" << stat.n << std::endl;
+                    log << std::setw(25) << "num_observation" << ": " << stat.n << std::endl;
                     if (i != toUInt(PerfId::AS_UpdateContractCount)) {
-                        log << std::setw(25) << "avg_latency(ns)" << ":" << stat.mean / _frequency << std::endl;
-                        log << std::setw(25) << "min_latency(ns)" << ":" << stat.min / _frequency << std::endl;
-                        log << std::setw(25) << "max_latency(ns)" << ":" << stat.max / _frequency << std::endl;
-                        log << std::setw(25) << "std_div" << ":" << sqrt(stat.variance) / _frequency << std::endl;
+                        log << std::setw(25) << "avg_latency(ns): " << stat.mean / _frequency << std::endl;
+                        log << std::setw(25) << "min_latency(ns): " << stat.min / _frequency << std::endl;
+                        log << std::setw(25) << "max_latency(ns): " << stat.max / _frequency << std::endl;
+                        log << std::setw(25) << "std_div: " << sqrt(stat.variance) / _frequency << std::endl;
                     } else {
-                        log << std::setw(25) << "avg" << ":" << stat.mean << std::endl;
-                        log << std::setw(25) << "min" << ":" << stat.min << std::endl;
-                        log << std::setw(25) << "max" << ":" << stat.max << std::endl;
-                        log << std::setw(25) << "std_div" << ":" << sqrt(stat.variance) << std::endl;
+                        log << std::setw(25) << "avg: " << stat.mean << std::endl;
+                        log << std::setw(25) << "min: " << stat.min << std::endl;
+                        log << std::setw(25) << "max: " << stat.max << std::endl;
+                        log << std::setw(25) << "std_div: " << sqrt(stat.variance) << std::endl;
                     }
                     log << std::endl;
                 }
