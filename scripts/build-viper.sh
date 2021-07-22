@@ -111,6 +111,13 @@ function main() {
         eval false; return
     fi
 
+    if [ -z ${ENABLE_PERF+x} ]; then
+        read -p "Enable Perf? [y/n] " perf
+        if [ "${perf,,}" == "y" ]; then
+            ENABLE_PERF=1
+        fi
+    fi
+
     echo "Version:                                     $VERSION"
     echo "viper hash:                                  $GITHASH"
     echo "rhonepublic hash:                            $RHONEPUBLIC_GITHASH"

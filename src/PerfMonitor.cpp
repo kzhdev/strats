@@ -18,7 +18,7 @@ void PerfMonitor::onCreate(const libconfig::Setting& config) {
         _instance = this;
     }
 
-    auto queue_size = hf::ConfigManager::getULong(config, "size", 1<<16);
+    auto queue_size = hf::ConfigManager::getULong(config, "size", 1<<22);
     logging::GetLogger().logInfo(boost::str(boost::format("perf_queue_size=%1%") % queue_size));
 
     auto shmname = hf::ConfigManager::getString(config, "shmname", "./shm/perf_queue.queue");

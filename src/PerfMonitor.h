@@ -78,6 +78,10 @@ class PerfMonitor : public virtual hf::Service {
 
             uint64_t value;
             if (point._type == PerfType::End) {
+                if (BOOST_UNLIKELY(!beginTime)) {
+                    logging::GetLogger().logInfo(boost::str(boost::format("Skip perf end point due to begin = 0. perfId=%1% n=%2%") % to_string(point._id) % n));
+                    return;
+                }
                 value = point._timestamp - beginTime;
                 beginTime = 0;
             } else {
@@ -126,10 +130,10 @@ public:
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             auto* perfPoint = _perfQueue.next(_cursor);
             if (perfPoint) {
-                auto& statistics = _statistics[perfPoint->_id];
-                statistics.addData(*perfPoint);
+                _statistics[perfPoint->_id].addData(*perfPoint);
+            } else {
+                log();
             }
-            log();
         }
     }
 
