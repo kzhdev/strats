@@ -197,7 +197,7 @@ function main() {
                       -DVIPER_GITHASH=${GITHASH} \
                       -DVIPER_VERSION=${VERSION} \
                       -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
-                      -DENABLE_PERF \
+                      -DENABLE_PERF=1 \
                       ..
             fi
             # make -j$(expr $(grep -c ^processor /proc/cpuinfo) / 2)
