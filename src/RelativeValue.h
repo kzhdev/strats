@@ -882,6 +882,8 @@ public:
         bool shortTermFairs = false;
         std::vector<uint32_t> checkEMA;
 
+        std::vector<std::tuple<VectorParametersColumns, uint32_t, double>> changedRangeMaxPos;
+
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
@@ -895,6 +897,7 @@ public:
                         foundation = true;
                         shortTermFairs = true;
                         LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::Range, gridCell.row(), value));
                     } else {
                         LOG(0, "RV could not change range. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
@@ -903,13 +906,14 @@ public:
                     break;
                 }
                 case VectorParametersColumns::MaxPos: {
-                    double value = boost::lexical_cast<double>(gridCell.value());
+                    auto value = boost::lexical_cast<double>(gridCell.value());
                     if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
                         _vectorsMaxPosition.setValue(gridCell.row(), value);
                         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                         foundation = true;
                         shortTermFairs = true;
                         LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::MaxPos, gridCell.row(), value));
                     } else {
                         LOG(0, "RV could not change max_pos. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
@@ -1000,6 +1004,22 @@ public:
                 default:
                     break;
             }
+        }
+
+        if (!changedRangeMaxPos.empty()) {
+            getStrategy(StrategyId::ArbieSpreader)->sendMessage<VectorParameterUpdate>(
+                    ViperMessageType::VectorParameterUpdate,
+                    [&changedRangeMaxPos] (VectorParameterUpdate& msg) {
+                        msg._numUpdate = changedRangeMaxPos.size();
+                        VectorParameterUpdate::Update* data = msg._data;
+                        for (auto& change : changedRangeMaxPos) {
+                            data->_type = std::get<0>(change);
+                            data->_vectorIndex = std::get<1>(change);
+                            data->_value = std::get<2>(change);
+                            ++data;
+                        }
+                    },
+                    changedRangeMaxPos.size() * sizeof(VectorParameterUpdate::Update));
         }
 
         if (foundation) {
@@ -2095,6 +2115,7 @@ public:
         _factorHedgedIndexes.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsInVector.init(_numberOfVectors);
+        _shortTermFairsMoveInVector.init(_numberOfVectors);
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
         _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
         _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
@@ -2102,6 +2123,7 @@ public:
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsForContracts.initDefault(_numberOfAllContracts);
         _shortTermFairsCache.init(_numberOfAllContracts);
+        _shortTermFairsMoveForContract.init(_numberOfAllContracts);
         _rhoneMaxClipSize.init(_numberOfAllContracts);
         _lastOrderRequests.resize(_numberOfAllContracts);
     }
@@ -3041,6 +3063,8 @@ public:
     Vector<hf::price_t> _shortTermFairsCache;
     std::unordered_map<uint32_t, ShortTermFairs*> _shortTermFairUpdate;
     Vector<double> _shortTermFairsInVector;
+    Vector<double> _shortTermFairsMoveInVector;
+    Vector<double> _shortTermFairsMoveForContract;
     Vector<double> _longTermFairsInVector;
     bool _hasDataForCharts = false;
 

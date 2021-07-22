@@ -1,0 +1,204 @@
+#pragma once
+
+#include <hf/Service.h>
+#include "LockFreeQueue.h"
+#include "logging/Logger.h"
+#include "ClockUtil.h"
+#include "Common.h"
+#include <set>
+#include <fstream>
+
+
+namespace Python {
+
+enum PerfId : uint8_t {
+    AS_Path_Calculation,
+    AS_UpdatePaths,
+    AS_UpdateHedge,
+    __PerfId_END__,
+};
+
+#ifdef ENABLE_PERF
+
+inline const char* to_string(PerfId id) noexcept {
+    assert(std::underlying_type_t<PerfId>(id) <= std::underlying_type_t<PerfId>(PerfId::__PerfId_END__));
+    constexpr const char* strPerfId [] = {
+            "AS_Path_Calculation",
+            "AS_UpdatePaths",
+            "AS_UpdateHedge",
+    };
+    static_assert(sizeof(strPerfId) / sizeof(const char*) == std::underlying_type_t<PerfId>(PerfId::__PerfId_END__),
+                  "Update to_string for new PerfId element.");
+    return strPerfId[id];
+}
+
+enum class PerfType {
+    Begin,
+    End,
+    Point,
+};
+
+#pragma pack(1)
+struct PerfPoint {
+    PerfId _id;
+    PerfType _type;
+    uint64_t _timestamp;
+};
+#pragma pack()
+
+class PerfMonitor : public virtual hf::Service {
+    uint64_t _cursor = 0;
+    hf::queue::LockFreeQueue<PerfPoint> _perfQueue;
+    static PerfMonitor* _instance;
+    uint64_t _nextLogTime = 0;
+    uint64_t _logInterval = 0;
+    double _frequency = 0.;
+
+    struct PerfStatistics {
+        double mean = 0.;
+        double M2 = 0.;
+        double variance = 0.;
+        uint64_t min = std::numeric_limits<uint64_t>::max();
+        uint64_t max = 0;
+        uint64_t beginTime = 0;
+//        uint64_t median = 0;
+        std::multiset<uint64_t> data;
+        uint32_t n = 0;
+
+        PerfStatistics() {
+//            data.resize(MAX_LATENCY, 0);
+        }
+
+        void addData(const PerfPoint& point) {
+            if (point._type == PerfType::Begin) {
+                assert(beginTime == 0);
+                beginTime = point._timestamp;
+                return;
+            }
+
+            uint64_t value;
+            if (point._type == PerfType::End) {
+                value = point._timestamp - beginTime;
+                beginTime = 0;
+            } else {
+                value = point._timestamp;
+            }
+
+//            data.emplace(value);
+            ++n;
+            double delta = (double)value - mean;
+            mean += delta / n;
+            M2 += delta * ((double)value - mean);
+            variance = M2 / n;
+            min = std::min<uint64_t>(value, min);
+            max = std::max<uint64_t>(value, max);
+        }
+
+        double median() const noexcept {
+            if (BOOST_UNLIKELY(n == 0)) {
+                return 0;
+            }
+            if (BOOST_UNLIKELY(n == 1)) {
+                return *data.begin();
+            }
+            auto iter = data.cbegin();
+            std::advance(iter, data.size() / 2);
+
+            auto half = n >> 1;
+            if (n == half << 1) {
+                // even number of data
+                return (*iter + (*std::next(iter))) / 2;
+            }
+            return *iter;
+        }
+    };
+
+    PerfStatistics _statistics[PerfId::__PerfId_END__];
+
+public:
+    static PerfMonitor* get() noexcept {
+        return _instance;
+    }
+
+    void onCreate(const libconfig::Setting& config) override;
+
+    void onRun() override {
+        while (BOOST_LIKELY(!hf::Service::isExitAll())) {
+            auto* perfPoint = _perfQueue.next(_cursor);
+            if (perfPoint) {
+                auto& statistics = _statistics[perfPoint->_id];
+                statistics.addData(*perfPoint);
+            }
+            log();
+        }
+    }
+
+    void addPerfPoint(PerfId id, PerfType type) {
+        addPerfPoint(id, type, clockUtil::GetCycles());
+    }
+
+    ALWAYS_INLINE
+    void addPerfPoint(PerfId id, PerfType type, uint64_t timestamp) {
+        auto index = _perfQueue.reserve();
+        auto& perfPoint = *_perfQueue[index];
+        perfPoint._id = id;
+        perfPoint._type = type;
+        perfPoint._timestamp = timestamp;
+        _perfQueue.publish(index);
+    }
+
+private:
+    void log() {
+        auto now = clockUtil::GetCycles();
+        if (now >= _nextLogTime) {
+            _nextLogTime = now + _logInterval;
+            std::ofstream log("./perf_log.log");
+            if (!log.is_open()) {
+                logging::GetLogger().logErrorAndThrow("Failed to open perf_log.log");
+                return;
+            }
+
+            for (std::underlying_type_t<PerfId> i = 0; i < std::underlying_type_t<PerfId>(PerfId::__PerfId_END__); ++i) {
+                auto& stat = _statistics[i];
+                if (stat.n > 100) {
+                    log << to_string(static_cast<PerfId>(i)) << std::endl;
+                    log << std::setw(25) << "num_observation" << ":" << stat.n << std::endl;
+                    log << std::setw(25) << "average_latency(us)" << ":" << GetMicrosFromCycles(stat.mean, _frequency) << std::endl;
+                    log << std::setw(25) << "min_latency(us)" << ":" << GetMicrosFromCycles(stat.min, _frequency) << std::endl;
+                    log << std::setw(25) << "max_latency(us)" << ":" << GetMicrosFromCycles(stat.max, _frequency) << std::endl;
+                    log << std::setw(25) << "std_div" << ":" << sqrt(stat.variance) << std::endl;
+                    log << std::endl;
+                }
+            }
+
+            log.close();
+        }
+    }
+};
+
+struct ScopedPerfPoint {
+    PerfId _id;
+    ScopedPerfPoint(PerfId id) : _id(id) {
+        PerfMonitor::get()->addPerfPoint(id, PerfType::Begin);
+    }
+
+    ~ScopedPerfPoint() {
+        PerfMonitor::get()->addPerfPoint(_id, PerfType::End);
+    }
+};
+
+#define SCOPED_PERF_POINT(id) ScopedPerfPoint pef(id)
+#define ADD_PERF_POINT(id, type) PerfMonitor::get()->addPerfPoint(id, type)
+
+#else   // ENABLE_PERF
+
+class PerfMonitor : public virtual hf::Service {
+public:
+    void onRun() {}
+};
+
+#define SCOPED_PERF_POINT(...) do {} while(0)
+#define ADD_PERF_POINT(...) do {} while(0)
+
+#endif  // ENABLE_PERF
+}

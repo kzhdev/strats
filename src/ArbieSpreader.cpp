@@ -1,5 +1,6 @@
 #include "ArbieSpreader.h"
 #include <util/ResourceManager.h>
+#include "MathStructures.h"
 
 using namespace Python;
 
@@ -10,6 +11,17 @@ const ArbieSpreader::ShortTermFairOffset ArbieSpreader::Contract::_zeroStfOffset
 
 void ArbieSpreader::init(double frequency, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker) {
     ViperStrategyBase::init(frequency, internalHeartbeatPeriod, std::move(pnlLimitsChecker));
+    auto numFactors = _viperConfig._vectorConfigs.size();
+    _vectorsRange.resize(numFactors, 0.);
+    _vectorsMaxPosition.resize(numFactors, 0.);
+    Matrix pricingMatrix;
+    _viperConfig.populatePricingMatrix(pricingMatrix);
+    _riskMatrix = pricingMatrix.inverse().transpose();
+    for (uint32_t index = 0; index < numFactors; ++index) {
+        VectorConfig& vc = _viperConfig._vectorConfigs[index];
+        _vectorsRange[index] = vc._range;
+        _vectorsMaxPosition[index] = vc._maxPos;
+    }
     initializeContracts();
 }
 
@@ -178,6 +190,8 @@ void ArbieSpreader::initializeContracts() {
                     }
 
                     getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, contract._def._internalId);
+
+                    calculateRVSTFMove(contract, *stfIter);
                 }
 
                 ++id;
@@ -185,6 +199,81 @@ void ArbieSpreader::initializeContracts() {
         }
     }
     logging::GetLogger().logInfo(boost::str(boost::format("AS. NumberOfPaths=%1%") % _allPaths.size()));
+}
+
+void ArbieSpreader::calculateRVSTFMove(Contract& quoteContract, ShortTermFairOffset& stfOffset, bool force) {
+    if (stfOffset._rvSTFMove && !force) {
+        // already calculated
+        return;
+    }
+
+    auto numVectors = _viperConfig._vectorConfigs.size();
+    std::vector<double> factorNetPos;
+    factorNetPos.resize(numVectors, 0.);
+    Matrix factorSTFMove(numVectors, 1);
+
+    auto calculateFectorsNetPos = [this, &factorNetPos](const ConfigContract& contract, int32_t radio, double qtyMultiplier) {
+        for (uint32_t i = 0; i < factorNetPos.size(); ++i) {
+            factorNetPos[i] += radio * _riskMatrix.getValue(i, contract._internalId) * qtyMultiplier;
+//#ifdev IS_DEV
+//            LOG(0, "{C[i1]} riskMatrix[{i2}][{i3}]={d1} qtyMultipler={d2} radio={i4} net_pos={d3}", contract._name, i, contract._internalId, _riskMatrix.getValue(i, contract._internalId), qtyMultiplier, radio, factorNetPos[i])
+//#endif
+        }
+    };
+
+    for (auto& stf : stfOffset._shortTermFairs) {
+        auto& contract = _viperConfig._allContracts[stf._contractId];
+        auto qtyMultiplier = _viperConfig._pricingConfigs[contract._internalId]._quantityMultiplier;
+        if (!contract._legs.empty()) {
+            for (auto& leg : contract._legs) {
+                auto& legContract = _viperConfig._allContracts[leg._index];
+                calculateFectorsNetPos(legContract, stf._ratio * leg._ratio, qtyMultiplier);
+            }
+        } else {
+            calculateFectorsNetPos(contract, stf._ratio, qtyMultiplier);
+        }
+    }
+
+    for (size_t i = 0; i < numVectors; ++i) {
+        factorSTFMove.setValue(i, 0, -factorNetPos[i] * _vectorsRange[i] / _vectorsMaxPosition[i]);
+//#ifdef IS_DEV
+//        LOG(0, "Factor {i1} NetPos={d1}. range={d2} maxPos={d3} Factor STF move for 1 unit path: {d4}", i, factorNetPos[i], _vectorsRange[i], _vectorsMaxPosition[i], factorSTFMove.getValue(i, 0))
+//#endif
+    }
+
+    auto numContracts = _contracts.size();
+    auto contractSTFMoveMatrix = _riskMatrix.transpose().multiply(factorSTFMove);
+    assert(contractSTFMoveMatrix._numberOfColumns == 1);
+    std::vector<double> contractSTFMove(numContracts, 0.);
+    for (uint32_t i = 0; i < numContracts; ++i) {
+        auto& contract = _viperConfig._allContracts[i];
+        if (contract._legs.empty()) {
+            contractSTFMove[i] = contractSTFMoveMatrix.getValue(contract._internalId, 0) / _viperConfig._pricingConfigs[contract._internalId]._pricingMultiplier;
+        } else {
+            for (auto& leg : contract._legs) {
+                contractSTFMove[i] += contractSTFMove[leg._index] * leg._ratio;
+            }
+        }
+//#ifdef IS_DEV
+//        LOG(0, "{C[i1]} stf move {d1}", contract._name, contractSTFMove[i])
+//#endif
+    }
+
+#ifdef IS_DEV
+    std::string path;
+#endif
+    double stfMove = 0.;
+    for (auto& stf : stfOffset._shortTermFairs) {
+#ifdef IS_DEV
+        auto& contract = _viperConfig._allContracts[stf._contractId];
+        path.append(std::to_string(stf._ratio)).append("*").append(contract._name);
+#endif
+        stfMove += stf._ratio * contractSTFMove[stf._contractId];
+    }
+    stfOffset._rvSTFMove = ToRhonePrice(stfMove / 2);
+#ifdef IS_DEV
+    LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), path, stfMove)
+#endif
 }
 
 void ArbieSpreader::registerOrderClient() {

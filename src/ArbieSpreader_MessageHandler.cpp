@@ -69,6 +69,9 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
                 auto& otherSideMarket = contract._markets[1 - msg._side][Market::External];
                 auto& tob = msg._book.l[0];
                 if (market.getPrice() != tob.pr || market.getUnAdjustedSize() != tob.q) {
+                    LOG(0, "AS {C[i1]}. Internal book update. Side={i2} {i3}@{d1} -> {i4}@{d2}. MDbid={i5} contract._lastMDbid={i6}", contract.name(),
+                        msg._side, market.getUnAdjustedSize(), ToDollars(market.getPrice()), tob.q, ToDollars(tob.pr),
+                        msg._lastMDbid, contract._lastMDbid)
                     if (msg._side == BID) {
                         onMarketDataUpdate(contract, true, tob.pr, tob.q, false, otherSideMarket.getPrice(), otherSideMarket.getUnAdjustedSize());
                     } else {
@@ -76,7 +79,25 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
                     }
                 }
                 contract._lastMDbid = msg._lastMDbid;
+            } else {
+                LOG(0, "AS {C[i1]}. ignore stale internal book update. Side={i2} update._lastMDbid={i3}, contract._lastMDbid={i4}", contract.name(), msg._side, msg._lastMDbid, contract._lastMDbid)
             }
+            break;
+        }
+        case ViperMessageType::EconomicNumberEnded: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            onEconomicNumberEnded((EconomicNumber::Color)msg._number_1);
+            break;
+        }
+        case ViperMessageType::ShiftUpdate: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            uint32_t shift = msg._number_1;
+            onShiftUpdate(shift);
+            break;
+        }
+        case ViperMessageType::VectorParameterUpdate: {
+            const auto& msg = reinterpret_cast<const VectorParameterUpdate&>(message._data[0]);
+            handleVectorParameterUpdate(msg);
             break;
         }
         default:
@@ -203,4 +224,94 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
         return true;
     }
     return false;
+}
+
+void ArbieSpreader::onEconomicNumberEnded(EconomicNumber::Color color) {
+    if (!canEnable()) {
+        LOG(0, "AS. on EconomicNumber ended. Cannot enabled {i1}", 0)
+        sendErrorMessage("AS on EconomicNumber ended. Cannot enabled", ErrorType::Critical);
+        return;
+    }
+
+    LOG(0, "AS. check cross on EconomicNumber ended. color={i1}", toUInt(color))
+
+    // check cross
+    bool crossed = false;
+    for (auto& contract : _contracts) {
+        if (contract._usedInQuoting) {
+            auto& bidQuote = contract._quote[BID];
+            auto mktAskPrice = contract._markets[ASK][Market::External].getPrice();
+            if (bidQuote._externalSize && bidQuote._externalPrice != hf::NULL_PRICE && mktAskPrice != hf::NULL_PRICE &&
+                bidQuote._externalPrice >= mktAskPrice) {
+                crossed = true;
+                LOG(0, "AS {C[i1]}. BID crossed externalPrice={d1} marketAskPrice={d2}", contract.name(),
+                    ToDollars(bidQuote._externalPrice), ToDollars(mktAskPrice))
+                sendErrorMessage(boost::str(boost::format("AS %1% BID crossed. externalPrice=%2% marketAskPrice=%3%") % contract._def._name
+                                            % ToDollars(bidQuote._externalPrice) % ToDollars(mktAskPrice)), ErrorType::Critical);
+            }
+
+            auto& askQuote = contract._quote[ASK];
+            auto mktBidPrice = contract._markets[BID][Market::External].getPrice();
+            if (askQuote._externalSize && askQuote._externalPrice != hf::NULL_PRICE && mktBidPrice != hf::NULL_PRICE &&
+                askQuote._externalPrice <= mktBidPrice) {
+                crossed = true;
+                LOG(0, "AS {C[i1]}. ASK crossed externalPrice={d1} marketAskPrice={d2}", contract.name(),
+                    ToDollars(bidQuote._externalPrice), ToDollars(mktAskPrice))
+                sendErrorMessage(boost::str(boost::format("AS %1% ASK crossed. externalPrice=%2% marketBidPrice=%3%") % contract._def._name
+                                            % ToDollars(bidQuote._externalPrice) % ToDollars(mktAskPrice)), ErrorType::Critical);
+            }
+        }
+    }
+
+    if (crossed) {
+        LOG(0,"Not enable AS due to cross. {i1}", 0)
+        sendErrorMessage("On EconomicNumber ended. Not enable AS due to cross", ErrorType::Critical);
+        return;
+    }
+
+    enable();
+    updateQuotes(true, state() == SystemState::CheckQuotes);
+    LOG(0,"AS enabled {i1}", 0)
+    sendErrorMessage("AS enabled on EconomicNumber ended.", ErrorType::Normal);
+}
+
+void ArbieSpreader::onShiftUpdate(uint32_t shift) {
+    for (auto& config : _viperConfig._globalConfigs) {
+        if (config._key == AS_EDGE_MULTIPLIER) {
+            auto multiplier = boost::lexical_cast<double>(config._shifts[shift]);
+            if (Compare(multiplier, _edgeMultiplier) != 0) {
+                LOG(0, "AS edge_multiplier changed. Value={d1}", _edgeMultiplier)
+                for (auto& contract : _contracts) {
+                    if (contract._usedInQuoting) {
+                        contract._edge = contract._edge / _edgeMultiplier * multiplier;
+                    }
+                }
+                _edgeMultiplier = multiplier;
+                updateQuotes(true, state() == SystemState::CheckQuotes);
+            }
+            break;
+        }
+    }
+    auto disableTime = boost::lexical_cast<int32_t>(_viperConfig.getGlobalByShift(AUTO_AS_DISABLE_TIME, toUInt(_viperConfig._currentShift)));
+    setAutoDisableTime(disableTime, clockUtil::GetCycles());
+}
+
+void ArbieSpreader::handleVectorParameterUpdate(const VectorParameterUpdate& msg) {
+    const VectorParameterUpdate::Update* update = msg._data;
+    for (uint32_t i = 0; i < msg._numUpdate; ++i) {
+        if (update->_type == VectorParametersColumns::Range) {
+            _vectorsRange[update->_vectorIndex] = update->_value;
+        } else {
+            _vectorsMaxPosition[update->_vectorIndex] = update->_value;
+        }
+        ++update;
+    }
+
+    for (auto& contract : _contracts) {
+        if (contract._usedInQuoting) {
+            for (auto& stfOffset : contract._shortTermFairOffsets) {
+                calculateRVSTFMove(contract, stfOffset, true);
+            }
+        }
+    }
 }

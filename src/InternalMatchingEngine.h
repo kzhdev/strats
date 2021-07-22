@@ -1916,12 +1916,9 @@ public:
             return false;
         }
 
-        if (id > orderId(StrategyId::MarketMaker, Order::Type::Quoting)) {
-            ++requestQueue._processedCursor;
-            auto& request = requestQueue._queue[requestQueue._processedCursor];
-            execute |= processOrderRequest<Side>(request, requestQueue._processedCursor);
-        } else {
-            uint32_t drainSize = lastRequest - (requestQueue._processedCursor + 1) + 1;
+        if (!id || ((id & 1) & (id != orderId(StrategyId::ArbieSpreader, Order::Type::Quoting)))) {
+            // MM Hedge or MM/RV Quote, skip to the last request
+            uint32_t drainSize = lastRequest - requestQueue._processedCursor;
 
             // process the last request to avoid order flickering
             auto& request = requestQueue._queue[lastRequest];
@@ -1930,8 +1927,14 @@ public:
 
             if (BOOST_UNLIKELY(drainSize && (logging::loggingLevel() > logging::LOG_LEVEL::INFO))) {
                 LOG(0, "IME {C[i1]}. Order request. ID={i2} Side={i3} Skip {i4}", getContractName(), toUInt(id), Side,
-                     (drainSize - 1));
+                    (drainSize - 1));
             }
+        } else {
+            // RV/AS Hedge or AS Quote
+            // Not skip AS quote to the last because the Aggressive Quote adjustment
+            ++requestQueue._processedCursor;
+            auto& request = requestQueue._queue[requestQueue._processedCursor];
+            execute |= processOrderRequest<Side>(request, requestQueue._processedCursor);
         }
         return true;
     }

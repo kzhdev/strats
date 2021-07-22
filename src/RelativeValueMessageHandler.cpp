@@ -79,6 +79,9 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
                 const md::top_t::level_t& l = msg._book.l[0];
                 const Market& market = contract.externalMarket(msg._side);
                 if ((market.getPrice() != l.pr) || (market.getUnAdjustedSize() != l.q)) {
+                    LOG(0, "RV {C[i1]}. InternalBook update. Side={i2} {i3}@{d1} -> {i4}@{d2} msg._lastMDbid={i5} contract._lastMDbid={i6}", getContract(contract._internalId),
+                        msg._side, market.getUnAdjustedSize(), ToDollars(market.getPrice()), l.q, ToDollars(l.pr),
+                        msg._lastMDbid, contract._lastMDbid)
                     if (msg._side == BID) {
                         onMarketDataUpdate(contract, msg._contractId, true, l.pr, l.q, false, contract.externalMarket(ASK).getPrice(), contract.externalMarket(ASK).getUnAdjustedSize());
                     } else {
@@ -86,6 +89,9 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
                     }
                 }
                 contract._lastMDbid = msg._lastMDbid;
+            } else {
+                LOG(0, "RV {C[i1]}. ignore stale internal book update. Side={i2} MDbid={i3} contract._lastMDbid={i4}", getContract(contract._internalId),
+                    msg._side, msg._lastMDbid, contract._lastMDbid)
             }
             break;
         }
@@ -161,7 +167,7 @@ void RelativeValue::onEconomicNumberEnded(EconomicNumber::Color color) {
                 crossed = true;
                 LOG(0, "RV {C[i1]}. ASK crossed externalPrice={d1} marketAskPrice={d2}", getContract(contract._internalId),
                     ToDollars(bidQuote._externalPrice), ToDollars(mktAskPrice))
-                sendErrorMessage(boost::str(boost::format("RV %1% ASK crossed. externalPrice=%2% marketAskPrice=%3%") % contract._definition._name
+                sendErrorMessage(boost::str(boost::format("RV %1% ASK crossed. externalPrice=%2% marketBidPrice=%3%") % contract._definition._name
                     % ToDollars(bidQuote._externalPrice) % ToDollars(mktAskPrice)), ErrorType::Critical);
             }
         }

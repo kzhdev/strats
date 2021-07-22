@@ -118,7 +118,7 @@ void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sen
         }
 
         guiThings.addRow(cells, contract._def._internalId, {
-                rowCell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(contract._edge)),
+                rowCell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(ToDollars(contract._edge))),
                 rowCell(ArbieSpreaderParameterColumns::STF, std::to_string(contract._stf)),
                 rowCell(ArbieSpreaderParameterColumns::BidLeanPath, contract._quote[BID]._hedgePath == -1 ? "" : contract._paths[BID][0]->_name),
                 rowCell(ArbieSpreaderParameterColumns::AskLeanPath, contract._quote[ASK]._hedgePath == -1 ? "" : contract._paths[ASK][0]->_name),
