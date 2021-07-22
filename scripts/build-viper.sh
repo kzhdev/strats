@@ -186,7 +186,7 @@ function main() {
             # Fake the build
             touch ../bin/${EXE_NAME}
         else
-            if [ -z ${ENABLE_PEF+x} ]; then
+            if [ -z ${ENABLE_PERF+x} ]; then
                 cmake -DCMAKE_BUILD_TYPE=Release \
                     -DVIPER_GITHASH=${GITHASH} \
                     -DVIPER_VERSION=${VERSION} \
