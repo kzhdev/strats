@@ -95,7 +95,12 @@ public:
                 cursor = 0;
             } else {
                 LOG_ERROR(boost::format("!!!! %1% is falling behind. reserved=%2% cursor=%3%") % getID() % reserved % cursor);
-                cursor = reserved - _size + 100;
+                cursor = reserved - _size + _size / 10;
+                slot* s;
+                do {
+                    ++cursor;
+                    s = &_data[cursor & _mask];
+                } while (s->_id.load(std::memory_order_relaxed) != cursor && cursor < reserved);
             }
         }
 
