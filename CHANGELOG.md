@@ -1,3 +1,6 @@
+#Version 1.54.0.4
+- Added more Perf points
+
 #Version 1.54.0.3
 - Implemented a PerfMonitor
 - Implemented RV STF Move in AS switch Paths; Adjust the move to the fill price of the ASToRV quote fill.

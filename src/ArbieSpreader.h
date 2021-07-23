@@ -259,7 +259,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
             uint32_t pathCount = 0;
             updatePaths<BID>(pathCount, force);
             updatePaths<ASK>(pathCount, force);
-            ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContract, pathCount);
+            ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractQuotes, pathCount);
         }
 
         template<uint32_t Side>
@@ -491,7 +491,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
         }
         _effected_markets.clear();
     }
-    
+
     uint32_t pathCount = 0;
     contract.template updatePaths<Side>(pathCount);
     ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractHedge, pathCount);
