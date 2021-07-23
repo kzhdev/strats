@@ -80,7 +80,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         std::string _name;
 
         template<uint32_t Side>
-        inline bool calculate(bool force);
+        inline bool calculate(bool force, uint32_t& pathCount);
 
         Path(uint32_t side, std::string name, uint32_t id, Contract* contract,
              const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig,
@@ -256,12 +256,14 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         }
 
         void updatePaths(bool force = false) {
-            updatePaths<BID>(force);
-            updatePaths<ASK>(force);
+            uint32_t pathCount = 0;
+            updatePaths<BID>(pathCount, force);
+            updatePaths<ASK>(pathCount, force);
+            ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContract, pathCount);
         }
 
         template<uint32_t Side>
-        inline void updatePaths(bool force = false);
+        inline void updatePaths(uint32_t& pathCount, bool force = false);
 
         template<uint32_t Side>
         bool updateBestMarket(Market* updated) {
@@ -489,7 +491,11 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
         }
         _effected_markets.clear();
     }
-    contract.template updatePaths<Side>();
+    
+    uint32_t pathCount = 0;
+    contract.template updatePaths<Side>(pathCount);
+    ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractHedge, pathCount);
+
     auto size = positionSize<Side>(qty);
     auto pBest = contract._paths[Side][0];
     if (BOOST_LIKELY(pBest->_priceSize.valid())) {
@@ -640,7 +646,7 @@ inline bool positionMaxedOut<ASK>(hf::qty_t position, hf::qty_t maxPos) noexcept
 }
 
 template<uint32_t Side>
-inline bool ArbieSpreader::Path::calculate(bool force) {
+inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
     if (_dirty | force) {
         _dirty = false;
 
@@ -664,6 +670,10 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
         }
 
         SCOPED_PERF_POINT(PerfId::AS_Path_Calculation);
+
+#ifdef ENABLE_PERF
+        ++pathCount;
+#endif
 
         auto oldPriceSize = _priceSize;
         _priceSize._price = 0;
@@ -735,11 +745,11 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
 }
 
 template<uint32_t Side>
-inline void ArbieSpreader::Contract::updatePaths(bool force) {
+inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force) {
     SCOPED_PERF_POINT(PerfId::AS_UpdatePaths);
     bool sort = false;
     for (auto path : _paths[Side]) {
-        sort |= path->calculate<Side>(force);
+        sort |= path->calculate<Side>(force, pathCount);
     }
     if (sort) {
         auto oldBest = _paths[Side][0];

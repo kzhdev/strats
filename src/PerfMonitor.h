@@ -18,13 +18,15 @@ enum PerfId : uint8_t {
     AS_UpdateQuotes,
     AS_RunCycle,
     AS_UpdateContractCount,
+    AS_PathUpdateCountPerContractQuotes,
+    AS_PathUpdateCountPerContractHedge,
     __PerfId_END__,
 };
 
 enum class PerfType {
     Begin,
     End,
-    Point,
+    Value,
     Discard,
 };
 
@@ -39,6 +41,8 @@ inline const char* to_string(PerfId id) noexcept {
             "AS_UpdateQuotes",
             "AS_RunCycle",
             "AS_UpdateContractCount",
+            "AS_PathUpdateCountPerContract",
+            "AS_PathUpdateCountPerContractHedge",
     };
     static_assert(sizeof(strPerfId) / sizeof(const char*) == std::underlying_type_t<PerfId>(PerfId::__PerfId_END__),
                   "Update to_string for new PerfId element.");
@@ -212,7 +216,7 @@ struct ScopedPerfPoint {
 
 #define SCOPED_PERF_POINT(id) ScopedPerfPoint pef(id)
 #define ADD_PERF_POINT(id, type) PerfMonitor::get()->addPerfPoint(id, type)
-#define ADD_PERF_VALUE(id, type, value) PerfMonitor::get()->addPerfPoint(id, type, value)
+#define ADD_PERF_VALUE(id, value) PerfMonitor::get()->addPerfPoint(id, PerfType::Value, value)
 
 #else   // ENABLE_PERF
 
