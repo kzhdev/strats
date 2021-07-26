@@ -95,7 +95,7 @@ public:
                 cursor = 0;
             } else {
                 LOG_ERROR(boost::format("!!!! %1% is falling behind. reserved=%2% cursor=%3%") % getID() % reserved % cursor);
-                cursor = reserved - _size + _size / 10;
+                cursor += (reserved - cursor) / 2;
                 slot* s;
                 do {
                     ++cursor;
