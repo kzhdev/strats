@@ -20,6 +20,12 @@ enum PerfId : uint8_t {
     AS_UpdateContractCount,
     AS_PathUpdateCountPerContractQuotes,
     AS_PathUpdateCountPerContractHedge,
+
+    RV_RunCycle,
+    RV_HedgeProcess,
+    RV_CalcAfterMDChange,
+    RV_CalculateQuote,
+
     __PerfId_END__,
 };
 
@@ -43,6 +49,11 @@ inline const char* to_string(PerfId id) noexcept {
             "AS_UpdateContractCount",
             "AS_PathUpdateCountPerContractQuotes",
             "AS_PathUpdateCountPerContractHedge",
+
+            "RV_RunCycle",
+            "RV_HedgeProcess",
+            "RV_CalcAfterMDChange",
+            "RV_CalculateQuote",
     };
     static_assert(sizeof(strPerfId) / sizeof(const char*) == std::underlying_type_t<PerfId>(PerfId::__PerfId_END__),
                   "Update to_string for new PerfId element.");
@@ -72,18 +83,21 @@ class PerfMonitor : public virtual hf::Service {
         uint64_t min = std::numeric_limits<uint64_t>::max();
         uint64_t max = 0;
         uint64_t beginTime = 0;
-//        uint64_t median = 0;
-        std::multiset<uint64_t> data;
         uint32_t n = 0;
 
+        enum Type {
+            Latency,
+            Count,
+        } type = Type::Latency;
+
         PerfStatistics() {
-//            data.resize(MAX_LATENCY, 0);
         }
 
         void addData(const PerfPoint& point) {
             if (point._type == PerfType::Begin) {
                 assert(beginTime == 0);
                 beginTime = point._timestamp;
+                type = Type::Latency;
                 return;
             }
 
@@ -101,10 +115,10 @@ class PerfMonitor : public virtual hf::Service {
                 value = point._timestamp - beginTime;
                 beginTime = 0;
             } else {
+                type = Type::Count;
                 value = point._timestamp;
             }
 
-//            data.emplace(value);
             ++n;
             double delta = (double)value - mean;
             mean += delta / n;
@@ -112,24 +126,6 @@ class PerfMonitor : public virtual hf::Service {
             variance = M2 / n;
             min = std::min<uint64_t>(value, min);
             max = std::max<uint64_t>(value, max);
-        }
-
-        double median() const noexcept {
-            if (BOOST_UNLIKELY(n == 0)) {
-                return 0;
-            }
-            if (BOOST_UNLIKELY(n == 1)) {
-                return *data.begin();
-            }
-            auto iter = data.cbegin();
-            std::advance(iter, data.size() / 2);
-
-            auto half = n >> 1;
-            if (n == half << 1) {
-                // even number of data
-                return (*iter + (*std::next(iter))) / 2;
-            }
-            return *iter;
         }
     };
 
@@ -183,9 +179,7 @@ private:
                 if (stat.n > 100) {
                     log << to_string(static_cast<PerfId>(i)) << ":" << std::endl;
                     log << std::setw(25) << "num_observation" << ": " << stat.n << std::endl;
-                    if (i != toUInt(PerfId::AS_UpdateContractCount) &&
-                        i != toUInt(PerfId::AS_PathUpdateCountPerContractQuotes) &&
-                        i != toUInt(PerfId::AS_PathUpdateCountPerContractHedge)) {
+                    if (stat.type == PerfStatistics::Type::Latency) {
                         log << std::setw(25) << "avg_latency(ns): " << stat.mean / _frequency << std::endl;
                         log << std::setw(25) << "min_latency(ns): " << stat.min / _frequency << std::endl;
                         log << std::setw(25) << "max_latency(ns): " << stat.max / _frequency << std::endl;

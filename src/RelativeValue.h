@@ -16,6 +16,7 @@
 #include "ViperStrategyBase.h"
 #include "OrderRequestManager.h"
 #include "MarketDataConsumer.h"
+#include "PerfMonitor.h"
 
 namespace Python {
 
@@ -383,6 +384,8 @@ public:
     }
 
     void runCycle(uint64_t now) {
+        SCOPED_PERF_POINT(PerfId::RV_RunCycle);
+
         if (_numberOfFills > 0) {
             LOG(0, "RV drained number of fills. {i1}", _numberOfFills)
         }
@@ -490,6 +493,8 @@ public:
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
+            SCOPED_PERF_POINT(PerfId::RV_HedgeProcess);
+
             LOG(0, "RV. Processing hedge requests. {i1}", _hedgeRequests.size())
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
@@ -1845,6 +1850,7 @@ public:
 
     void recalculateAfterExternalMarketDataChange() {
         if (canActOnMarketData()) {
+            SCOPED_PERF_POINT(PerfId::RV_CalcAfterMDChange);
             bool needToRecalculate = false;
             for (uint32_t id : _updatedContracts) {
                 RvContract& contract = _contracts[id];
@@ -2789,6 +2795,7 @@ public:
     }
 
     bool calculateQuotes() {
+        SCOPED_PERF_POINT(PerfId::RV_CalculateQuote);
         // LOG(0, "CalculateQuotes {i1}", 0);
         const uint64_t startTimeStamp = clockUtil::GetCycles();
         // logCurrentExternalMarkets();

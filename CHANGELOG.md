@@ -1,3 +1,7 @@
+#Version 1.54.0.5
+- Fixed an infinite loop in ViperLogger
+- Added Perf points in RV
+
 #Version 1.54.0.4
 - Added more Perf points
 
