@@ -384,14 +384,18 @@ public:
     }
 
     void runCycle(uint64_t now) {
-        SCOPED_PERF_POINT(PerfId::RV_RunCycle);
-
         if (_numberOfFills > 0) {
             LOG(0, "RV drained number of fills. {i1}", _numberOfFills)
         }
 
         const bool calculateDueToHedges = processHedgeRequests();
+#ifdef ENABLE_PERF
+        bool addPerf = calculateDueToHedges;
+#endif
         if (_hadExternalMarketData) {
+#ifdef ENABLE_PERF
+            addPerf = true;
+#endif
             recalculateAfterExternalMarketDataChange();
         }
 
@@ -399,9 +403,15 @@ public:
         const bool recalculateQuotes = (canActOnMarketData() & (_calculateDueToFront | _hadInternalMarketData  | _hadExternalMarketData))
                 | calculateDueToHedges | checkEMAOnOffTime(now);
         if (recalculateQuotes) {
+#ifdef ENABLE_PERF
+            addPerf = true;
+#endif
             _hasPendingQuoteCalculation = _withinInternalFillsOfCycle;
             calculateQuotes();
         } else if (_endOfQuotes & _hasPendingQuoteCalculation){
+#ifdef ENABLE_PERF
+            addPerf = true;
+#endif
             _hasPendingQuoteCalculation = false;
             calculateQuotes();
         }
@@ -411,6 +421,12 @@ public:
         _hadInternalMarketData = false;
         _hadExternalMarketData = false;
         _numberOfFills = 0;
+#ifdef ENABLE_PERF
+        if (addPerf) {
+            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, now);
+            ADD_PERF_POINT(PerfId::RV_RunCycle, PerfType::End);
+        }
+#endif
     }
 
 #ifdef IS_DEV
