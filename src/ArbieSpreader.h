@@ -740,6 +740,13 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
             LOG(0, "AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", _contract->name(), _id, _side, _priceSize._size, ToDollars(_priceSize._price))
             return true;
         }
+#ifdef ENABLE_PERF
+        else {
+            static uint64_t count = 0;
+            ++count;
+            ADD_PERF_VALUE(PerfId::AS_SameCalcResult, count);
+        }
+#endif
     }
     return false;
 }

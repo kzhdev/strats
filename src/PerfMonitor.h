@@ -20,6 +20,7 @@ enum PerfId : uint8_t {
     AS_UpdateContractCount,
     AS_PathUpdateCountPerContractQuotes,
     AS_PathUpdateCountPerContractHedge,
+    AS_SameCalcResult,
 
     RV_RunCycle,
     RV_HedgeProcess,
@@ -49,6 +50,7 @@ inline const char* to_string(PerfId id) noexcept {
             "AS_UpdateContractCount",
             "AS_PathUpdateCountPerContractQuotes",
             "AS_PathUpdateCountPerContractHedge",
+            "AS_SameCalcResult",
 
             "RV_RunCycle",
             "RV_HedgeProcess",
