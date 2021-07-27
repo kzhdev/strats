@@ -143,7 +143,6 @@ private:
             message._source = source;
             message._internalAllocation = internalAllocation;
             message._externalAllocation = externalAllocation;
-            message._rvStf = 0;
         });
     }
 

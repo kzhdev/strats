@@ -227,6 +227,7 @@ public:
 
         auto netPos = _internallyInitiatedPosition + _externallyInitiatedPosition;
         if (netPos) {
+            LOG(0, "MM {C[i1]}. Loaded Positions. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
             _marketMaker->sendFillToFront(contract._internalId, (netPos > 0 ? BID : ASK),
                                           _marketMaker->_viperConfig._mmLastFillPrices[contract._marketMakeIndex],
                                           std::abs(netPos), FillType::Phantom, FillSource::ViperStart,

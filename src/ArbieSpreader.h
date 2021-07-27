@@ -744,7 +744,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
         else {
             static uint64_t count = 0;
             ++count;
-            ADD_PERF_VALUE(PerfId::AS_SameCalcResult, count);
+            ADD_PERF_VALUE(PerfId::AS_SamePathCalcResult, count);
         }
 #endif
     }
@@ -754,6 +754,10 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
 template<uint32_t Side>
 inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force) {
     SCOPED_PERF_POINT(PerfId::AS_UpdatePaths);
+#ifdef ENABLE_PERF
+    static uint64_t total = 0;
+    ++total;
+#endif
     bool sort = false;
     for (auto path : _paths[Side]) {
         sort |= path->calculate<Side>(force, pathCount);
@@ -786,6 +790,14 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
             LOG(0, "AS {C[i1]}. {i2} Lean on path {i3} {i4}@{d1}", bestPath->_contract->name(),
                 Side, bestPath->_id, bestPath->_priceSize._size, ToDollars(bestPath->_priceSize._price))
         }
+#ifdef ENABLE_PERF
+        else  {
+            static uint64_t count = 0;
+            ++count;
+            ADD_PERF_VALUE(PerfId::AS_BestPathUnChangedAfterRecalc, count);
+            ADD_PERF_PERCENTAGE(PerfId::AS_BestPathUnChangedAfterRecalcPercent, count / total);
+        }
+#endif
     }
 }
 

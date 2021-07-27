@@ -1,3 +1,8 @@
+#Version 1.54.0.6
+- Fix MM Position Update issue
+- Added more perf points
+- Reduce FillMessage size
+
 #Version 1.54.0.5
 - Fixed an infinite loop in ViperLogger
 - Added Perf points in RV

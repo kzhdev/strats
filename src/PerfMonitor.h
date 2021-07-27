@@ -20,7 +20,9 @@ enum PerfId : uint8_t {
     AS_UpdateContractCount,
     AS_PathUpdateCountPerContractQuotes,
     AS_PathUpdateCountPerContractHedge,
-    AS_SameCalcResult,
+    AS_SamePathCalcResult,
+    AS_BestPathUnChangedAfterRecalc,
+    AS_BestPathUnChangedAfterRecalcPercent,
 
     RV_RunCycle,
     RV_HedgeProcess,
@@ -35,6 +37,7 @@ enum class PerfType {
     End,
     Value,
     Discard,
+    Percentage,
 };
 
 #ifdef ENABLE_PERF
@@ -50,7 +53,9 @@ inline const char* to_string(PerfId id) noexcept {
             "AS_UpdateContractCount",
             "AS_PathUpdateCountPerContractQuotes",
             "AS_PathUpdateCountPerContractHedge",
-            "AS_SameCalcResult",
+            "AS_SamePathCalcResult",
+            "AS_BestPathUnChangedAfterRecalc",
+            "AS_BestPathUnChangedAfterRecalcPercent",
 
             "RV_RunCycle",
             "RV_HedgeProcess",
@@ -90,6 +95,7 @@ class PerfMonitor : public virtual hf::Service {
         enum Type {
             Latency,
             Count,
+            Percentage,
         } type = Type::Latency;
 
         PerfStatistics() {
@@ -105,6 +111,12 @@ class PerfMonitor : public virtual hf::Service {
 
             if (point._type == PerfType::Discard) {
                 beginTime = 0;
+                return;
+            }
+
+            if (point._type == PerfType::Percentage) {
+                type = Type::Percentage;
+                mean = static_cast<double>(point._timestamp);
                 return;
             }
 
@@ -186,11 +198,13 @@ private:
                         log << std::setw(25) << "min_latency(ns): " << stat.min / _frequency << std::endl;
                         log << std::setw(25) << "max_latency(ns): " << stat.max / _frequency << std::endl;
                         log << std::setw(25) << "std_div: " << sqrt(stat.variance) / _frequency << std::endl;
-                    } else {
+                    } else if (stat.type == PerfStatistics::Type::Count) {
                         log << std::setw(25) << "avg: " << stat.mean << std::endl;
                         log << std::setw(25) << "min: " << stat.min << std::endl;
                         log << std::setw(25) << "max: " << stat.max << std::endl;
                         log << std::setw(25) << "std_div: " << sqrt(stat.variance) << std::endl;
+                    } else {
+                        log << std::setw(25) << stat.mean << "%" << std::endl;
                     }
                     log << std::endl;
                 }
@@ -215,6 +229,7 @@ struct ScopedPerfPoint {
 #define SCOPED_PERF_POINT(id) ScopedPerfPoint pef(id)
 #define ADD_PERF_POINT(id, type) PerfMonitor::get()->addPerfPoint(id, type)
 #define ADD_PERF_VALUE(id, value) PerfMonitor::get()->addPerfPoint(id, PerfType::Value, value)
+#define ADD_PERF_PERCENTAGE(id, value) PerfMonitor::get()->addPerfPoint(id, PerfType::Percentage, value)
 
 #else   // ENABLE_PERF
 

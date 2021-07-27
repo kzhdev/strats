@@ -2861,8 +2861,6 @@ public:
                 message._type = FillType::NegativeScalpCheck;
                 message._price = event.filledPrice;
                 message._source = FillSource::Quote;    // not used
-                message._internalAllocation = 0;
-                message._externalAllocation = 0;
                 message._rvStf = 0;
             });
 

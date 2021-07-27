@@ -1490,10 +1490,10 @@ struct RVLatencyTrackingMessage {
     uint32_t _hedgeId;
 };
 
+#pragma pack(1)
 struct FillMessage {
     uint64_t _timestamp;
     hf::price_t _price;
-    hf::qty_t _qty;
     union {
         hf::price_t _rvStf;
         struct {
@@ -1501,6 +1501,8 @@ struct FillMessage {
             uint32_t _externalAllocation;
         };
     };
+    LatencyTrackingFields _latencyTracking;
+    int32_t _qty;
     uint32_t _contractId;
     uint32_t _side;
     StrategyId _strategy;
@@ -1508,9 +1510,8 @@ struct FillMessage {
     FillSource _source;
     bool _forceOverFill;
     bool _checkLimit;
-
-    LatencyTrackingFields _latencyTracking;
 };
+#pragma pack()
 
 struct ASFillsToRV {
     uint32_t _numFills;
