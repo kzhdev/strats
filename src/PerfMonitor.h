@@ -190,7 +190,7 @@ private:
 
             for (std::underlying_type_t<PerfId> i = 0; i < std::underlying_type_t<PerfId>(PerfId::__PerfId_END__); ++i) {
                 auto& stat = _statistics[i];
-                if (stat.n > 100) {
+                if (stat.n > 100 || stat.type == PerfStatistics::Type::Percentage) {
                     log << to_string(static_cast<PerfId>(i)) << ":" << std::endl;
                     log << std::setw(25) << "num_observation" << ": " << stat.n << std::endl;
                     if (stat.type == PerfStatistics::Type::Latency) {

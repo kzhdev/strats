@@ -80,7 +80,7 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
                 }
                 contract._lastMDbid = msg._lastMDbid;
             } else {
-                LOG(0, "AS {C[i1]}. ignore stale internal book update. Side={i2} update._lastMDbid={i3}, contract._lastMDbid={i4}", contract.name(), msg._side, msg._lastMDbid, contract._lastMDbid)
+                LOG(0, "AS {C[i1]}. ignore stale internal book update. Side={i2} update._lastMDbid={i3} contract._lastMDbid={i4}", contract.name(), msg._side, msg._lastMDbid, contract._lastMDbid)
             }
             break;
         }
