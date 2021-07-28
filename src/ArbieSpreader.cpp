@@ -275,7 +275,7 @@ void ArbieSpreader::calculateRVSTFMove(Contract& quoteContract, ShortTermFairOff
 #ifdef IS_DEV
     LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), path, stfMove)
 #else
-    LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), (*_paths.begin())->_id, stfMove)
+    LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), (*stfOffset._paths.begin())->_id, stfMove)
 #endif
 }
 
