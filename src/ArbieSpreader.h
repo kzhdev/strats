@@ -88,6 +88,8 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         void marketDirty(Contract* contract, uint32_t side);
         void marketDirty(Contract* contract);
+
+        void log() const noexcept;
     };
 
     template<uint32_t Side>
@@ -672,6 +674,8 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
         SCOPED_PERF_POINT(PerfId::AS_Path_Calculation);
 
 #ifdef ENABLE_PERF
+        static uint64_t total = 0;
+        ++total;
         ++pathCount;
 #endif
 
@@ -743,8 +747,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
 #ifdef ENABLE_PERF
         else {
             static uint64_t count = 0;
-            ++count;
-            ADD_PERF_VALUE(PerfId::AS_SamePathCalcResult, count);
+            ADD_PERF_PERCENTAGE(PerfId::AS_SamePathCalcResult, ++count, total);
         }
 #endif
     }
@@ -793,9 +796,7 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
 #ifdef ENABLE_PERF
         else  {
             static uint64_t count = 0;
-            ++count;
-            ADD_PERF_VALUE(PerfId::AS_BestPathUnChangedAfterRecalc, count);
-            ADD_PERF_PERCENTAGE(PerfId::AS_BestPathUnChangedAfterRecalcPercent, count / total);
+            ADD_PERF_PERCENTAGE(PerfId::AS_BestPathUnChangedAfterRecalc, ++count, total);
         }
 #endif
     }
@@ -878,6 +879,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
                     Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
                     ToDollars(quote._externalPrice), quote._hedgePath, ToDollars(quote._leanPrice), pBestPath->_leanOnRV,
                     ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice()))
+                pBestPath->log();
                 sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=AS MaxTicksThroughMarketCheckFailed. OffendingContract=%1% Side=%2% calculatedQuote=%3% otherSideBest=%4%")
                     % contract._def._name % Side % ToDollars(quote._externalPrice)
                     % ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice())), ErrorType::Critical);

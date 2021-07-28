@@ -1,3 +1,8 @@
+#Version 1.54.0.7
+- Fix AS ExtCommission update not convert double to hf::price_t
+- Added percentage perf type
+- Added diagnostic logging for AS MaxTicksThroughMarket breach
+
 #Version 1.54.0.6
 - Fix MM Position Update issue
 - Added more perf points

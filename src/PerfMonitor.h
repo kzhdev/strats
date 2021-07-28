@@ -22,7 +22,6 @@ enum PerfId : uint8_t {
     AS_PathUpdateCountPerContractHedge,
     AS_SamePathCalcResult,
     AS_BestPathUnChangedAfterRecalc,
-    AS_BestPathUnChangedAfterRecalcPercent,
 
     RV_RunCycle,
     RV_HedgeProcess,
@@ -55,7 +54,6 @@ inline const char* to_string(PerfId id) noexcept {
             "AS_PathUpdateCountPerContractHedge",
             "AS_SamePathCalcResult",
             "AS_BestPathUnChangedAfterRecalc",
-            "AS_BestPathUnChangedAfterRecalcPercent",
 
             "RV_RunCycle",
             "RV_HedgeProcess",
@@ -71,7 +69,7 @@ inline const char* to_string(PerfId id) noexcept {
 struct PerfPoint {
     PerfId _id;
     PerfType _type;
-    uint64_t _timestamp;
+    uint64_t _value[2] = {0, 0};
 };
 #pragma pack()
 
@@ -94,6 +92,7 @@ class PerfMonitor : public virtual hf::Service {
 
         enum Type {
             Latency,
+            Value,
             Count,
             Percentage,
         } type = Type::Latency;
@@ -104,7 +103,7 @@ class PerfMonitor : public virtual hf::Service {
         void addData(const PerfPoint& point) {
             if (point._type == PerfType::Begin) {
                 assert(beginTime == 0);
-                beginTime = point._timestamp;
+                beginTime = point._value[0];
                 type = Type::Latency;
                 return;
             }
@@ -116,7 +115,9 @@ class PerfMonitor : public virtual hf::Service {
 
             if (point._type == PerfType::Percentage) {
                 type = Type::Percentage;
-                mean = static_cast<double>(point._timestamp);
+                min = point._value[0];
+                max = point._value[1];
+                ++n;
                 return;
             }
 
@@ -126,11 +127,11 @@ class PerfMonitor : public virtual hf::Service {
                     logging::GetLogger().logInfo(boost::str(boost::format("Skip perf end point due to begin = 0. perfId=%1% n=%2%") % to_string(point._id) % n));
                     return;
                 }
-                value = point._timestamp - beginTime;
+                value = point._value[0] - beginTime;
                 beginTime = 0;
             } else {
-                type = Type::Count;
-                value = point._timestamp;
+                type = Type::Value;
+                value = point._value[0];
             }
 
             ++n;
@@ -168,12 +169,13 @@ public:
     }
 
     ALWAYS_INLINE
-    void addPerfPoint(PerfId id, PerfType type, uint64_t timestamp) {
+    void addPerfPoint(PerfId id, PerfType type, uint64_t value1, uint64_t value2 = 0) {
         auto index = _perfQueue.reserve();
         auto& perfPoint = *_perfQueue[index];
         perfPoint._id = id;
         perfPoint._type = type;
-        perfPoint._timestamp = timestamp;
+        perfPoint._value[0] = value1;
+        perfPoint._value[1] = value2;
         _perfQueue.publish(index);
     }
 
@@ -190,24 +192,36 @@ private:
 
             for (std::underlying_type_t<PerfId> i = 0; i < std::underlying_type_t<PerfId>(PerfId::__PerfId_END__); ++i) {
                 auto& stat = _statistics[i];
-                if (stat.n > 100 || stat.type == PerfStatistics::Type::Percentage) {
-                    log << to_string(static_cast<PerfId>(i)) << ":" << std::endl;
-                    log << std::setw(25) << "num_observation" << ": " << stat.n << std::endl;
-                    if (stat.type == PerfStatistics::Type::Latency) {
+                if (stat.n < 100) {
+                    continue;
+                }
+                log << to_string(static_cast<PerfId>(i)) << ":" << std::endl;
+                switch(stat.type) {
+                    case PerfStatistics::Type::Latency:
+                        log << std::setw(25) << "num_observations: " << stat.n << std::endl;
                         log << std::setw(25) << "avg_latency(ns): " << stat.mean / _frequency << std::endl;
                         log << std::setw(25) << "min_latency(ns): " << stat.min / _frequency << std::endl;
                         log << std::setw(25) << "max_latency(ns): " << stat.max / _frequency << std::endl;
                         log << std::setw(25) << "std_div: " << sqrt(stat.variance) / _frequency << std::endl;
-                    } else if (stat.type == PerfStatistics::Type::Count) {
+                        break;
+
+                    case PerfStatistics::Type::Value:
+                        log << std::setw(25) << "num_observations: " << stat.n << std::endl;
                         log << std::setw(25) << "avg: " << stat.mean << std::endl;
                         log << std::setw(25) << "min: " << stat.min << std::endl;
                         log << std::setw(25) << "max: " << stat.max << std::endl;
                         log << std::setw(25) << "std_div: " << sqrt(stat.variance) << std::endl;
-                    } else {
-                        log << std::setw(25) << stat.mean << "%" << std::endl;
-                    }
-                    log << std::endl;
+                        break;
+
+                    case PerfStatistics::Type::Percentage:
+                        log << std::setw(25) << stat.min << "/" << stat.max << " = " << stat.min / stat.max << "%" << std::endl;
+                        break;
+
+                    case PerfStatistics::Type::Count:
+                        log << std::setw(25) << stat.max << std::endl;
+                        break;
                 }
+                log << std::endl;
             }
 
             log.close();
@@ -229,7 +243,7 @@ struct ScopedPerfPoint {
 #define SCOPED_PERF_POINT(id) ScopedPerfPoint pef(id)
 #define ADD_PERF_POINT(id, type) PerfMonitor::get()->addPerfPoint(id, type)
 #define ADD_PERF_VALUE(id, value) PerfMonitor::get()->addPerfPoint(id, PerfType::Value, value)
-#define ADD_PERF_PERCENTAGE(id, value) PerfMonitor::get()->addPerfPoint(id, PerfType::Percentage, value)
+#define ADD_PERF_PERCENTAGE(id, numerator, denominator) PerfMonitor::get()->addPerfPoint(id, PerfType::Percentage, numerator, denominator)
 
 #else   // ENABLE_PERF
 
@@ -240,6 +254,8 @@ public:
 
 #define SCOPED_PERF_POINT(...) do {} while(0)
 #define ADD_PERF_POINT(...) do {} while(0)
+#define ADD_PERF_VALUE(...) do {} while(0)
+#define ADD_PERF_PERCENTAGE(...) do {} while(0)
 
 #endif  // ENABLE_PERF
 }

@@ -271,8 +271,11 @@ void ArbieSpreader::calculateRVSTFMove(Contract& quoteContract, ShortTermFairOff
         stfMove += stf._ratio * contractSTFMove[stf._contractId];
     }
     stfOffset._rvSTFMove = ToRhonePrice(stfMove / 2);
+
 #ifdef IS_DEV
     LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), path, stfMove)
+#else
+    LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), (*_paths.begin())->_id, stfMove)
 #endif
 }
 
