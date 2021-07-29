@@ -80,7 +80,7 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
                 }
                 contract._lastMDbid = msg._lastMDbid;
             } else {
-                LOG(0, "AS {C[i1]}. ignore stale internal book update. Side={i2} update._lastMDbid={i3}, contract._lastMDbid={i4}", contract.name(), msg._side, msg._lastMDbid, contract._lastMDbid)
+                LOG(0, "AS {C[i1]}. ignore stale internal book update. Side={i2} update._lastMDbid={i3} contract._lastMDbid={i4}", contract.name(), msg._side, msg._lastMDbid, contract._lastMDbid)
             }
             break;
         }
@@ -194,6 +194,8 @@ void ArbieSpreader::ShortTermFairOffset::onSTFUpdate(uint32_t contractId, hf::pr
     auto iter = findSTF(contractId);
     if (BOOST_LIKELY(iter != _shortTermFairs.end())) {
         iter->_fair = stf;
+    } else {
+        assert(false);
     }
 }
 
@@ -206,7 +208,6 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
     for (auto& stf : _shortTermFairs) {
         if (stf._fair == hf::NULL_PRICE) {
             if (_stfOffset != hf::NULL_PRICE) {
-                LOG(0, "AS {C[i1]}. Received STF reset.", stf._contractId)
                 stfOffset = hf::NULL_PRICE;
                 break;
             }
@@ -218,6 +219,8 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
 
     if (_stfOffset != stfOffset) {
         _stfOffset = stfOffset;
+        LOG(0, "AS {C[i1]}. Path {i2} STFOffset={d1} RvSTFMove={d2}", _contract->name(), (*_paths.begin())->_id,
+            ToDollars(_stfOffset), ToDollars(_rvSTFMove))
         for (auto path : _paths) {
             path->_dirty = true;
         }

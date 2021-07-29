@@ -1,3 +1,20 @@
+#Version 1.54.0.7
+- Fix AS ExtCommission update not convert double to hf::price_t
+- Added percentage perf type
+- Added diagnostic logging for AS MaxTicksThroughMarket breach
+
+#Version 1.54.0.6
+- Fix MM Position Update issue
+- Added more perf points
+- Reduce FillMessage size
+
+#Version 1.54.0.5
+- Fixed an infinite loop in ViperLogger
+- Added Perf points in RV
+
+#Version 1.54.0.4
+- Added more Perf points
+
 #Version 1.54.0.3
 - Implemented a PerfMonitor
 - Implemented RV STF Move in AS switch Paths; Adjust the move to the fill price of the ASToRV quote fill.

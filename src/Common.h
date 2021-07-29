@@ -46,6 +46,7 @@ static const uint32_t POTENTIAL_OVERFILL_QTY = 8; //Theoretically can combine wi
 static const uint32_t STACKER_ORDER_FLAGS = 9;
 static const uint32_t IS_HEDGE = 10;
 static const uint32_t HEDGE_ID = 11;
+static const uint32_t TIMESTAMP = 12;
 
 //Bits set with STACKER_ORDER_FLAGS
 static const uint8_t SOF_DECREMENT_FAILED = 0;
@@ -1490,10 +1491,10 @@ struct RVLatencyTrackingMessage {
     uint32_t _hedgeId;
 };
 
+#pragma pack(1)
 struct FillMessage {
     uint64_t _timestamp;
     hf::price_t _price;
-    hf::qty_t _qty;
     union {
         hf::price_t _rvStf;
         struct {
@@ -1501,6 +1502,8 @@ struct FillMessage {
             uint32_t _externalAllocation;
         };
     };
+    LatencyTrackingFields _latencyTracking;
+    int32_t _qty;
     uint32_t _contractId;
     uint32_t _side;
     StrategyId _strategy;
@@ -1508,9 +1511,8 @@ struct FillMessage {
     FillSource _source;
     bool _forceOverFill;
     bool _checkLimit;
-
-    LatencyTrackingFields _latencyTracking;
 };
+#pragma pack()
 
 struct ASFillsToRV {
     uint32_t _numFills;

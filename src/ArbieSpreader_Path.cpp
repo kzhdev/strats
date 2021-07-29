@@ -52,3 +52,14 @@ void ArbieSpreader::Path::marketDirty(Contract* contract) {
         }
     }
 }
+
+void ArbieSpreader::Path::log() const noexcept {
+    LOG(0, "AS {C[i1]}. {i2} Path {i3} stfOffset={d1}", _contract->name(), _side, _id, _stfOffset._stfOffset)
+    for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
+        auto& pathContract = _leanContracts[i];
+        auto& market = *_bestHedgeMarket[i];
+        LOG(0, "{C[i1]}. MarketId={i2} Side={i3} multiplier={i4} {i5}({i6})@{d1} extCommission={d2}", pathContract._contract->name(),
+            market.getId(), market.getSide(), pathContract._multiplier, market.getUnAdjustedSize(),
+            market.getAdjustedSize(), ToDollars(market.getPrice()), ToDollars(pathContract._contract->_extCommission))
+    }
+}

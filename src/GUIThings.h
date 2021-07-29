@@ -144,7 +144,7 @@ public:
     Position& getPosition(uint32_t index, std::map<uint32_t, Position>& positions) {
         auto it = positions.find(index);
         if (it == positions.end()) {
-            return positions.insert({index, Position()}).first->second;
+            return positions.emplace(index, Position()).first->second;
         }
         return it->second;
     }

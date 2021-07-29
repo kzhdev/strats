@@ -271,8 +271,11 @@ void ArbieSpreader::calculateRVSTFMove(Contract& quoteContract, ShortTermFairOff
         stfMove += stf._ratio * contractSTFMove[stf._contractId];
     }
     stfOffset._rvSTFMove = ToRhonePrice(stfMove / 2);
+
 #ifdef IS_DEV
     LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), path, stfMove)
+#else
+    LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), (*stfOffset._paths.begin())->_id, stfMove)
 #endif
 }
 
@@ -303,6 +306,11 @@ void ArbieSpreader::runCycle(uint64_t now) {
     }
 
     if (nUpdate) {
+#ifdef ENABLE_PERF
+        PerfMonitor::get()->addPerfPoint(PerfId::AS_RunCycle, PerfType::Begin, now);
+#endif
+        ADD_PERF_POINT(PerfId::AS_RunCycle, PerfType::End);
+        ADD_PERF_VALUE(PerfId::AS_UpdateContractCount, nUpdate);
         const uint64_t latency = clockUtil::GetCycles() - now;
         ILOG(0, "AS. CalculateQuotes Latency {i1}. {i2} updated contract(s). size={i3}", latency, nUpdate, size)
     }
@@ -369,6 +377,7 @@ void ArbieSpreader::updateQuotes(bool force, bool checkQuote) {
 }
 
 bool ArbieSpreader::updateQuotes(Contract& contract, bool force, bool checkQuote) {
+    SCOPED_PERF_POINT(PerfId::AS_UpdateQuotes);
     contract.updatePaths(force);
 
     if (!isEnabled() && !checkQuote) {

@@ -80,7 +80,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         std::string _name;
 
         template<uint32_t Side>
-        inline bool calculate(bool force);
+        inline bool calculate(bool force, uint32_t& pathCount);
 
         Path(uint32_t side, std::string name, uint32_t id, Contract* contract,
              const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig,
@@ -88,6 +88,8 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         void marketDirty(Contract* contract, uint32_t side);
         void marketDirty(Contract* contract);
+
+        void log() const noexcept;
     };
 
     template<uint32_t Side>
@@ -256,12 +258,14 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         }
 
         void updatePaths(bool force = false) {
-            updatePaths<BID>(force);
-            updatePaths<ASK>(force);
+            uint32_t pathCount = 0;
+            updatePaths<BID>(pathCount, force);
+            updatePaths<ASK>(pathCount, force);
+            ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractQuotes, pathCount);
         }
 
         template<uint32_t Side>
-        inline void updatePaths(bool force = false);
+        inline void updatePaths(uint32_t& pathCount, bool force = false);
 
         template<uint32_t Side>
         bool updateBestMarket(Market* updated) {
@@ -489,7 +493,11 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
         }
         _effected_markets.clear();
     }
-    contract.template updatePaths<Side>();
+
+    uint32_t pathCount = 0;
+    contract.template updatePaths<Side>(pathCount);
+    ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractHedge, pathCount);
+
     auto size = positionSize<Side>(qty);
     auto pBest = contract._paths[Side][0];
     if (BOOST_LIKELY(pBest->_priceSize.valid())) {
@@ -640,7 +648,7 @@ inline bool positionMaxedOut<ASK>(hf::qty_t position, hf::qty_t maxPos) noexcept
 }
 
 template<uint32_t Side>
-inline bool ArbieSpreader::Path::calculate(bool force) {
+inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
     if (_dirty | force) {
         _dirty = false;
 
@@ -664,6 +672,12 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
         }
 
         SCOPED_PERF_POINT(PerfId::AS_Path_Calculation);
+
+#ifdef ENABLE_PERF
+        static uint64_t total = 0;
+        ++total;
+        ++pathCount;
+#endif
 
         auto oldPriceSize = _priceSize;
         _priceSize._price = 0;
@@ -730,16 +744,26 @@ inline bool ArbieSpreader::Path::calculate(bool force) {
             LOG(0, "AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", _contract->name(), _id, _side, _priceSize._size, ToDollars(_priceSize._price))
             return true;
         }
+#ifdef ENABLE_PERF
+        else {
+            static uint64_t count = 0;
+            ADD_PERF_PERCENTAGE(PerfId::AS_SamePathCalcResult, ++count, total);
+        }
+#endif
     }
     return false;
 }
 
 template<uint32_t Side>
-inline void ArbieSpreader::Contract::updatePaths(bool force) {
+inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force) {
     SCOPED_PERF_POINT(PerfId::AS_UpdatePaths);
+#ifdef ENABLE_PERF
+    static uint64_t total = 0;
+    ++total;
+#endif
     bool sort = false;
     for (auto path : _paths[Side]) {
-        sort |= path->calculate<Side>(force);
+        sort |= path->calculate<Side>(force, pathCount);
     }
     if (sort) {
         auto oldBest = _paths[Side][0];
@@ -769,6 +793,12 @@ inline void ArbieSpreader::Contract::updatePaths(bool force) {
             LOG(0, "AS {C[i1]}. {i2} Lean on path {i3} {i4}@{d1}", bestPath->_contract->name(),
                 Side, bestPath->_id, bestPath->_priceSize._size, ToDollars(bestPath->_priceSize._price))
         }
+#ifdef ENABLE_PERF
+        else  {
+            static uint64_t count = 0;
+            ADD_PERF_PERCENTAGE(PerfId::AS_BestPathUnChangedAfterRecalc, ++count, total);
+        }
+#endif
     }
 }
 
@@ -849,6 +879,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
                     Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
                     ToDollars(quote._externalPrice), quote._hedgePath, ToDollars(quote._leanPrice), pBestPath->_leanOnRV,
                     ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice()))
+                pBestPath->log();
                 sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=AS MaxTicksThroughMarketCheckFailed. OffendingContract=%1% Side=%2% calculatedQuote=%3% otherSideBest=%4%")
                     % contract._def._name % Side % ToDollars(quote._externalPrice)
                     % ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice())), ErrorType::Critical);

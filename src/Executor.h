@@ -2868,8 +2868,6 @@ public:
                 message._type = FillType::NegativeScalpCheck;
                 message._price = event.filledPrice;
                 message._source = FillSource::Quote;    // not used
-                message._internalAllocation = 0;
-                message._externalAllocation = 0;
                 message._rvStf = 0;
             });
 
@@ -3066,6 +3064,7 @@ public:
     void addRoutingStateToNewLimitOrder(om::order_t& order, uint32_t internalId, const strat::om_queue_info_t* connection) {
         order.debug.i[INTERNAL_ID] = internalId;
         order.debug.i[ROUTE] = strat::port_gid(*connection).value();
+        order.debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
     }
 
     void disableMarketMakerDisableQuoteExternalOnOtherStrategies(uint32_t internalId, const std::string& reason) {
@@ -3195,6 +3194,7 @@ public:
             order->debug.i[ORDER_OWNER] = UNASSIGNED_OWNER + toUInt(strategy);
             order->debug.i[INTERNAL_ID] = internalId;
             order->debug.i[HEDGE_ID] = hedgeId;
+            order->debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
             ++state._ime._messages._inserts;
             state._rhoneRouter.setNextRoute(state._contract._venue, clockUtil::GetCycles(), _b3hb._oneMillisecondInTicks);
         }
@@ -3241,6 +3241,7 @@ public:
         }
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
+        const_cast<om::order_t*>(order)->debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
         const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE, om::RISK_TYPE::ENTERING);
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_LIKELY(done)) {

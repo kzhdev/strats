@@ -16,6 +16,7 @@
 #include "ViperStrategyBase.h"
 #include "OrderRequestManager.h"
 #include "MarketDataConsumer.h"
+#include "PerfMonitor.h"
 
 namespace Python {
 
@@ -388,7 +389,13 @@ public:
         }
 
         const bool calculateDueToHedges = processHedgeRequests();
+#ifdef ENABLE_PERF
+        bool addPerf = calculateDueToHedges;
+#endif
         if (_hadExternalMarketData) {
+#ifdef ENABLE_PERF
+            addPerf = true;
+#endif
             recalculateAfterExternalMarketDataChange();
         }
 
@@ -396,9 +403,15 @@ public:
         const bool recalculateQuotes = (canActOnMarketData() & (_calculateDueToFront | _hadInternalMarketData  | _hadExternalMarketData))
                 | calculateDueToHedges | checkEMAOnOffTime(now);
         if (recalculateQuotes) {
+#ifdef ENABLE_PERF
+            addPerf = true;
+#endif
             _hasPendingQuoteCalculation = _withinInternalFillsOfCycle;
             calculateQuotes();
         } else if (_endOfQuotes & _hasPendingQuoteCalculation){
+#ifdef ENABLE_PERF
+            addPerf = true;
+#endif
             _hasPendingQuoteCalculation = false;
             calculateQuotes();
         }
@@ -408,6 +421,12 @@ public:
         _hadInternalMarketData = false;
         _hadExternalMarketData = false;
         _numberOfFills = 0;
+#ifdef ENABLE_PERF
+        if (addPerf) {
+            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, now);
+            ADD_PERF_POINT(PerfId::RV_RunCycle, PerfType::End);
+        }
+#endif
     }
 
 #ifdef IS_DEV
@@ -490,6 +509,8 @@ public:
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
+            SCOPED_PERF_POINT(PerfId::RV_HedgeProcess);
+
             LOG(0, "RV. Processing hedge requests. {i1}", _hedgeRequests.size())
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
@@ -1845,6 +1866,7 @@ public:
 
     void recalculateAfterExternalMarketDataChange() {
         if (canActOnMarketData()) {
+            SCOPED_PERF_POINT(PerfId::RV_CalcAfterMDChange);
             bool needToRecalculate = false;
             for (uint32_t id : _updatedContracts) {
                 RvContract& contract = _contracts[id];
@@ -2789,6 +2811,7 @@ public:
     }
 
     bool calculateQuotes() {
+        SCOPED_PERF_POINT(PerfId::RV_CalculateQuote);
         // LOG(0, "CalculateQuotes {i1}", 0);
         const uint64_t startTimeStamp = clockUtil::GetCycles();
         // logCurrentExternalMarkets();
