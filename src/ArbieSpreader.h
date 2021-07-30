@@ -168,7 +168,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         std::vector<Path*> _paths[2];
         std::vector<Path*> _affectedPaths;  // The path used this contract
         static const ShortTermFairOffset _zeroStfOffset;
-        hf::price_t _stf = 0;
+        hf::price_t _stf = hf::NULL_PRICE;
         hf::price_t _edge = 0;
         double _hedgeOffset = 0.;
         hf::price_t _maxTicksThroughMarket = 0;

@@ -2,6 +2,7 @@
 - Fix AS ExtCommission update not convert double to hf::price_t
 - Added percentage perf type
 - Added diagnostic logging for AS MaxTicksThroughMarket breach
+- Fix RV not sending STFs to AS after re-enable
 
 #Version 1.54.0.6
 - Fix MM Position Update issue
