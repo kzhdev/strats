@@ -2752,7 +2752,7 @@ public:
                                     data->_fair = kvp.second->_fair;
                                     if (BOOST_UNLIKELY(!kvp.second->_firstUpdateSent)) {
                                         kvp.second->_firstUpdateSent = true;
-                                        logging::GetLogger().logInfo(boost::str(boost::format("RV. Send %1% stf. stf=%2%") % _contracts[kvp.first]._definition._name % kvp.second->_fair));
+                                        logging::GetLogger().logInfo(boost::str(boost::format("RV. Send %1% stf. stf=%2%") % _contracts[kvp.first]._definition._name % ToDollars(kvp.second->_fair)));
                                     }
                                 }
                                 ++data;

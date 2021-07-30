@@ -178,7 +178,7 @@ void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
         if (!configContract._legs.empty()) {
             Contract& contract = _contracts[stf->_contractId];
             if (contract._stf == hf::NULL_PRICE || stf->_fair == hf::NULL_PRICE) {
-                logging::GetLogger().logInfo(boost::str(boost::format("AS %1%. STF=%2%") % configContract._name % stf->_fair));
+                logging::GetLogger().logInfo(boost::str(boost::format("AS %1%. STF=%2%") % configContract._name % ToDollars(stf->_fair)));
             }
             contract._stf = stf->_fair;
         }
