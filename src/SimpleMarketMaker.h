@@ -882,17 +882,16 @@ public:
 
     template<uint32_t Side, uint32_t source>
     void modifyQuoteOrder(Quote& quote, bool persist) {
-        auto internalSize = quote._internalSize + quote._externalSize;
         _lastOrderRequests._quote[Side] = _orderRequestManager.sendQuoteRequest(_contract._internalId,
                                                                                 QUOTE_ORDER_ID,
                                                                                 Side, quote._internalPrice,
-                                                                                internalSize,
+                                                                                quote._internalSize,
                                                                                 quote._externalPrice,
                                                                                 quote._externalSize, persist,
                                                                                 _orderExecutionToken);
-        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6} source={i7} execToken={i8}",
-             getContractName(), Side, internalSize, ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),
-             persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
+        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6} source={i7} execToken={i8}", getContractName(),
+            Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
+            ToDollars(quote._externalPrice), persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
         quote._lastInternalPriceSent = quote._internalPrice;
         quote._lastExternalSizeSent = quote._externalSize;
     }
