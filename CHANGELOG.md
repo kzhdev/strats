@@ -1,3 +1,6 @@
+#Version 1.53.0.29
+- Changed IME to match internal and external orders
+
 #Version 1.54.0.7
 - Fix AS ExtCommission update not convert double to hf::price_t
 - Added percentage perf type
