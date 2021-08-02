@@ -991,7 +991,6 @@ public:
 
                     if (!matchExternal) {
                         otherOrder->_size -= fillSize;
-                        _internalMarketNotification.emplace(toUInt(otherOrder->_strategy));
                         if (otherOrder->_size == 0) {
                             assert(otherSize == 0);
                             if (otherOrder->_externalPrice != hf::NULL_PRICE && otherOrder->_externalSize) {
@@ -1143,7 +1142,6 @@ public:
 
             if (!matchBidExternal) {
                 bidOrder->_size -= fillSize;
-                _internalMarketNotification.emplace(toUInt(bidOrder->_strategy));
                 if (bidOrder->_size == 0) {
                     assert(bidSize == 0);
                     if (bidOrder->_externalPrice != hf::NULL_PRICE && bidOrder->_externalSize) {
@@ -1156,7 +1154,6 @@ public:
 
             if (!matchAskExternal) {
                 askOrder->_size -= fillSize;
-                _internalMarketNotification.emplace(toUInt(askOrder->_strategy));
                 if (askOrder->_size == 0) {
                     assert(askSize == 0);
                     if (askOrder->_externalPrice != hf::NULL_PRICE && askOrder->_externalSize) {
@@ -1325,7 +1322,7 @@ public:
         const hf::qty_t internalReduction = std::min(order->_size, fillSize);
         order->_size -= internalReduction;
         _notifyInternalMarketChange = true;
-        if (order->_size == 0) {
+        if (order->_size <= 0) {
             removeOrderFromMap(order, map);
         }
     }
