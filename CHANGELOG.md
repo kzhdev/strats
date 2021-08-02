@@ -1,3 +1,6 @@
+#Version 1.53.0.29
+- Changed IME to match internal and external orders
+
 #Version 1.53.0.28
 - Fix 2x maxTickWide check not ignore -1.
 - Add asDuration column in economic numbers
