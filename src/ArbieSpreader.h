@@ -435,8 +435,8 @@ private:
 
     void handleFill(const FillMessage& fill);
 
-    void updateQuotes(bool force = false, bool checkQuote = false);
-    bool updateQuotes(Contract& contract, bool force = false, bool checkQuote = false);
+    void updateQuotes(bool force = false);
+    bool updateQuotes(Contract& contract, bool force = false);
 
     template<uint32_t Side>
     inline bool updateQuote(Contract& contract, bool force, bool canQuoteExternal, ReadyOrderRequests& lastRequest);

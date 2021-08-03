@@ -276,7 +276,7 @@ void ArbieSpreader::onEconomicNumberEnded(EconomicNumber::Color color) {
     }
 
     enable();
-    updateQuotes(true, state() == SystemState::CheckQuotes);
+    updateQuotes(true);
     LOG(0,"AS enabled {i1}", 0)
     sendErrorMessage("AS enabled on EconomicNumber ended.", ErrorType::Normal);
 }
@@ -293,7 +293,7 @@ void ArbieSpreader::onShiftUpdate(uint32_t shift) {
                     }
                 }
                 _edgeMultiplier = multiplier;
-                updateQuotes(true, state() == SystemState::CheckQuotes);
+                updateQuotes(true);
             }
             break;
         }

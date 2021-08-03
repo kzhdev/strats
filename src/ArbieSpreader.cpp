@@ -352,7 +352,7 @@ bool ArbieSpreader::canEnable() const noexcept {
 
 void ArbieSpreader::handleCheckQuotes() {
     LOG(0, "AS check quotes {i1}", 0);
-    updateQuotes(false, true);
+    updateQuotes(false);
 }
 
 bool ArbieSpreader::isContractQuoteExternal(uint32_t contractId) const noexcept {
@@ -360,11 +360,11 @@ bool ArbieSpreader::isContractQuoteExternal(uint32_t contractId) const noexcept 
 }
 
 void ArbieSpreader::onQuoteExternalChanged(SystemState quoteExt) {
-    updateQuotes(true, state() == SystemState::CheckQuotes);
+    updateQuotes(true);
 }
 
 void ArbieSpreader::onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
-    updateQuotes(true, state() == SystemState::CheckQuotes);
+    updateQuotes(true);
 }
 
 void ArbieSpreader::addUpdatedContract(Contract& contract) {
@@ -394,19 +394,19 @@ void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket)
     }
 }
 
-void ArbieSpreader::updateQuotes(bool force, bool checkQuote) {
+void ArbieSpreader::updateQuotes(bool force) {
     for (auto& contract : _contracts) {
         if (contract._usedInQuoting) {
-            updateQuotes(contract, force, checkQuote);
+            updateQuotes(contract, force);
         }
     }
 }
 
-bool ArbieSpreader::updateQuotes(Contract& contract, bool force, bool checkQuote) {
+bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
     SCOPED_PERF_POINT(PerfId::AS_UpdateQuotes);
     contract.updatePaths(force);
 
-    if (!isEnabled() && !checkQuote) {
+    if (BOOST_UNLIKELY(!isEnabled() && (state() != SystemState::CheckQuotes))) {
         return false;
     }
 

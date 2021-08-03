@@ -317,14 +317,14 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
             if (configContract) {
                 auto& contract = _contracts[configContract->_internalId];
                 contract._edge = ToRhonePrice(asConfig._edge * _edgeMultiplier);
-                updateQuotes(contract, true, state() == SystemState::CheckQuotes);
+                updateQuotes(contract, true);
             } else {
                 assert(false);
             }
         }
     } else {
         for (auto contract : updatedContracts) {
-            updateQuotes(*contract, true, state() == SystemState::CheckQuotes);
+            updateQuotes(*contract, true);
         }
     }
 }
