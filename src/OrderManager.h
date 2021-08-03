@@ -1036,7 +1036,10 @@ public:
             if (isModifying(order)) {
                 modifyWorkingQuantityInChain(mutableOrder, event.filledQty);
                 auto* targetLevel = getTargetLevel(order);
-
+                LOG(0, "OM {C[i1]}. Order TargetLevel. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
+                    targetLevel->_dollar, targetLevel->_target[0], targetLevel->_target[1], targetLevel->_acknowledged,
+                    targetLevel->_flight, targetLevel->_traded, order.leavesQty, targetLevel->_potentialOverfill,
+                    targetLevel->_flightout)
                 // add potentialOverfill only when the order modify down on same level
                 if (targetLevel == this) {
                     hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
@@ -1069,7 +1072,8 @@ public:
             }
 
             //Note that WE ARE NOT calling adjustAfterAck(...) here since IME hasn't changed _target to reflect the fill!
-            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
+                _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
         }
 
         static inline hf::qty_t reduceTargetOnFill(Level& levelToReduce, hf::qty_t reduceTarget) {
@@ -1089,89 +1093,86 @@ public:
 
         void modifyWorkingQuantityInChain(om::order_t& order, hf::qty_t filledQty) {
 
-            bool modifying = isModifying(order);
             bool fullFill = order.leavesQty <= 0;   // Theoretically leavesQty should not become negative, to be safe here, just in case the leavesQty messed up in rhone.
 
-            if (modifying) {
-                //CME and ICE are doing the same thing conceptually, it's just with ICE we can't have a chain with more than 1 level
-                const auto foreachNodeOnPartialFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
+            //CME and ICE are doing the same thing conceptually, it's just with ICE we can't have a chain with more than 1 level
+            const auto foreachNodeOnPartialFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
 
-                    if(priorLevel != currentLevel) {
-                        priorLevel->_flight += filledQty;
-                        priorLevel->_flightout -= filledQty;
-                        currentLevel->_flight -= filledQty;
-                    }
-                    else {
-                        //
-                        // Intentionally Blank
-                        //
-                    }
-
-                    //There is an implicit node at the end if we are cancelling, at the same price level
-                    if(isLastLevel && order.action_flags.is_cancelling) {
-                        currentLevel->_flight += filledQty;
-                    }
-                };
-
-                const auto foreachNodeOnFullFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
-                    //Since we want to do nothing on Modify Rejects, we need to undo the entire modify chain here
-
-                    if(priorLevel != currentLevel) {
-                        hf::qty_t priorFilledQty = order.executedQty - filledQty;
-                        //BOOST_ASSERT(priorFilledQty >= 0); //Can fail on overfill in chain
-                        hf::qty_t priorWorkingQty = priorQty - priorFilledQty;
-                        //BOOST_ASSERT(priorWorkingQty > 0); //Can fail on overfill in chain
-                        hf::qty_t newWorkingQty = currentQty - priorFilledQty;
-                        //BOOST_ASSERT(newWorkingQty > 0); //Can fail on overfill in chain
-
-                        priorLevel->_flight += priorWorkingQty;
-                        priorLevel->_flightout -= priorWorkingQty;
-                        currentLevel->_flight -= newWorkingQty;
-
-                        currentLevel->notifyIfLevelFree();
-                    }
-                    else {
-                        hf::qty_t delta = currentQty - priorQty;
-                        currentLevel->_flight -= delta;
-                    }
-
-                    //There is an implicit node at the end if we are cancelling, at the same price level
-                    if(isLastLevel && order.action_flags.is_cancelling) {
-                        hf::qty_t priorFilledQty = order.executedQty - filledQty;
-                        currentLevel->_flight += currentQty - priorFilledQty;
-                    }
-                };
-
-                if ((_om->_contract._venue == hf::VENUE::CME) | (_om->_contract._venue == hf::VENUE::EUREX) |
-                    (_om->_contract._venue == hf::VENUE::B3)) {
-                    ModifyTracker* tracker = getModifyTracker(order);
-                    if(fullFill) {
-                        tracker->performOnEachNode(std::move(foreachNodeOnFullFill));
-                    }
-                    else {
-                        tracker->performOnEachNode(std::move(foreachNodeOnPartialFill));
-                    }
-                }
-                else if (_om->_contract._venue == hf::VENUE::ICE) {
-                    Level* currentLevel = getTargetLevel(order);
-                    Level* priorLevel = this;
-                    const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
-                    const hf::qty_t& prior_qty = GetQuantity(order, PRIOR_QUANTITY);
-                    bool isLastLevel = true;
-                    bool isPriorLevelRestingLevel = true;
-
-                    if(fullFill) {
-                        foreachNodeOnFullFill(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
-                    }
-                    else {
-                        foreachNodeOnPartialFill(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
-                    }
+                if(priorLevel != currentLevel) {
+                    priorLevel->_flight += filledQty;
+                    priorLevel->_flightout -= filledQty;
+                    currentLevel->_flight -= filledQty;
                 }
                 else {
-                    throw std::runtime_error("unknown venue");
+                    //
+                    // Intentionally Blank
+                    //
                 }
-                //We don't want to send new orders until the Unsoc. cancel just in case _target changes
+
+                //There is an implicit node at the end if we are cancelling, at the same price level
+                if(isLastLevel && order.action_flags.is_cancelling) {
+                    currentLevel->_flight += filledQty;
+                }
+            };
+
+            const auto foreachNodeOnFullFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
+                //Since we want to do nothing on Modify Rejects, we need to undo the entire modify chain here
+
+                if(priorLevel != currentLevel) {
+                    hf::qty_t priorFilledQty = order.executedQty - filledQty;
+                    //BOOST_ASSERT(priorFilledQty >= 0); //Can fail on overfill in chain
+                    hf::qty_t priorWorkingQty = priorQty - priorFilledQty;
+                    //BOOST_ASSERT(priorWorkingQty > 0); //Can fail on overfill in chain
+                    hf::qty_t newWorkingQty = currentQty - priorFilledQty;
+                    //BOOST_ASSERT(newWorkingQty > 0); //Can fail on overfill in chain
+
+                    priorLevel->_flight += priorWorkingQty;
+                    priorLevel->_flightout -= priorWorkingQty;
+                    currentLevel->_flight -= newWorkingQty;
+
+                    currentLevel->notifyIfLevelFree();
+                }
+                else {
+                    hf::qty_t delta = currentQty - priorQty;
+                    currentLevel->_flight -= delta;
+                }
+
+                //There is an implicit node at the end if we are cancelling, at the same price level
+                if(isLastLevel && order.action_flags.is_cancelling) {
+                    hf::qty_t priorFilledQty = order.executedQty - filledQty;
+                    currentLevel->_flight += currentQty - priorFilledQty;
+                }
+            };
+
+            if ((_om->_contract._venue == hf::VENUE::CME) | (_om->_contract._venue == hf::VENUE::EUREX) |
+                (_om->_contract._venue == hf::VENUE::B3)) {
+                ModifyTracker* tracker = getModifyTracker(order);
+                if(fullFill) {
+                    tracker->performOnEachNode(std::move(foreachNodeOnFullFill));
+                }
+                else {
+                    tracker->performOnEachNode(std::move(foreachNodeOnPartialFill));
+                }
             }
+            else if (_om->_contract._venue == hf::VENUE::ICE) {
+                Level* currentLevel = getTargetLevel(order);
+                Level* priorLevel = this;
+                const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
+                const hf::qty_t& prior_qty = GetQuantity(order, PRIOR_QUANTITY);
+                bool isLastLevel = true;
+                bool isPriorLevelRestingLevel = true;
+
+                if(fullFill) {
+                    foreachNodeOnFullFill(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
+                }
+                else {
+                    foreachNodeOnPartialFill(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
+                }
+            }
+            else {
+                throw std::runtime_error("unknown venue");
+            }
+            //We don't want to send new orders until the Unsoc. cancel just in case _target changes
         }
 
         void handleModifyOnNewOrderReject(om::order_t& order, hf::qty_t inFlightQty) {
@@ -1302,7 +1303,8 @@ public:
 
         void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
             LOG(0, "OM {C[i1]}. Order Cancelled. Side={i2} Id={i3}", getContractName(), _om->_side, order.oid.value())
-            LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
+                _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             Level *targetLevel = nullptr;
             removeOrder(order);
@@ -1326,6 +1328,10 @@ public:
                 if (overfillQty > 0) {
                     targetLevel = getTargetLevel(order);
                     targetLevel->_potentialOverfill -= overfillQty;
+                    LOG(0, "OM {C[i1]}. Reduce PotentialOverfill. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
+                        targetLevel->_dollar, targetLevel->_target[0], targetLevel->_target[1],
+                        targetLevel->_acknowledged, targetLevel->_flight,
+                        targetLevel->_traded, targetLevel->_potentialOverfill, targetLevel->_flightout)
                 }
             }
             else {
@@ -1343,7 +1349,8 @@ public:
             if(targetLevel) {
                 targetLevel->notifyIfLevelFree();
             }
-            LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
+                _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         void onOrderRejected(const om::OMOrderRejectedEvent &event, const om::order_t &order) {
