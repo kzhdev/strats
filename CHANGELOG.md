@@ -1,3 +1,8 @@
+#Version 1.54.0.8
+- Merged 1.53.0.29
+- Added conditional perf point
+- Fix ArbieSpreader STFOffset reduction didn't handle outright contract
+
 #Version 1.53.0.29
 - Changed IME to match internal and external orders
 

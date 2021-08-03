@@ -27,7 +27,7 @@ QMU2-QMX2,FALSE,FALSE,80,5,0.2,0.001,0.001,0.0001,0.01,1,1,0,200,0,3,2000,800,0,
 QMV2-QMX2,FALSE,FALSE,80,5,0.2,0.001,0.001,0.0001,0.01,1,1,0,200,0,3,2000,800,0,0.0001,13,15,0.8,-1,0.556,3,0,-23
 ,,,,,,,,,,,,
 ASConfigs,quoteExternal,quoteSize,edge,hedgeOffset,maxTicksThroughMarket,,,,,,,
-QMQ2-QMU2,TRUE,3,0.0005,0.0004,5,,,,,,,
+QMQ2,TRUE,3,0.0005,0.0004,5,,,,,,,
 QMQ2-QMV2,TRUE,7,0.0005,0.0004,5,,,,,,,
 ,,,,,,,,,,,,
 StackerConfigs,quoteSize,quoteGap,maxQuote,stackLevels,stackSlack,maxTicksOffTopLevel,useGTC,allowMultipleNewHedge,enableQuoteSprayer,redNumberPull,darkRedNumberPull,

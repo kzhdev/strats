@@ -71,29 +71,55 @@ void ArbieSpreader::initializeContracts() {
                     }
                     pathContracts.emplace_back(&_contracts[pathContract->_internalId], configPathContract._multiplier);
 
-                    for (auto& leg : pathContract->_legs) {
-                        auto it = pathShortTermFares.find(leg._index);
+                    if (pathContract->_legs.empty()) {
+                        auto it = pathShortTermFares.find(pathContract->_internalId);
                         if (it == pathShortTermFares.end()) {
-                            pathShortTermFares.try_emplace(leg._index, leg._index, -configPathContract._multiplier * leg._ratio);
+                            pathShortTermFares.try_emplace(pathContract->_internalId, pathContract->_internalId, -configPathContract._multiplier);
                         } else {
-                            it->second._ratio -= configPathContract._multiplier * leg._ratio;
+                            it->second._ratio -= configPathContract._multiplier;
 
                             if (it->second._ratio == 0) {
                                 pathShortTermFares.erase(it);
                             }
                         }
+                    } else {
+                        for (auto& leg : pathContract->_legs) {
+                            auto it = pathShortTermFares.find(leg._index);
+                            if (it == pathShortTermFares.end()) {
+                                pathShortTermFares.try_emplace(leg._index, leg._index, -configPathContract._multiplier * leg._ratio);
+                            } else {
+                                it->second._ratio -= configPathContract._multiplier * leg._ratio;
+
+                                if (it->second._ratio == 0) {
+                                    pathShortTermFares.erase(it);
+                                }
+                            }
+                        }
                     }
                 }
 
-                for (auto& leg : configContract._legs) {
-                    auto it = pathShortTermFares.find(leg._index);
+                if (configContract._legs.empty()) {
+                    auto it = pathShortTermFares.find(configContract._internalId);
                     if (it == pathShortTermFares.end()) {
-                        pathShortTermFares.try_emplace(leg._index, leg._index, leg._ratio);
+                        pathShortTermFares.try_emplace(configContract._internalId, configContract._internalId, 1);
                     } else {
-                        it->second._ratio += leg._ratio;
+                        it->second._ratio += 1;
 
                         if (it->second._ratio == 0) {
                             pathShortTermFares.erase(it);
+                        }
+                    }
+                } else {
+                    for (auto& leg : configContract._legs) {
+                        auto it = pathShortTermFares.find(leg._index);
+                        if (it == pathShortTermFares.end()) {
+                            pathShortTermFares.try_emplace(leg._index, leg._index, leg._ratio);
+                        } else {
+                            it->second._ratio += leg._ratio;
+
+                            if (it->second._ratio == 0) {
+                                pathShortTermFares.erase(it);
+                            }
                         }
                     }
                 }

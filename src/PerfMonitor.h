@@ -22,6 +22,8 @@ enum PerfId : uint8_t {
     AS_PathUpdateCountPerContractHedge,
     AS_SamePathCalcResult,
     AS_BestPathUnChangedAfterRecalc,
+    AS_Run,
+    AS_OnMDUpdate,
 
     RV_RunCycle,
     RV_HedgeProcess,
@@ -54,6 +56,8 @@ inline const char* to_string(PerfId id) noexcept {
             "AS_PathUpdateCountPerContractHedge",
             "AS_SamePathCalcResult",
             "AS_BestPathUnChangedAfterRecalc",
+            "AS_Run",
+            "AS_OnMDUpdate",
 
             "RV_RunCycle",
             "RV_HedgeProcess",
@@ -214,7 +218,7 @@ private:
                         break;
 
                     case PerfStatistics::Type::Percentage:
-                        log << std::setw(25) << stat.min << "/" << stat.max << " = " << stat.min / stat.max << "%" << std::endl;
+                        log << std::setw(25) << stat.min << "/" << stat.max << " = " << (double)stat.min / (double)stat.max << "%" << std::endl;
                         break;
 
                     case PerfStatistics::Type::Count:
@@ -240,10 +244,30 @@ struct ScopedPerfPoint {
     }
 };
 
-#define SCOPED_PERF_POINT(id) ScopedPerfPoint pef(id)
+struct ConditionalScopedPerfPoint {
+    PerfId _id;
+    bool _enabled;
+
+    template<typename Condition>
+    ConditionalScopedPerfPoint(PerfId id, Condition&& condition)
+        : _id(id), _enabled(condition()) {
+        if (_enabled) {
+            PerfMonitor::get()->addPerfPoint(id, PerfType::Begin);
+        }
+    }
+
+    ~ConditionalScopedPerfPoint() {
+        if (_enabled) {
+            PerfMonitor::get()->addPerfPoint(_id, PerfType::End);
+        }
+    }
+};
+
+#define SCOPED_PERF_POINT(id) ScopedPerfPoint perf(id)
 #define ADD_PERF_POINT(id, type) PerfMonitor::get()->addPerfPoint(id, type)
 #define ADD_PERF_VALUE(id, value) PerfMonitor::get()->addPerfPoint(id, PerfType::Value, value)
 #define ADD_PERF_PERCENTAGE(id, numerator, denominator) PerfMonitor::get()->addPerfPoint(id, PerfType::Percentage, numerator, denominator)
+#define CONDITIONAL_SCOPED_PERF_POINT(id) ConditionalScopedPerfPoint perf(id)
 
 #else   // ENABLE_PERF
 
@@ -256,6 +280,7 @@ public:
 #define ADD_PERF_POINT(...) do {} while(0)
 #define ADD_PERF_VALUE(...) do {} while(0)
 #define ADD_PERF_PERCENTAGE(...) do {} while(0)
+#define CONDITIONAL_SCOPED_PERF_POINT(...) do {} while(0)
 
 #endif  // ENABLE_PERF
 }

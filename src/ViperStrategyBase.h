@@ -10,6 +10,7 @@
 #include "ViperResource.h"
 #include "ClockUtil.h"
 #include "MarketDataConsumer.h"
+#include "PerfMonitor.h"
 
 namespace Python {
 
@@ -191,6 +192,9 @@ public:
         LOG(0, "Strategy {i1} thread started.", strategyName())
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
+#ifdef ENABLE_PERF
+            ConditionalScopedPerfPoint perf(PerfId::AS_Run, [this](){return strategyId() == StrategyId::ArbieSpreader; });
+#endif
             checkSystemState();
             drainInternalMessages();
             this->drainAllMarketData();

@@ -5,6 +5,7 @@
 #include <hf/log.h>
 #include <atomic>
 #include <unordered_set>
+#include "PerfMonitor.h"
 
 namespace Python {
 
@@ -79,6 +80,9 @@ public:
                 switch (mde.type) {
                     case md::MDEvent::TYPE::UPDATE: {
                         const auto& event = static_cast<const md::MDUpdateEvent&> (mde);
+#ifdef ENABLE_PERF
+                        ConditionalScopedPerfPoint perf(PerfId::AS_OnMDUpdate, [this](){return underlying().strategyId() == StrategyId::ArbieSpreader; });
+#endif
                         underlying().onMDUpdate(event, internalId, batch.bid);
                         _mdUpdated.emplace(internalId);
                         break;
