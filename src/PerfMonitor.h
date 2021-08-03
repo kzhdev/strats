@@ -218,7 +218,7 @@ private:
                         break;
 
                     case PerfStatistics::Type::Percentage:
-                        log << std::setw(25) << stat.min << "/" << stat.max << " = " << (double)stat.min / (double)stat.max << "%" << std::endl;
+                        log << std::setw(25) << stat.min << "/" << stat.max << " = " << (double)stat.min / (double)stat.max * 100 << "%" << std::endl;
                         break;
 
                     case PerfStatistics::Type::Count:
