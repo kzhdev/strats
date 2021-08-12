@@ -197,8 +197,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
                 return _internalPrice != rhs._internalPrice
                     || _internalSize != rhs._internalSize
                     || _externalPrice != rhs._externalPrice
-                    || _externalSize != rhs._externalSize
-                    || _hedgePath != rhs._hedgePath;
+                    || _externalSize != rhs._externalSize;
             }
 
             void reset() noexcept {

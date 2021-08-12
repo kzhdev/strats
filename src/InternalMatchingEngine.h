@@ -1099,7 +1099,9 @@ public:
             if ((aggressingStrategy == StrategyId::ArbieSpreader) && hasASOrder) {
                 if (bidOrder->_strategy == StrategyId::ArbieSpreader) {
                     asMatchedSize[BID] += matchedSize;
-                } else {
+                }
+
+                if (askOrder->_strategy == StrategyId::ArbieSpreader) {
                     asMatchedSize[ASK] += matchedSize;
                 }
             }
