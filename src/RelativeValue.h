@@ -1735,7 +1735,7 @@ public:
             }
             case 21: {
                 contract._canTradeStatus = false;
-                LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), (uint32_t)(event.extStatus), contract._usedInPricing)
+                LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), contract._usedInPricing)
                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing=%2%") % contract._definition._name % contract._usedInPricing));
                 break;
             }

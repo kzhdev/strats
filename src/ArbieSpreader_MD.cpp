@@ -163,7 +163,7 @@ void ArbieSpreader::handle_CME_B3_MDStatus(const md::MDStatusEvent& event, Contr
         }
         case 21: {
             contract._canTrade = false;
-            LOG(0, "AS {C[i1]} market data - entered pre-open. Used in pricing={i2}", contract.name(), (uint32_t)(event.extStatus), contract._enabled)
+            LOG(0, "AS {C[i1]} market data - entered pre-open. Used in pricing={i2}", contract.name(), contract._enabled)
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing=%2%") % contract._def._name % contract._enabled));
             break;
         }

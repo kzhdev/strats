@@ -295,7 +295,7 @@ public:
         pnlForType._open += openPnlChange;
         pnlTotal._open += openPnlChange;
         _open = _newOpenPnl;
-        LOG(0,"PNL Calculator {i1} {C[i2]}. Open={d1} MarkPrice={d2}", toUInt(_id), getContractName(), ToDollars(_open), ToDollars(_markPrice))
+        LOG(0, "PNL Calculator {i1} {C[i2]}. Open={d1} MarkPrice={d2}", toUInt(_id), getContractName(), ToDollars(_open), ToDollars(_markPrice))
     }
 
     void onMarkPriceChange(hf::price_t price, Pnl& pnlForType, Pnl& pnlTotal) {
