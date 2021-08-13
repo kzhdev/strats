@@ -227,10 +227,10 @@ void ArbieSpreader::onMarketDataUpdate(Contract& contract,
                                        hf::qty_t askSize) {
     bool hasChange = false;
     if (bidChanged) {
-        hasChange = contract.updateMarket<BID>(MarketIds::MARKET_ID_EXTERNAL, bidPrice, bidSize, _effected_markets);
+        hasChange = contract.updateMarket<BID>(MarketIds::MARKET_ID_EXTERNAL, bidPrice, (bidPrice == hf::NULL_PRICE) ? 0 : bidSize, _effected_markets);
     }
     if (askChanged) {
-        hasChange = contract.updateMarket<ASK>(MarketIds::MARKET_ID_EXTERNAL, askPrice, askSize, _effected_markets);
+        hasChange = contract.updateMarket<ASK>(MarketIds::MARKET_ID_EXTERNAL, askPrice, (askPrice == hf::NULL_PRICE) ? 0 : askSize, _effected_markets);
     }
 
     if (hasChange) {

@@ -648,8 +648,9 @@ struct Market {
              getUnAdjustedSize(), getAdjustedSize())
     }
 
-    void update(hf::price_t price, hf::qty_t size, std::unordered_set<Market*>& effected_markets) {
+    bool update(hf::price_t price, hf::qty_t size, std::unordered_set<Market*>& effected_markets) {
         assert(_id == MarketIds::MARKET_ID_EXTERNAL);
+        bool changed = (_price != price) | (_size != size);
         if (_price != price) {
             LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Prices different.", _strategy, _contractId, _id, _side)
             if (_fakSizeAdjustment[_id]) {
@@ -665,6 +666,7 @@ struct Market {
         DLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} MD updated. FAKAdj={i5} asQuoteAdj={i6} FAKPreAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _strategy,
              _contractId, _id, _side, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
              getUnAdjustedSize(), getAdjustedSize())
+         return changed;
     }
 
     void updateInternalMarket(hf::price_t price, hf::qty_t size) {

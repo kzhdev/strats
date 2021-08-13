@@ -31,10 +31,20 @@ void ArbieSpreader::Path::marketDirty(Contract* contract, uint32_t side) {
             if (leanContract._contract == contract) {
                 if (leanContract._multiplier > 0) {
                     if (_side == side) {
-                        _dirty = true;
+                        _dirty = leanContract.shouldRecalculate(side, _contract->_quoteSize);
+                        if (!_dirty) {
+                            DLOG(0, "AS {C[i1]}. {C[i2]} best market change didn't trigger recalc. Side={i3} oldBestPrice={d1} oldBestSize={i4}", _contract->name(),
+                                 contract->name(), side, leanContract._priceSizeCache[side]._price,
+                                 leanContract._priceSizeCache[side]._size)
+                        }
                     }
                 } else if (_side == (1- side)) {
-                    _dirty = true;
+                    _dirty = leanContract.shouldRecalculate(side, _contract->_quoteSize);
+                    if (!_dirty) {
+                        DLOG(0, "AS {C[i1]}. {C[i2]} best market change didn't trigger recalc. Side={i3} oldBestPrice={d1} oldBestSize={i4}", _contract->name(),
+                             contract->name(), side, leanContract._priceSizeCache[side]._price,
+                             leanContract._priceSizeCache[side]._size)
+                    }
                 }
                 break;
             }
