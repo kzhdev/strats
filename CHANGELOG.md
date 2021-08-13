@@ -1,3 +1,6 @@
+#Version 1.53.0.30
+- [rhonepublic] Fixed missing FAK done event. When multiple FAK fills in same OM batch, only the first order issued FAK done event.
+
 #Version 1.53.0.29
 - Changed IME to match internal and external orders
 
