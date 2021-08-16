@@ -51,11 +51,6 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
             handleInternalHedgeDone(hedgeDone);
             break;
         }
-        case ViperMessageType::ASQuoteAdjustmentACK: {
-            const auto& msg = reinterpret_cast<const GenericMessage&> (message._data[0]);
-            handleASQuoteAdjustmentACK(msg._number_1, msg._number_2, msg._number_3);
-            break;
-        }
         case ViperMessageType::STFUpdate: {
             const auto& msg = reinterpret_cast<const STFUpdate&> (message._data[0]);
             handleSTFUpdate(msg);
@@ -141,19 +136,6 @@ void ArbieSpreader::handleASInternalMatchingDone(uint32_t contractId) {
         markContractDirty(effected_contract, market);
     }
     _effected_markets.clear();
-}
-
-void ArbieSpreader::handleASQuoteAdjustmentACK(uint32_t contractId, uint32_t side, hf::qty_t adjSize) {
-    auto& contract = _contracts[contractId];
-    auto otherSide = GetOtherSide(side);
-    if (contract._markets[otherSide][Market::Type::External].ackAsQuoteAdjustment(adjSize, _effected_markets)) {
-        markContractDirty(contract, &contract._markets[otherSide][Market::Type::External]);
-        for (Market* market : _effected_markets) {
-            auto& effected_contract = _contracts[market->getContractId()];
-            markContractDirty(effected_contract, market);
-        }
-        _effected_markets.clear();
-    }
 }
 
 void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {

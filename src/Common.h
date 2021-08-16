@@ -1440,12 +1440,11 @@ enum class ViperMessageType : uint8_t {
     RVLatencyTracking,
     InternalBookUpdate,
     ASInternalMatchingDone,
-    ASQuoteAdjustmentACK,
     SubscribeSTFUpdate,
     STFUpdate,
     TransferPositionToRV,
-
     VectorParameterUpdate,
+
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

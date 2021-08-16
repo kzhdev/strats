@@ -474,7 +474,6 @@ private:
     void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event, uint32_t internalId);
     void handleInternalHedgeDone(const InternalHedgeDone& message);
     void handleASInternalMatchingDone(uint32_t contractId);
-    void handleASQuoteAdjustmentACK(uint32_t contractId, uint32_t side, hf::qty_t matchedSize);
     void markContractDirty(Contract& contract, Market* updatedMarket);
     void addUpdatedContract(Contract& contract);
     void handleSTFUpdate(const STFUpdate& msg);

@@ -3,7 +3,8 @@
 - Do not send AS quote update if the price and size did not change only the hedge path changed.
 - Fix AS ASK aggressive quote not unadjusted if AS quotes crossed
 - [rhonepublic] Fixed missing FAK done event. When multiple FAK fills in same OM batch, only the first order issued FAK done event.
-- Reduce AS unnecessary re-calculation. Re-calculate when best market price changed or should to quote less or can quote more
+- Reduce AS unnecessary re-calculation. Re-calculate when best market price changed or should quote less or can quote more
+- Fix AS aggressive quote unadjusted too early after internal matching
 
 #Version 1.54.0.8
 - Merged 1.53.0.29
