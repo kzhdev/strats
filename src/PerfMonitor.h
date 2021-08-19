@@ -209,6 +209,7 @@ private:
                 switch(stat.type) {
                     case PerfStatistics::Type::Latency:
                         log << std::setw(25) << "num_observations: " << stat.n << std::endl;
+                        log << std::setw(25) << "num_outliers: " << stat.nOutliers << std::endl;
                         log << std::setw(25) << "avg_latency(ns): " << stat.mean / _frequency << std::endl;
                         log << std::setw(25) << "min_latency(ns): " << stat.min / _frequency << std::endl;
                         log << std::setw(25) << "max_latency(ns): " << stat.max / _frequency << std::endl;
