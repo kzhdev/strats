@@ -93,6 +93,7 @@ class PerfMonitor : public virtual hf::Service {
         uint64_t max = 0;
         uint64_t beginTime = 0;
         uint32_t n = 0;
+        uint32_t nOutliers = 0;
 
         enum Type {
             Latency,
@@ -133,6 +134,11 @@ class PerfMonitor : public virtual hf::Service {
                 }
                 value = point._value[0] - beginTime;
                 beginTime = 0;
+
+                if (value > 999999) {
+                    ++nOutliers;
+                    return;
+                }
             } else {
                 type = Type::Value;
                 value = point._value[0];
