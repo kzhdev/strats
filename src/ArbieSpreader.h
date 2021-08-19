@@ -81,6 +81,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         hf::price_t _commission;
         std::vector<PathContract> _leanContracts;
         PriceQtyPair _priceSize;
+        PriceQtyPair _oldPriceSize;
         uint32_t _id;
         uint32_t _side;
         std::vector<Market*> _bestHedgeMarket;
@@ -687,7 +688,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
         ++pathCount;
 #endif
 
-        auto oldPriceSize = _priceSize;
+        _oldPriceSize = _priceSize;
         _priceSize._price = 0;
         _priceSize._size = std::numeric_limits<hf::qty_t>::max();
         _leanOnRV = false;
@@ -748,9 +749,9 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
             _priceSize._price = applyPriceOffset<Side>(_priceSize._price, -_commission);
         }
 
-        if ((oldPriceSize._price != _priceSize._price) ||
-            ((oldPriceSize._size > _priceSize._size) & (_priceSize._size < _contract->_quoteSize)) ||       // need to quote less
-            ((oldPriceSize._size < _priceSize._size) & (oldPriceSize._size < _contract->_quoteSize))) {     // can quote more
+        if ((_oldPriceSize._price != _priceSize._price) ||
+            ((_oldPriceSize._size > _priceSize._size) & (_priceSize._size < _contract->_quoteSize)) ||      // need to quote less
+            ((_oldPriceSize._size < _priceSize._size) & (_oldPriceSize._size < _contract->_quoteSize))) {   // can quote more
             LOG(0, "AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", _contract->name(), _id, _side, _priceSize._size, ToDollars(_priceSize._price))
             return true;
         }
