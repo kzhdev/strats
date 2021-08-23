@@ -1103,7 +1103,6 @@ public:
                 if(priorLevel != currentLevel) {
                     priorLevel->_flight += filledQty;
                     priorLevel->_flightout -= filledQty;
-                    currentLevel->_flight -= filledQty;
                 }
                 else {
                     //
