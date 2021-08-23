@@ -1,3 +1,7 @@
+#Version 1.54.0.10
+- Fix Candidate > target when order filled while modify in-flight
+- AbieSpreader hedge w/o updatePath if the hedging market still present
+
 #Version 1.54.0.9
 - Reduce MD feed logging
 - Do not send AS quote update if the price and size did not change only the hedge path changed.

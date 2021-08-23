@@ -25,7 +25,7 @@ ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract
     }
 }
 
-void ArbieSpreader::Path::marketDirty(Contract* contract, uint32_t side) {
+bool ArbieSpreader::Path::marketDirty(Contract* contract, uint32_t side) {
     if (_config->_enabled) {
         for (auto& leanContract : _leanContracts) {
             if (leanContract._contract == contract) {
@@ -49,7 +49,9 @@ void ArbieSpreader::Path::marketDirty(Contract* contract, uint32_t side) {
                 break;
             }
         }
+        return _dirty;
     }
+    return false;
 }
 
 void ArbieSpreader::Path::marketDirty(Contract* contract) {
@@ -72,4 +74,16 @@ void ArbieSpreader::Path::log() const noexcept {
             market.getId(), market.getSide(), pathContract._multiplier, market.getUnAdjustedSize(),
             market.getAdjustedSize(), ToDollars(market.getPrice()), ToDollars(pathContract._contract->_extCommission))
     }
+}
+
+bool ArbieSpreader::Path::canHedge(hf::qty_t size) const noexcept {
+    for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
+        auto& pathContract = _leanContracts[i];
+        auto& market = *_bestHedgeMarket[i];
+        if (IsBetter(pathContract._priceSizeCache[market.getSide()]._price, market.getPrice(), market.getSide()) ||
+            market.getAdjustedSize() < size) {
+            return false;
+        }
+    }
+    return true;
 }

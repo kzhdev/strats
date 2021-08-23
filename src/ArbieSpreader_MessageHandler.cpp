@@ -112,8 +112,8 @@ void ArbieSpreader::handleHedgeMarketDataAdjustmentAck(const HedgeMarketDataAdju
 }
 
 void ArbieSpreader::handleInternalHedgeDone(const InternalHedgeDone& message) {
-    DLOG(0, "AS {C[i1]}. InternalHedgeDone. Side={i2} HedgeId={i3} Market={i4}",
-         getContract(message._instrumentIndex), message._side, message._hedgeId, message._marketIndex)
+    LOG(0, "AS {C[i1]}. InternalHedgeDone. Side={i2} HedgeId={i3} Market={i4}", getContract(message._instrumentIndex),
+        message._side, message._hedgeId, message._marketIndex)
     assert(message._marketIndex < MARKET_ID_EXTERNAL);
     auto& contract = _contracts[message._instrumentIndex];
     Market& market = contract._markets[message._side][Market::Internal];

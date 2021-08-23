@@ -225,16 +225,11 @@ void ArbieSpreader::onMarketDataUpdate(Contract& contract,
                                        bool askChanged,
                                        hf::price_t askPrice,
                                        hf::qty_t askSize) {
-    bool hasChange = false;
     if (bidChanged) {
-        hasChange = contract.updateMarket<BID>(MarketIds::MARKET_ID_EXTERNAL, bidPrice, (bidPrice == hf::NULL_PRICE) ? 0 : bidSize, _effected_markets);
+        contract.updateMarket<BID>(MarketIds::MARKET_ID_EXTERNAL, bidPrice, (bidPrice == hf::NULL_PRICE) ? 0 : bidSize, _effected_markets);
     }
     if (askChanged) {
-        hasChange = contract.updateMarket<ASK>(MarketIds::MARKET_ID_EXTERNAL, askPrice, (askPrice == hf::NULL_PRICE) ? 0 : askSize, _effected_markets);
-    }
-
-    if (hasChange) {
-        addUpdatedContract(contract);
+        contract.updateMarket<ASK>(MarketIds::MARKET_ID_EXTERNAL, askPrice, (askPrice == hf::NULL_PRICE) ? 0 : askSize, _effected_markets);
     }
 
     for (Market* market : _effected_markets) {
@@ -249,17 +244,13 @@ void ArbieSpreader::processInternalMarketUpdate(const MarketUpdate& marketUpdate
     bidMarket.setId(marketUpdate._bidMarketId);
     auto bidPrice = marketUpdate._bidSize == 0 ? hf::NULL_PRICE : marketUpdate._bidPrice;
     if (bidMarket.getPrice() != bidPrice || bidMarket.getUnAdjustedSize() != marketUpdate._bidSize) {
-        if (contract.updateMarket<BID>((MarketIds)marketUpdate._bidMarketId, bidPrice, marketUpdate._bidSize, _effected_markets)) {
-            addUpdatedContract(contract);
-        }
+        contract.updateMarket<BID>((MarketIds)marketUpdate._bidMarketId, bidPrice, marketUpdate._bidSize, _effected_markets);
     }
     auto& askMarket = contract._markets[ASK][Market::Internal];
     askMarket.setId(marketUpdate._askMarketId);
     auto askPrice = marketUpdate._askSize == 0 ? hf::NULL_PRICE : marketUpdate._askPrice;
     if (askMarket.getPrice() != askPrice || askMarket.getUnAdjustedSize() != marketUpdate._askSize) {
-        if (contract.updateMarket<ASK>((MarketIds)marketUpdate._askMarketId, askPrice, marketUpdate._askSize, _effected_markets)) {
-            addUpdatedContract(contract);
-        }
+        contract.updateMarket<ASK>((MarketIds)marketUpdate._askMarketId, askPrice, marketUpdate._askSize, _effected_markets);
     }
 
     for (Market* market : _effected_markets) {

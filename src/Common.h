@@ -678,13 +678,13 @@ struct Market {
     }
 
     bool handleInternalHedgeDone(uint32_t marketId, uint32_t hedgeId) {
-        assert(marketId != MarketIds::MARKET_ID_EXTERNAL);
+        assert(marketId < MarketIds::MARKET_ID_EXTERNAL);
         for (auto it = _fakSizeAdjustments[marketId].begin(); it != _fakSizeAdjustments[marketId].end(); ++it) {
             SizeAdjustment& adj = *it;
             if (adj._hedgeId == hedgeId) {
                 _fakSizeAdjustment[marketId] -= adj._adjustment;
                 LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} internal hedge adjustment Done. HedgeId={i5} Adj={i6} FAKAdj={i7} asQuoteQdj={i8} FAKPreAdj={i9} Price={d1} Size={i10} AdjustedSize={i11}", _strategy,
-                    _contractId, _id, _side, adj._hedgeId, adj._adjustment, _fakSizeAdjustment[marketId],
+                    _contractId, marketId, _side, adj._hedgeId, adj._adjustment, _fakSizeAdjustment[marketId],
                     _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(),
                     getAdjustedSize(marketId))
                 _fakSizeAdjustments[marketId].erase(it);

@@ -96,9 +96,10 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
              const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig,
              const ShortTermFairOffset* stfOffset);
 
-        void marketDirty(Contract* contract, uint32_t side);
+        bool marketDirty(Contract* contract, uint32_t side);
         void marketDirty(Contract* contract);
 
+        bool canHedge(hf::qty_t size) const noexcept;
         void log() const noexcept;
     };
 
@@ -238,7 +239,9 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         void setMarketDirty(uint32_t side) {
             for (auto* path : _affectedPaths) {
-                path->marketDirty(this, side);
+                if (path->marketDirty(this, side)) {
+                    ArbieSpreader::get()->pushUpdatedContract(path->_contract);
+                }
             }
         }
 
@@ -335,6 +338,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         }
     };
 
+    static ArbieSpreader* _self;
     std::vector<Contract> _contracts;
     std::vector<Path> _allPaths;
     OrderRequestManager& _orderRequestMgr;
@@ -358,6 +362,10 @@ public:
     }
 
     ~ArbieSpreader() {
+    }
+
+    static ArbieSpreader* get() noexcept {
+        return _self;
     }
 
     ResourceId id() const noexcept override { return ResourceId::ArbieSpreader; }
@@ -476,7 +484,6 @@ private:
     void handleInternalHedgeDone(const InternalHedgeDone& message);
     void handleASInternalMatchingDone(uint32_t contractId);
     void markContractDirty(Contract& contract, Market* updatedMarket);
-    void addUpdatedContract(Contract& contract);
     void handleSTFUpdate(const STFUpdate& msg);
 
     template<uint32_t Side>
@@ -503,12 +510,15 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
         _effected_markets.clear();
     }
 
-    uint32_t pathCount = 0;
-    contract.template updatePaths<Side>(pathCount);
-    ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractHedge, pathCount);
-
     auto size = positionSize<Side>(qty);
     auto pBest = contract._paths[Side][0];
+    if (!pBest->canHedge(size)) {
+        uint32_t pathCount = 0;
+        contract.template updatePaths<Side>(pathCount);
+        ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractHedge, pathCount);
+        pBest = contract._paths[Side][0];
+    }
+
     if (BOOST_LIKELY(pBest->_priceSize.valid())) {
         sendFillToFront();
         auto hedgeId = ++contract._hedgeId;
@@ -817,7 +827,6 @@ template<uint32_t Side>
 inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, const Contract::Quote& quote, bool quoteExternally) {
     if (quote._externalSize) {
         if (contract.addAggressiveQuoteAdjustment<Side>(path, quote, quoteExternally, _effected_markets)) {
-            addUpdatedContract(contract);
             for (auto market : _effected_markets) {
                 markContractDirty(_contracts[market->getContractId()], market);
             }

@@ -8,8 +8,10 @@ static hf::ResourceRegistrator<ArbieSpreader> s_registrator("ArbieSpreader");
 
 /*static*/
 const ArbieSpreader::ShortTermFairOffset ArbieSpreader::Contract::_zeroStfOffset;
+ArbieSpreader* ArbieSpreader::_self = nullptr;
 
 void ArbieSpreader::init(double frequency, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker) {
+    ArbieSpreader::_self = this;
     ViperStrategyBase::init(frequency, internalHeartbeatPeriod, std::move(pnlLimitsChecker));
     auto numFactors = _viperConfig._vectorConfigs.size();
     _vectorsRange.resize(numFactors, 0.);
@@ -367,14 +369,6 @@ void ArbieSpreader::onExchangeQuoteExternalChanged(const SharedSystemState::Quot
     updateQuotes(true);
 }
 
-void ArbieSpreader::addUpdatedContract(Contract& contract) {
-    for (auto* path : contract._affectedPaths) {
-        if (path->_dirty) {
-            pushUpdatedContract(path->_contract);
-        }
-    }
-}
-
 void ArbieSpreader::pushUpdatedContract(Contract* contract) {
     auto index = _updatedContracts.reserve();
     _updatedContracts[index] = contract;
@@ -390,7 +384,6 @@ void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket)
     }
     if (bestMarketChanged) {
         contract.setMarketDirty(updatedMarket->getSide());
-        addUpdatedContract(contract);
     }
 }
 
