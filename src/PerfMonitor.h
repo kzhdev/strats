@@ -174,8 +174,24 @@ public:
         }
     }
 
-    void addPerfPoint(PerfId id, PerfType type) {
-        addPerfPoint(id, type, clockUtil::GetCycles());
+    void addPerfPointBegin(PerfId id) {
+        auto index = _perfQueue.reserve();
+        auto& perfPoint = *_perfQueue[index];
+        perfPoint._id = id;
+        perfPoint._type = PerfType::Begin;
+        perfPoint._value[1] = 0;
+        perfPoint._value[0] = clockUtil::getCpuTicksStart();
+        _perfQueue.publish(index);
+    }
+
+    void addPerfPointEnd(PerfId id) {
+        auto index = _perfQueue.reserve();
+        auto& perfPoint = *_perfQueue[index];
+        perfPoint._id = id;
+        perfPoint._type = PerfType::Begin;
+        perfPoint._value[1] = 0;
+        perfPoint._value[0] = clockUtil::getCpuTicksEnd();
+        _perfQueue.publish(index);
     }
 
     ALWAYS_INLINE
@@ -243,11 +259,11 @@ private:
 struct ScopedPerfPoint {
     PerfId _id;
     ScopedPerfPoint(PerfId id) : _id(id) {
-        PerfMonitor::get()->addPerfPoint(id, PerfType::Begin);
+        PerfMonitor::get()->addPerfPointBegin(id);
     }
 
     ~ScopedPerfPoint() {
-        PerfMonitor::get()->addPerfPoint(_id, PerfType::End);
+        PerfMonitor::get()->addPerfPointEnd(_id);
     }
 };
 
@@ -259,19 +275,20 @@ struct ConditionalScopedPerfPoint {
     ConditionalScopedPerfPoint(PerfId id, Condition&& condition)
         : _id(id), _enabled(condition()) {
         if (_enabled) {
-            PerfMonitor::get()->addPerfPoint(id, PerfType::Begin);
+            PerfMonitor::get()->addPerfPointBegin(id);
         }
     }
 
     ~ConditionalScopedPerfPoint() {
         if (_enabled) {
-            PerfMonitor::get()->addPerfPoint(_id, PerfType::End);
+            PerfMonitor::get()->addPerfPointEnd(_id);
         }
     }
 };
 
 #define SCOPED_PERF_POINT(id) ScopedPerfPoint perf(id)
-#define ADD_PERF_POINT(id, type) PerfMonitor::get()->addPerfPoint(id, type)
+#define ADD_PERF_POINT_BEGIN(id) PerfMonitor::get()->addPerfPointBegin(id)
+#define ADD_PERF_POINT_END(id) PerfMonitor::get()->addPerfPointEnd(id)
 #define ADD_PERF_VALUE(id, value) PerfMonitor::get()->addPerfPoint(id, PerfType::Value, value)
 #define ADD_PERF_PERCENTAGE(id, numerator, denominator) PerfMonitor::get()->addPerfPoint(id, PerfType::Percentage, numerator, denominator)
 #define CONDITIONAL_SCOPED_PERF_POINT(id) ConditionalScopedPerfPoint perf(id)

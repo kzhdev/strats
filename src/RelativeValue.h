@@ -384,6 +384,9 @@ public:
     }
 
     void runCycle(uint64_t now) {
+#ifdef ENABLE_PERF
+        auto begin = clockUtil::getCpuTicksStart();
+#endif
         if (_numberOfFills > 0) {
             LOG(0, "RV drained number of fills. {i1}", _numberOfFills)
         }
@@ -423,8 +426,9 @@ public:
         _numberOfFills = 0;
 #ifdef ENABLE_PERF
         if (addPerf) {
-            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, now);
-            ADD_PERF_POINT(PerfId::RV_RunCycle, PerfType::End);
+            auto end = clockUtil::getCpuTicksEnd();
+            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, begin);
+            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, end);
         }
 #endif
     }

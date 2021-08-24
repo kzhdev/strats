@@ -26,6 +26,28 @@ inline uint64_t GetCyclesSerialized() {
     return tsc;
 }
 
+inline __attribute__((always_inline)) uint64_t getCpuTicksStart()
+{
+    uint32_t lo, hi;
+    asm volatile ("CPUID\n\t"
+                  "RDTSC\n\t"
+                  "mov %%edx, %0\n\t"
+                  "mov %%eax, %1\n\t": "=r" (hi), "=r" (lo)::
+                  "%rax", "%rbx", "%rcx", "%rdx");
+    return (uint64_t)hi << 32 | lo;
+}
+
+inline __attribute__((always_inline)) uint64_t getCpuTicksEnd()
+{
+    uint32_t lo, hi;
+    asm volatile("RDTSCP\n\t"
+                 "mov %%edx, %0\n\t"
+                 "mov %%eax, %1\n\t"
+                 "CPUID\n\t": "=r" (hi), "=r" (lo)::
+                 "%rax", "%rbx", "%rcx", "%rdx");
+    return (uint64_t)hi << 32 | lo;
+}
+
 inline uint64_t GetMonotonicClockResolution() {
     timespec ts;
     clock_getres(CLOCK_MONOTONIC, &ts);
