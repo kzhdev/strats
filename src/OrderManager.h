@@ -1103,6 +1103,7 @@ public:
                 if(priorLevel != currentLevel) {
                     priorLevel->_flight += filledQty;
                     priorLevel->_flightout -= filledQty;
+                    currentLevel->_flight = std::max<hf::qty_t>(0, currentLevel->_flight - filledQty);
                 }
                 else {
                     //
