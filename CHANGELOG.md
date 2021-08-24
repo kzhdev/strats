@@ -1,6 +1,10 @@
 #Version 1.54.0.10
 - Fix Candidate > target when order filled while modify in-flight
 - AbieSpreader hedge w/o updatePath if the hedging market still present
+- Make AbieSpreader hedgeId unique across all contracts
+- Notify strategy FAKDone when Executor received FAK fill/cancel in case FAKDone event not come or come late in MD feed
+- Exclude outliers in perf monitor
+- Made perf monitor timestamp more accurate
 
 #Version 1.54.0.9
 - Reduce MD feed logging

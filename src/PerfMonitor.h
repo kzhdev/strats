@@ -86,6 +86,7 @@ class PerfMonitor : public virtual hf::Service {
     double _frequency = 0.;
 
     struct PerfStatistics {
+        PerfId _id;
         double mean = 0.;
         double M2 = 0.;
         double variance = 0.;
@@ -188,7 +189,7 @@ public:
         auto index = _perfQueue.reserve();
         auto& perfPoint = *_perfQueue[index];
         perfPoint._id = id;
-        perfPoint._type = PerfType::Begin;
+        perfPoint._type = PerfType::End;
         perfPoint._value[1] = 0;
         perfPoint._value[0] = clockUtil::getCpuTicksEnd();
         _perfQueue.publish(index);

@@ -480,7 +480,7 @@ private:
 
     void handleHedgeMarketDataAdjustmentAck(const HedgeMarketDataAdjustmentAck& hedgeAck);
 
-    void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event, uint32_t internalId);
+    void handleFakDone(uint32_t side, uint32_t internalId, om::strategy_order_id_t::value_type orderId);
     void handleInternalHedgeDone(const InternalHedgeDone& message);
     void handleASInternalMatchingDone(uint32_t contractId);
     void markContractDirty(Contract& contract, Market* updatedMarket);

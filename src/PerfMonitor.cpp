@@ -30,6 +30,11 @@ void PerfMonitor::onCreate(const libconfig::Setting& config) {
 
     _frequency = clockUtil::GetCpuFrequency();
     _logInterval = GetCyclesFromSeconds(60, _frequency);
+
+    uint32_t i = 0;
+    for (auto& stat : _statistics) {
+        stat._id = static_cast<PerfId>(i++);
+    }
 }
 
 #endif

@@ -696,6 +696,12 @@ struct Market {
 
     bool handleFakDone(om::order_id_t id) {
         assert(_id == MarketIds::MARKET_ID_EXTERNAL);
+        if (_fakDoneReceived.test(id)) {
+            return false;
+        }
+
+        _fakDoneReceived.set(id);
+
         for (auto it = _fakSizeAdjustments[_id].begin(); it != _fakSizeAdjustments[_id].end(); ++it) {
             SizeAdjustment& adj = *it;
             if (adj._orderId == id) {
@@ -883,6 +889,7 @@ private:
     hf::qty_t _fakPreAdjustment = 0;
     std::vector<SizeAdjustment> _fakSizeAdjustments[MarketIds::__end__];
     std::vector<Market*> _fakPreAdjustedMarkets;
+    std::bitset<om::ORDER_NUM> _fakDoneReceived;
 };
 
 template<uint32_t Side>
@@ -1445,6 +1452,7 @@ enum class ViperMessageType : uint8_t {
     TransferPositionToRV,
     VectorParameterUpdate,
 
+    FAKDone,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

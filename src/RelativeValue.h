@@ -428,7 +428,7 @@ public:
         if (addPerf) {
             auto end = clockUtil::getCpuTicksEnd();
             PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, begin);
-            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, end);
+            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::End, end);
         }
 #endif
     }
@@ -1581,7 +1581,7 @@ public:
         switch (mde.type) {
             case md::MDEvent::TYPE::FAK_DONE: {
                 const auto &event = static_cast<const md::MDFakDonenEvent &> (mde);
-                handleFakDone(batch.venue, event, internalId);
+                handleFakDone(ToViperSide(event._side), internalId, event._oid.value());
                 break;
             }
             case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
@@ -1809,12 +1809,11 @@ public:
         }
     }
 
-    void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event, uint32_t internalId) {
+    void handleFakDone(uint32_t side, uint32_t internalId, om::strategy_order_id_t::value_type oid) {
         LOG(0, "RV {C[i1]}. Received FAK done.", internalId)
         RvContract& contract = _contracts[internalId];
-        const uint32_t side = ToViperSide(event._side);
         Market& book = contract.externalMarket(side);
-        book.handleFakDone(event._oid.value());
+        book.handleFakDone(oid);
     }
 
     void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId, hf::batch_id_t batchBid) {

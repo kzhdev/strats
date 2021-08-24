@@ -263,7 +263,7 @@ void ArbieSpreader::handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBa
     switch (mde.type) {
         case md::MDEvent::TYPE::FAK_DONE: {
             const auto &event = static_cast<const md::MDFakDonenEvent &> (mde);
-            handleFakDone(batch.venue, event, internalId);
+            handleFakDone(ToViperSide(event._side), internalId, event._oid.value());
             break;
         }
         default:
@@ -271,13 +271,12 @@ void ArbieSpreader::handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBa
     }
 }
 
-void ArbieSpreader::handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event, uint32_t internalId) {
-    const uint32_t side = ToViperSide(event._side);
-    LOG(0, "AS {C[i1]}. Side={i2} Received FAK done. OID={i3}", internalId, side, event._oid.value())
+void ArbieSpreader::handleFakDone(uint32_t side, uint32_t internalId, om::strategy_order_id_t::value_type orderId) {
+    LOG(0, "AS {C[i1]}. Side={i2} Received FAK done. OID={i3}", internalId, side, orderId)
 
     auto& contract = _contracts[internalId];
     Market& market = contract._markets[side][Market::External];
-    if (BOOST_LIKELY(market.handleFakDone(event._oid.value()))) {
+    if (BOOST_LIKELY(market.handleFakDone(orderId))) {
         markContractDirty(contract, &market);
     }
 }

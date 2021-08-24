@@ -109,6 +109,11 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
             }
             break;
         }
+        case ViperMessageType::FAKDone: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            handleFakDone(msg._number_1, msg._number_2, msg._number_3);
+            break;
+        }
         default:
 //            DLOG(0, "RV. unhandled ViperMessage {i1}", toUInt(message._type))
             break;

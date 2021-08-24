@@ -2873,6 +2873,9 @@ public:
                 sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, order.qp.qtyInFront, ime._internalId);
             } else {
                 const uint32_t internalId = ime._internalId;
+                // Notify Strategy FAK done in case the FAK done is missing or come late in MD feed
+                StrategyId strategy = getStrategyId(order);
+                getStrategy(strategy)->sendGenericMessage(ViperMessageType::FAKDone, ToViperSide(order.side), internalId, order.oid.value());
                 LOG(0, "EXE {C[i1]}. FAK Hedge order filled. OID={i2}", getContract(internalId), order.oid.value())
             }
             ime._messages._fills += event.filledQty;
@@ -2904,6 +2907,8 @@ public:
             if (isFAKHedge(order)) {
                 auto internalId = getInternalId(order);
                 StrategyId strategy = getStrategyId(order);
+                // Notify Strategy FAK done in case the FAK done is missing or come late in MD feed
+                getStrategy(strategy)->sendGenericMessage(ViperMessageType::FAKDone, ToViperSide(order.side), internalId, order.oid.value());
                 LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid.value())
                 cleanBook(1 - ToViperSide(order.side), internalId, order.pr);
                 sendReverseFillToStrategyExt(strategy, internalId, order, FillSource::MissedHedge, batch.bid, event.orderSnapshot.exchangeOrderId.value());
@@ -3029,9 +3034,17 @@ public:
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         auto connection = state._rhoneRouter.getRouteForNextNewOrder(state._contract._venue);
+#ifdef ENABLE_LATENCY_TRACK
+        mb();
+        auto timestsamp = hf::util::TimeUtils::clock_gettime();
+        mb();
+#endif
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), orderType,
                                                          ToRhoneSide(side), price, size,
                                                          om::STP_ACTION::CANCEL_PASSIVE);
+#ifdef ENABLE_LATENCY_TRACK
+        order->debug.i[TIMESTAMP] = timestsamp;
+#endif
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_UNLIKELY(order == nullptr)) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
@@ -3057,7 +3070,6 @@ public:
     void addRoutingStateToNewLimitOrder(om::order_t& order, uint32_t internalId, const strat::om_queue_info_t* connection) {
         order.debug.i[INTERNAL_ID] = internalId;
         order.debug.i[ROUTE] = strat::port_gid(*connection).value();
-        order.debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
     }
 
     void disableMarketMakerDisableQuoteExternalOnOtherStrategies(uint32_t internalId, const std::string& reason) {
@@ -3179,7 +3191,15 @@ public:
 
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
+#ifdef ENABLE_LATENCY_TRACK
+        mb();
+        auto timestsamp = hf::util::TimeUtils::clock_gettime();
+        mb();
+#endif
         om::order_t* order = this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, state._contract._orderIncrementQty, 0, om::STP_ACTION::CANCEL_PASSIVE);
+#ifdef ENABLE_LATENCY_TRACK
+        order->debug.i[TIMESTAMP] = timestsamp;
+#endif
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
         } else {
@@ -3187,7 +3207,6 @@ public:
             order->debug.i[ORDER_OWNER] = UNASSIGNED_OWNER + toUInt(strategy);
             order->debug.i[INTERNAL_ID] = internalId;
             order->debug.i[HEDGE_ID] = hedgeId;
-            order->debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
             ++state._ime._messages._inserts;
             state._rhoneRouter.setNextRoute(state._contract._venue, clockUtil::GetCycles(), _b3hb._oneMillisecondInTicks);
         }
@@ -3234,7 +3253,11 @@ public:
         }
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
+#ifdef ENABLE_LATENCY_TRACK
+        mb();
         const_cast<om::order_t*>(order)->debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
+        mb();
+#endif
         const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE, om::RISK_TYPE::ENTERING);
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_LIKELY(done)) {

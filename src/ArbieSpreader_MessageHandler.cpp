@@ -95,6 +95,11 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
             handleVectorParameterUpdate(msg);
             break;
         }
+        case ViperMessageType::FAKDone: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            handleFakDone(msg._number_1, msg._number_2, msg._number_3);
+            break;
+        }
         default:
             TLOG(0, "AS. unhandled ViperMessage {i1}", toUInt(message._type))
             break;

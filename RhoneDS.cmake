@@ -13,6 +13,10 @@ if (${ENABLE_PERF})
     target_compile_definitions(${BINARY_NAME} PRIVATE -DENABLE_PERF)
 endif()
 
+if ($(ENABLE_LATENCY_TRACK))
+    target_compile_definitions(${BINARY_NAME} PRIVATE -DENABLE_LATENCY_TRACK)
+endif()
+
 target_include_directories(${BINARY_NAME} PUBLIC
         ${RHONE_INCLUDES}
         ${RHONEPUBLIC_DIR}/rhonelogging/src
