@@ -255,6 +255,7 @@ class InternalMatchingEngine {
     std::unordered_map<uint32_t, InternalMarketSub> _internalMarketSubscriptions;
     bool _notifyInternalMarketChange = false;
     uint32_t _selfMatchCounter = 0;
+    uint32_t _hedgeQuoteSelfMatchCounter[toUInt(StrategyId::Execution)];
 
 public:
 
@@ -266,6 +267,10 @@ public:
         for (auto& topLevelBySide : _topLevelsByStrategyBySide) {
             topLevelBySide[BID] = hf::NULL_PRICE;
             topLevelBySide[ASK] = hf::NULL_PRICE;
+        }
+
+        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+            _hedgeQuoteSelfMatchCounter[i] = 0;
         }
     }
 
@@ -895,10 +900,13 @@ public:
             if (strategy == order->_strategy) {
                 WLOG(0, "IME {C[i1]}. {i2} Self match. Skip order {i3}@{d1} ID={i4}", getContractName(),
                      strategyName(strategy), order->_size, ToDollars(order->_price), order->_id)
-                _executor->sendErrorMessage(
-                        boost::str(boost::format("Skip self match order. Strategy=%1% Contract=%2% OrderId=%3% %4%@%5%") %
-                                   toString(strategy) % _name % order->_id % order->_size % ToDollars(order->_price)),
-                        ErrorType::Critical);
+                 if (++_hedgeQuoteSelfMatchCounter[toUInt(strategy)] >= MAX_SELF_MATCH_THRESHOLD) {
+                     _hedgeQuoteSelfMatchCounter[toUInt(strategy)] = 0;
+                     _executor->sendErrorMessage(
+                             boost::str(boost::format("Disable %1%. Self match reached 50 times") % toString(strategy)),
+                             ErrorType::Critical);
+                     _executor->getStrategy(strategy)->disable();
+                 }
 
                 if (++orderIt == orderMap.end()) {
                     break;

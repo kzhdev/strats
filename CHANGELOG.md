@@ -5,6 +5,7 @@
 - Notify strategy FAKDone when Executor received FAK fill/cancel in case FAKDone event not come or come late in MD feed
 - Added outliers statistics in perf monitor
 - Made perf monitor timestamp more accurate
+- Disable strategy if it self matched 50 times in IME
 
 #Version 1.54.0.9
 - Reduce MD feed logging
