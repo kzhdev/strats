@@ -87,14 +87,13 @@ class PerfMonitor : public virtual hf::Service {
 
     struct PerfStatistics {
         PerfId _id;
-        double mean = 0.;
-        double M2 = 0.;
+        double mean[2] {0., 0.};    // 0: normal, 1: outliers
+        double M2 {0.};
         double variance = 0.;
-        uint64_t min = std::numeric_limits<uint64_t>::max();
-        uint64_t max = 0;
+        uint64_t min[2] {std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max()};
+        uint64_t max[2] {0, 0};
         uint64_t beginTime = 0;
-        uint32_t n = 0;
-        uint32_t nOutliers = 0;
+        uint32_t n[2] = {0, 0};
 
         enum Type {
             Latency,
@@ -121,9 +120,9 @@ class PerfMonitor : public virtual hf::Service {
 
             if (point._type == PerfType::Percentage) {
                 type = Type::Percentage;
-                min = point._value[0];
-                max = point._value[1];
-                ++n;
+                min[0] = point._value[0];
+                max[0] = point._value[1];
+                ++n[0];
                 return;
             }
 
@@ -137,7 +136,7 @@ class PerfMonitor : public virtual hf::Service {
                 beginTime = 0;
 
                 if (value > 999999) {
-                    ++nOutliers;
+                    calc<1>(value);
                     return;
                 }
             } else {
@@ -145,13 +144,21 @@ class PerfMonitor : public virtual hf::Service {
                 value = point._value[0];
             }
 
-            ++n;
-            double delta = (double)value - mean;
-            mean += delta / n;
-            M2 += delta * ((double)value - mean);
-            variance = M2 / n;
-            min = std::min<uint64_t>(value, min);
-            max = std::max<uint64_t>(value, max);
+            calc<0>(value);
+        }
+
+    private:
+        template<uint32_t index>
+        inline void calc(uint64_t value) {
+            ++n[index];
+            double delta = (double)value - mean[index];
+            mean[index] += delta / n[index];
+            if (!index) {
+                M2 += delta * ((double)value - mean[0]);
+                variance = M2 / n[0];
+            }
+            min[index] = std::min<uint64_t>(value, min[index]);
+            max[index] = std::max<uint64_t>(value, max[index]);
         }
     };
 
@@ -219,18 +226,21 @@ private:
 
             for (std::underlying_type_t<PerfId> i = 0; i < std::underlying_type_t<PerfId>(PerfId::__PerfId_END__); ++i) {
                 auto& stat = _statistics[i];
-                if (stat.n < 100) {
+                if (stat.n[0] < 100) {
                     continue;
                 }
                 log << to_string(static_cast<PerfId>(i)) << ":" << std::endl;
                 switch(stat.type) {
                     case PerfStatistics::Type::Latency:
-                        log << std::setw(25) << "num_observations: " << stat.n << std::endl;
-                        log << std::setw(25) << "num_outliers: " << stat.nOutliers << std::endl;
-                        log << std::setw(25) << "avg_latency(ns): " << stat.mean / _frequency << std::endl;
-                        log << std::setw(25) << "min_latency(ns): " << stat.min / _frequency << std::endl;
-                        log << std::setw(25) << "max_latency(ns): " << stat.max / _frequency << std::endl;
+                        log << std::setw(25) << "num_observations: " << stat.n[0] << std::endl;
+                        log << std::setw(25) << "avg_latency(ns): " << stat.mean[0] / _frequency << std::endl;
+                        log << std::setw(25) << "min_latency(ns): " << stat.min[0] / _frequency << std::endl;
+                        log << std::setw(25) << "max_latency(ns): " << stat.max[0] / _frequency << std::endl;
                         log << std::setw(25) << "std_div: " << sqrt(stat.variance) / _frequency << std::endl;
+                        log << std::setw(25) << "num_outliers: " << stat.n[1] << std::endl;
+                        log << std::setw(25) << "outlier_avg(ns): " << stat.mean[1] / _frequency << std::endl;
+                        log << std::setw(25) << "outlier_min(ns): " << stat.min[1] / _frequency << std::endl;
+                        log << std::setw(25) << "outlier_max(ns): " << stat.max[1] / _frequency << std::endl;
                         break;
 
                     case PerfStatistics::Type::Value:
@@ -242,7 +252,7 @@ private:
                         break;
 
                     case PerfStatistics::Type::Percentage:
-                        log << std::setw(25) << stat.min << "/" << stat.max << " = " << (double)stat.min / (double)stat.max * 100 << "%" << std::endl;
+                        log << std::setw(25) << stat.min[0] << "/" << stat.max[0] << " = " << (double)stat.min[0] / (double)stat.max[0] * 100 << "%" << std::endl;
                         break;
 
                     case PerfStatistics::Type::Count:
