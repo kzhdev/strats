@@ -219,7 +219,6 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         };
         Quote _quote[2];
         Quote _lastQuoteSent[2];
-        uint32_t _hedgeId {0};
         hf::batch_id_t _lastMDbid {0};
         bool _forceUpdate[2] {false, false};
         bool _usedInQuoting = false;
@@ -346,6 +345,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::bitset<1024> _contractUpdatedFlag;
     uint64_t _updatedContractCursor {0};
     double _edgeMultiplier = 0.;
+    uint32_t _hedgeId {0};
     std::vector<ReadyOrderRequests> _lastOrderRequests;
     std::unordered_map<uint32_t, Path*> _pathsParameters;
     std::unordered_set<Market*> _effected_markets;
@@ -521,7 +521,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
 
     if (BOOST_LIKELY(pBest->_priceSize.valid())) {
         sendFillToFront();
-        auto hedgeId = ++contract._hedgeId;
+        auto hedgeId = ++_hedgeId;
         LOG(0, "AS {C[i1]}. Hedge on Path {i2} {i3}@{d1}.", contract.name(), pBest->_id, pBest->_priceSize._size, ToDollars(pBest->_priceSize._price))
         for (uint32_t i = 0; i < pBest->_leanContracts.size(); ++i) {
             auto& hedgeContract = pBest->_leanContracts[i];
