@@ -2875,7 +2875,7 @@ public:
                 const uint32_t internalId = ime._internalId;
                 // Notify Strategy FAK done in case the FAK done is missing or come late in MD feed
                 StrategyId strategy = getStrategyId(order);
-                getStrategy(strategy)->sendGenericMessage(ViperMessageType::FAKDone, ToViperSide(order.side), internalId, order.oid.value());
+                getStrategy(strategy)->sendGenericMessage(ViperMessageType::FAKDone, 1 - ToViperSide(order.side), internalId, order.oid.value());
                 LOG(0, "EXE {C[i1]}. FAK Hedge order filled. OID={i2}", getContract(internalId), order.oid.value())
             }
             ime._messages._fills += event.filledQty;
@@ -2908,7 +2908,7 @@ public:
                 auto internalId = getInternalId(order);
                 StrategyId strategy = getStrategyId(order);
                 // Notify Strategy FAK done in case the FAK done is missing or come late in MD feed
-                getStrategy(strategy)->sendGenericMessage(ViperMessageType::FAKDone, ToViperSide(order.side), internalId, order.oid.value());
+                getStrategy(strategy)->sendGenericMessage(ViperMessageType::FAKDone, 1 - ToViperSide(order.side), internalId, order.oid.value());
                 LOG(0, "EXE {C[i1]}. Hedge order cancelled. OID={i2}", getContract(internalId), order.oid.value())
                 cleanBook(1 - ToViperSide(order.side), internalId, order.pr);
                 sendReverseFillToStrategyExt(strategy, internalId, order, FillSource::MissedHedge, batch.bid, event.orderSnapshot.exchangeOrderId.value());
