@@ -271,9 +271,11 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
 
                 if (contract._extCommission != value) {
                     contract._extCommission = ToRhonePrice(value);
-                    for (auto path : contract._affectedPaths) {
-                        path->_dirty = true;
-                        updatedContracts.emplace_back(path->_contract);
+                    for (auto& pathsBySide : contract._affectedPaths) {
+                        for (auto* path : pathsBySide) {
+                            path->_dirty = true;
+                            updatedContracts.emplace_back(path->_contract);
+                        }
                     }
                 }
             }

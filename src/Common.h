@@ -836,11 +836,11 @@ struct Market {
     }
 
     hf::qty_t getAdjustedSize() const noexcept {
-        return getAdjustedSize(_id);
+        return _id == MarketIds::__end__ ? 0 : getAdjustedSize(_id);
     }
 
     hf::qty_t getAdjustedSizeExcludeFAKPreAdj() const noexcept {
-        return std::max<hf::qty_t>(_size - _fakSizeAdjustment[_id] - _asQuoteAdjustment, 0);
+        return _id == MarketIds::__end__ ? 0 : std::max<hf::qty_t>(_size - _fakSizeAdjustment[_id] - _asQuoteAdjustment, 0);
     }
 
     hf::qty_t getAdjustedSize(uint32_t marketId) const noexcept {

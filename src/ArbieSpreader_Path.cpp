@@ -13,48 +13,31 @@ ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract
     , _id(id)
     , _side(side)
     , _name(std::move(name)) {
-    _bestHedgeMarket.resize(pathContracts.size());
     for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
         auto& pathContract = _leanContracts[i];
+        pathContract._side = pathContract._multiplier > 0 ? _side : (1 - _side);
         pathContract._contract->_usedInPath = true;
-        if (side == BID) {
-            _bestHedgeMarket[i] = getBestMarket<BID>(pathContract);
-        } else {
-            _bestHedgeMarket[i] = getBestMarket<ASK>(pathContract);
-        }
     }
 }
 
-bool ArbieSpreader::Path::marketDirty(Contract* contract, uint32_t side) {
+bool ArbieSpreader::Path::marketDirty(Contract* contract) {
     if (_config->_enabled) {
         for (auto& leanContract : _leanContracts) {
             if (leanContract._contract == contract) {
-                if (leanContract._multiplier > 0) {
-                    if (_side == side) {
-                        _dirty = leanContract.shouldRecalculate(side, _contract->_quoteSize);
-                        if (!_dirty) {
-                            DLOG(0, "AS {C[i1]}. {C[i2]} best market change didn't trigger recalc. Side={i3} oldBestPrice={d1} oldBestSize={i4}", _contract->name(),
-                                 contract->name(), side, leanContract._priceSizeCache[side]._price,
-                                 leanContract._priceSizeCache[side]._size)
-                        }
-                    }
-                } else if (_side == (1- side)) {
-                    _dirty = leanContract.shouldRecalculate(side, _contract->_quoteSize);
-                    if (!_dirty) {
-                        DLOG(0, "AS {C[i1]}. {C[i2]} best market change didn't trigger recalc. Side={i3} oldBestPrice={d1} oldBestSize={i4}", _contract->name(),
-                             contract->name(), side, leanContract._priceSizeCache[side]._price,
-                             leanContract._priceSizeCache[side]._size)
-                    }
+                _dirty = leanContract.shouldRecalculate(_contract->_quoteSize);
+                if (!_dirty) {
+                    DLOG(0, "AS {C[i1]}. {C[i2]} best market change didn't trigger recalc. Side={i3} oldBestPrice={d1} oldBestSize={i4}", _contract->name(),
+                         contract->name(), leanContract._side, leanContract._priceSizeCache._price,
+                         leanContract._priceSizeCache._size)
                 }
-                break;
+                return _dirty;
             }
         }
-        return _dirty;
     }
     return false;
 }
 
-void ArbieSpreader::Path::marketDirty(Contract* contract) {
+void ArbieSpreader::Path::forceMarketDirty(Contract* contract) {
     if (_config->_enabled) {
         for (auto& leanContract : _leanContracts) {
             if (leanContract._contract == contract) {
@@ -67,21 +50,22 @@ void ArbieSpreader::Path::marketDirty(Contract* contract) {
 
 void ArbieSpreader::Path::log() const noexcept {
     LOG(0, "AS {C[i1]}. {i2} Path {i3} stfOffset={d1}", _contract->name(), _side, _id, _stfOffset._stfOffset)
-    for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
-        auto& pathContract = _leanContracts[i];
-        auto& market = *_bestHedgeMarket[i];
+    for (auto const& pathContract : _leanContracts) {
+        Market* market = pathContract.bestMarket();
         LOG(0, "{C[i1]}. MarketId={i2} Side={i3} multiplier={i4} {i5}({i6})@{d1} extCommission={d2}", pathContract._contract->name(),
-            market.getId(), market.getSide(), pathContract._multiplier, market.getUnAdjustedSize(),
-            market.getAdjustedSize(), ToDollars(market.getPrice()), ToDollars(pathContract._contract->_extCommission))
+            market->getId(), market->getSide(), pathContract._multiplier, market->getUnAdjustedSize(),
+            market->getAdjustedSize(), ToDollars(market->getPrice()), ToDollars(pathContract._contract->_extCommission))
     }
 }
 
 bool ArbieSpreader::Path::canHedge(hf::qty_t size) const noexcept {
-    for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
-        auto& pathContract = _leanContracts[i];
-        auto& market = *_bestHedgeMarket[i];
-        if (IsBetter(pathContract._priceSizeCache[market.getSide()]._price, market.getPrice(), market.getSide()) ||
-            market.getAdjustedSize() < size) {
+    for (const auto& pathContract : _leanContracts) {
+        auto market = pathContract.bestMarket();
+        auto side = market->getSide();
+        auto price = market->getPrice();
+        if (price == hf::NULL_PRICE || market->getId() == MarketIds::__end__ ||
+        IsBetter(pathContract._priceSizeCache._price, price, side) ||
+        market->getAdjustedSize() < size) {
             return false;
         }
     }

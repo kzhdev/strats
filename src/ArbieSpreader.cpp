@@ -150,16 +150,16 @@ void ArbieSpreader::initializeContracts() {
 
                 _allPaths.emplace_back(BID, path._name, id, &contract, pathContracts, path, stfOffset);
                 auto& bidPath = _allPaths.back();
-                for (auto& pathContract : pathContracts) {
-                    pathContract._contract->_affectedPaths.emplace_back(&bidPath);
+                for (auto& pathContract : bidPath._leanContracts) {
+                    pathContract._contract->_affectedPaths[pathContract._side].emplace_back(&bidPath);
                 }
                 contract._paths[BID].emplace_back(&bidPath);
                 _allPaths.emplace_back(ASK, path._name, id, &contract, pathContracts, path, stfOffset);
                 auto& askPath = _allPaths.back();
                 bidPath._otherSidePath = &askPath;
                 askPath._otherSidePath = &bidPath;
-                for (auto& pathContract : pathContracts) {
-                    pathContract._contract->_affectedPaths.emplace_back(&askPath);
+                for (auto& pathContract : askPath._leanContracts) {
+                    pathContract._contract->_affectedPaths[pathContract._side].emplace_back(&askPath);
                 }
                 contract._paths[ASK].emplace_back(&askPath);
 
