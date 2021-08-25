@@ -310,6 +310,7 @@ struct RvContract {
     bool _canTradeStatus = false;
     bool _traded = false;
     bool _usedInPricing = false;
+    bool _logNoPrice = false;
 
     void clearLeans() {
         _quotes[BID]._leans.clear();
