@@ -32,7 +32,7 @@ void ArbieSpreader::initializeContracts() {
     auto numContracts = _viperConfig._allContracts.size();
     _contracts.resize(numContracts);
     _lastOrderRequests.resize(numContracts);
-    _effected_markets.reserve(numContracts);
+    _affected_markets.reserve(numContracts);
     _allPaths.reserve(65536);
     if (_viperConfig._allContracts.size() > _contractUpdatedFlag.size()) {
         logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Number of contracts > %1%") % _contractUpdatedFlag.size()));

@@ -1107,6 +1107,19 @@ public:
         hf::qty_t askSize = askOrder->_size;
 
         bool asSelfMatch = false;
+        bool hasASOrder = false;
+        hf::qty_t asMatchedSize[2] = {0, 0};
+        auto countASMatchedSize = [&asMatchedSize, &hasASOrder, aggressingStrategy, bidOrder, askOrder](hf::qty_t matchedSize) {
+            if ((aggressingStrategy == StrategyId::ArbieSpreader) && hasASOrder) {
+                if (bidOrder->_strategy == StrategyId::ArbieSpreader) {
+                    asMatchedSize[BID] += matchedSize;
+                }
+
+                if (askOrder->_strategy == StrategyId::ArbieSpreader) {
+                    asMatchedSize[ASK] += matchedSize;
+                }
+            }
+        };
         bool matchBidExternal = false;
         bool matchAskExternal = false;
         while (bidTop >= askTop) {
@@ -1129,12 +1142,14 @@ public:
             }
             const hf::price_t fillPrice = bidOrder->_strategy == aggressingStrategy ? askTop : bidTop;
             const hf::qty_t fillSize = std::min<hf::qty_t>(askSize, bidSize);
+            hasASOrder = (bidOrder->_strategy == StrategyId::ArbieSpreader) || (askOrder->_strategy == StrategyId::ArbieSpreader);
             LOG(0, "IME {C[i1]}. Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} isExternal={i4} Ask={i5}@{d2} Id={i6} isExternal={i7} fillSize={i8}", getContractName(),
                 bidSize, ToDollars(bidTop), bidOrder->_id, (uint32_t)matchBidExternal, askSize, ToDollars(askTop),
                 askOrder->_id, (uint32_t)matchAskExternal, fillSize)
 
             bidSize -= fillSize;
             askSize -= fillSize;
+            countASMatchedSize(fillSize);
             _internalFills.push_back({bidOrder, fillPrice, fillSize});
             _internalFills.push_back({askOrder, fillPrice, fillSize});
             doExternalReductionAfterInternalFill(bidOrder, fillSize);
@@ -1205,6 +1220,11 @@ public:
             if (getTopLevel(_askLevels) == nullptr) {
                 _topLevelsByStrategyBySide[toUInt(StrategyId::ArbieSpreader)][ASK] = hf::NULL_PRICE;
             }
+        }
+
+        if (aggressingStrategy == StrategyId::ArbieSpreader) {
+            _executor->getStrategy(StrategyId::ArbieSpreader)->template sendGenericMessage(ViperMessageType::ASInternalMatchingDone,
+                    _internalId, asMatchedSize[BID], asMatchedSize[ASK]);
         }
         return true;
     }
@@ -1900,10 +1920,6 @@ public:
 
         if (execute) {
             const bool matchOk = matchOrders(strategy);
-            if (strategy == StrategyId::ArbieSpreader) {
-                _executor->getStrategy(strategy)->template sendGenericMessage(ViperMessageType::ASInternalMatchingDone,
-                                                                              _internalId);
-            }
             if (BOOST_LIKELY(matchOk)) {
 //                const uint64_t timestamp2 = clockUtil::GetCycles();
 //                DLOG(0, "processOrderRequests Matching Latency {i1}", (timestamp2 - timestamp1));

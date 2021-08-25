@@ -29,7 +29,7 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
         }
         case ViperMessageType::ASInternalMatchingDone: {
             const auto& reply = reinterpret_cast<const GenericMessage&> (message._data[0]);
-            handleASInternalMatchingDone(reply._number_1);
+            handleASInternalMatchingDone(reply._number_1, reply._number_2, reply._number_3);
             break;
         }
         case ViperMessageType::HedgeMDAdjsutAck: {
@@ -127,20 +127,30 @@ void ArbieSpreader::handleInternalHedgeDone(const InternalHedgeDone& message) {
     }
 }
 
-void ArbieSpreader::handleASInternalMatchingDone(uint32_t contractId) {
+void ArbieSpreader::handleASInternalMatchingDone(uint32_t contractId, hf::qty_t bidFills, hf::qty_t askFills) {
     DLOG(0, "AS {C[i1]}. AS internal matching done.", getContract(contractId))
     auto& contract = _contracts[contractId];
-    if (contract._markets[BID][Market::Internal].undoAsQuoteAdjustment(_effected_markets)) {
+    if (contract._markets[BID][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
         markContractDirty(contract, &contract._markets[BID][Market::Internal]);
     }
-    if (contract._markets[ASK][Market::Internal].undoAsQuoteAdjustment(_effected_markets)) {
+    if (contract._markets[ASK][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
         markContractDirty(contract, &contract._markets[ASK][Market::Internal]);
     }
-    for (Market* market : _effected_markets) {
+    if (bidFills) {
+        if (contract._markets[ASK][Market::Type::External].undoAsQuoteAdjustment(bidFills, _affected_markets)) {
+            markContractDirty(contract, &contract._markets[ASK][Market::Type::External]);
+        }
+    }
+    if (askFills) {
+        if (contract._markets[BID][Market::Type::External].undoAsQuoteAdjustment(askFills, _affected_markets)) {
+            markContractDirty(contract, &contract._markets[BID][Market::Type::External]);
+        }
+    }
+    for (Market* market : _affected_markets) {
         auto& effected_contract = _contracts[market->getContractId()];
         markContractDirty(effected_contract, market);
     }
-    _effected_markets.clear();
+    _affected_markets.clear();
 }
 
 void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {

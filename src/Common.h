@@ -648,7 +648,7 @@ struct Market {
              getUnAdjustedSize(), getAdjustedSize())
     }
 
-    bool update(hf::price_t price, hf::qty_t size, std::unordered_set<Market*>& effected_markets) {
+    bool update(hf::price_t price, hf::qty_t size, std::unordered_set<Market*>& affected_markets) {
         assert(_id == MarketIds::MARKET_ID_EXTERNAL);
         bool changed = (_price != price) | (_size != size);
         if (_price != price) {
@@ -658,7 +658,7 @@ struct Market {
                 _fakSizeAdjustments[_id].clear();
                 LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4}. Flushing FAK adjustments.", _strategy, _contractId, _id, _side)
             }
-            undoAsQuoteAdjustment(effected_markets);
+            undoAsQuoteAdjustment(affected_markets);
             _fakPreAdjustment = 0;
         }
         _price = price;
@@ -789,39 +789,23 @@ struct Market {
             ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
     }
 
-    bool undoAsQuoteAdjustment(std::unordered_set<Market*>& effected_markets) noexcept {
-        return undoAsQuoteAdjustment(_asQuoteAdjustment, effected_markets);
+    bool undoAsQuoteAdjustment(std::unordered_set<Market*>& affected_markets) noexcept {
+        return undoAsQuoteAdjustment(_asQuoteAdjustment, affected_markets);
     }
 
-    bool undoAsQuoteAdjustment(hf::qty_t adj, std::unordered_set<Market*>& effected_markets) noexcept {
+    bool undoAsQuoteAdjustment(hf::qty_t adj, std::unordered_set<Market*>& affected_markets) noexcept {
         if (_asQuoteAdjustment) {
-            _asQuoteAdjustment -= adj;
+            _asQuoteAdjustment = std::max<hf::qty_t>(0, _asQuoteAdjustment - adj);
             LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4}. Undo AS Quote Adjustment. adj={i5} asQuoteAdjustment={i6} Price={d1} Size={i7} AdjustedSize={i8}", _strategy,
                 _contractId, _id, _side, adj, _asQuoteAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
             for (auto* market : _fakPreAdjustedMarkets) {
                 market->undoFAKPreAdjustment(adj);
-                effected_markets.emplace(market);
+                affected_markets.emplace(market);
             }
             assert(_asQuoteAdjustment >= 0);
             if (_asQuoteAdjustment <=0) {
                 _fakPreAdjustedMarkets.clear();
             }
-            return true;
-        }
-        return false;
-    }
-
-    bool ackAsQuoteAdjustment(hf::qty_t acked, std::unordered_set<Market*>& effected_markets) noexcept {
-        if (_asQuoteAdjustment) {
-            for (auto* market : _fakPreAdjustedMarkets) {
-                market->undoFAKPreAdjustment(acked);
-                effected_markets.emplace(market);
-            }
-            _asQuoteAdjustment = std::max<hf::qty_t>(0, _asQuoteAdjustment - acked);
-
-            LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Acked AS Quote adjustment. acked={i5} asQuoteAdjustment={i6} FAKPreAdj={i7} FAKAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _strategy,
-                _contractId, _id, _side, acked, _asQuoteAdjustment, _fakPreAdjustment, _fakSizeAdjustment[_id],
-                ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
             return true;
         }
         return false;

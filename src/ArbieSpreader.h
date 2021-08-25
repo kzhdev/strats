@@ -363,7 +363,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     uint32_t _hedgeId {0};
     std::vector<ReadyOrderRequests> _lastOrderRequests;
     std::unordered_map<uint32_t, Path*> _pathsParameters;
-    std::unordered_set<Market*> _effected_markets;
+    std::unordered_set<Market*> _affected_markets;
     std::unordered_set<ShortTermFairOffset*> _updatedSTFOffsets;
     std::unordered_multimap<uint32_t, ShortTermFairOffset*> _mapShortTermFairOffset;
     Matrix _riskMatrix; // x,y - vectors - square
@@ -497,7 +497,7 @@ private:
 
     void handleFakDone(uint32_t side, uint32_t internalId, om::strategy_order_id_t::value_type orderId);
     void handleInternalHedgeDone(const InternalHedgeDone& message);
-    void handleASInternalMatchingDone(uint32_t contractId);
+    void handleASInternalMatchingDone(uint32_t contractId, hf::qty_t bidFills, hf::qty_t askFills);
     void markContractDirty(Contract& contract, Market* updatedMarket);
     void handleSTFUpdate(const STFUpdate& msg);
 
@@ -529,13 +529,13 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     constexpr auto otherSide = GetOtherSide<Side>();
     if (contract._markets[otherSide][Market::External].getASQuoteAdjustment()) {
         // the aggressor quote filled?
-        if (contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _effected_markets)) {
+        if (contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _affected_markets)) {
             markContractDirty(contract, &contract._markets[otherSide][Market::External]);
         }
-        for (auto market : _effected_markets) {
+        for (auto market : _affected_markets) {
             markContractDirty(_contracts[market->getContractId()], market);
         }
-        _effected_markets.clear();
+        _affected_markets.clear();
     }
 
     auto size = positionSize<Side>(qty);
@@ -813,11 +813,11 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
 template<uint32_t Side>
 inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, Path* path, const Contract::Quote& quote, bool quoteExternally) {
     if (quote._externalSize) {
-        if (contract.addAggressiveQuoteAdjustment<Side>(path, quote, quoteExternally, _effected_markets)) {
-            for (auto market : _effected_markets) {
+        if (contract.addAggressiveQuoteAdjustment<Side>(path, quote, quoteExternally, _affected_markets)) {
+            for (auto market : _affected_markets) {
                 markContractDirty(_contracts[market->getContractId()], market);
             }
-            _effected_markets.clear();
+            _affected_markets.clear();
         }
     }
 }
