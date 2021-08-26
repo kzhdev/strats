@@ -130,22 +130,19 @@ void ArbieSpreader::handleInternalHedgeDone(const InternalHedgeDone& message) {
 void ArbieSpreader::handleASInternalMatchingDone(uint32_t contractId, hf::qty_t bidFills, hf::qty_t askFills) {
     DLOG(0, "AS {C[i1]}. AS internal matching done.", getContract(contractId))
     auto& contract = _contracts[contractId];
-    if (contract._markets[BID][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
-        markContractDirty(contract, &contract._markets[BID][Market::Internal]);
-    }
-    if (contract._markets[ASK][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
-        markContractDirty(contract, &contract._markets[ASK][Market::Internal]);
-    }
-    if (bidFills) {
-        if (contract._markets[ASK][Market::Type::External].undoAsQuoteAdjustment(bidFills, _affected_markets)) {
-            markContractDirty(contract, &contract._markets[ASK][Market::Type::External]);
+    // If order filled internally, undoASQuoteAdjustment will be done in updateHedge
+    if (!bidFills) {
+        if (contract._markets[BID][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
+            markContractDirty(contract, &contract._markets[BID][Market::Internal]);
         }
     }
-    if (askFills) {
-        if (contract._markets[BID][Market::Type::External].undoAsQuoteAdjustment(askFills, _affected_markets)) {
-            markContractDirty(contract, &contract._markets[BID][Market::Type::External]);
+
+    if (!askFills) {
+        if (contract._markets[ASK][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
+            markContractDirty(contract, &contract._markets[ASK][Market::Internal]);
         }
     }
+
     for (Market* market : _affected_markets) {
         auto& effected_contract = _contracts[market->getContractId()];
         markContractDirty(effected_contract, market);

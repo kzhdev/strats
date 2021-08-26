@@ -42,9 +42,9 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
             });
         };
         if (side == BID) {
-            hedgeSent |= updateHedge<BID>(contract, size, sendFillToFront);
+            hedgeSent |= updateHedge<BID>(contract, size, sendFillToFront, false);
         } else {
-            hedgeSent |= updateHedge<ASK>(contract, size, sendFillToFront);
+            hedgeSent |= updateHedge<ASK>(contract, size, sendFillToFront, false);
         }
 
         if (!hedgeSent) {
@@ -93,9 +93,9 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
             };
 
             if (fill._side == BID) {
-                hedgeSent |= updateHedge<BID>(contract, fill._qty, sendFillToFront);
+                hedgeSent |= updateHedge<BID>(contract, fill._qty, sendFillToFront, fill._type == FillType::Internal);
             } else {
-                hedgeSent |= updateHedge<ASK>(contract, fill._qty, sendFillToFront);
+                hedgeSent |= updateHedge<ASK>(contract, fill._qty, sendFillToFront, fill._type == FillType::Internal);
             }
 
             if (!hedgeSent) {

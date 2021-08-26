@@ -478,7 +478,7 @@ private:
     inline bool checkMaxTicksThroughMarket(Contract& contract, Contract::Quote& quote);
 
     template<uint32_t Side>
-    inline bool updateHedge(Contract& contract, hf::qty_t qty, const std::function<void()>& sendFillToFront);
+    inline bool updateHedge(Contract& contract, hf::qty_t qty, const std::function<void()>& sendFillToFront, bool isInternal);
 
     void sendHedgeOrder(uint32_t internalId,
                         uint32_t hedgeContractId,
@@ -524,23 +524,28 @@ inline Market* getLeanMarkets<ASK>(const ArbieSpreader::PathContract& pathContra
 }
 
 template<uint32_t Side>
-inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const std::function<void()>& sendFillToFront) {
+inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const std::function<void()>& sendFillToFront, bool isInternal) {
     SCOPED_PERF_POINT(PerfId::AS_UpdateHedge);
     constexpr auto otherSide = GetOtherSide<Side>();
-    if (contract._markets[otherSide][Market::External].getASQuoteAdjustment()) {
-        // the aggressor quote filled?
-        if (contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _affected_markets)) {
-            markContractDirty(contract, &contract._markets[otherSide][Market::External]);
+    if (isInternal) {
+        if (contract._markets[Side][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
+            _affected_markets.emplace(&contract._markets[Side][Market::Internal]);
         }
-        for (auto market : _affected_markets) {
-            markContractDirty(_contracts[market->getContractId()], market);
+
+        // If AS internally crossed, side AS Quote will be unadjusted when ASK fill received
+        // this could cause bid hedge switch path. We will try to undo AS quote on both side
+        if (contract._markets[Side][Market::External].getASQuoteAdjustment() &&
+            contract._markets[Side][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[Side][Market::External].getASQuoteAdjustment()), _affected_markets)) {
+            _affected_markets.emplace(&contract._markets[Side][Market::External]);
         }
-        _affected_markets.clear();
+    }
+    if (contract._markets[otherSide][Market::External].getASQuoteAdjustment() &&
+        contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _affected_markets)) {
+        _affected_markets.emplace(&contract._markets[otherSide][Market::External]);
     }
 
-    auto size = positionSize<Side>(qty);
     auto pBest = contract._paths[Side][0];
-    if (!pBest->canHedge(size)) {
+    if (!pBest->canHedge(qty)) {
         uint32_t pathCount = 0;
         contract.template updatePaths<Side>(pathCount);
         ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractHedge, pathCount);
@@ -639,6 +644,11 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                         }
                     }, dataSize);
         }
+
+        for (auto market : _affected_markets) {
+            markContractDirty(_contracts[market->getContractId()], market);
+        }
+        _affected_markets.clear();
 
         // Adjust FAK in separate loop so that the hedges are send out ASAP.
         for (const auto& hedgeContract : pBest->_leanContracts) {
