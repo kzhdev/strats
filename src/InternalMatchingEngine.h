@@ -1337,20 +1337,20 @@ public:
         }
     }
 
-    void allocateExternalFills(const om::OMExecutionEvent &event, const om::OMBatch& batch, const om::order_t &order, uint32_t side) {
-        LOG(0, "IME {C[i1]}. Allocate external fill. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(event.filledPrice), event.filledQty)
+    void allocateExternalFills(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, hf::batch_id_t bid, const om::order_t &order, uint32_t side) {
+        LOG(0, "IME {C[i1]}. Allocate external fill. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(filledPrice), filledQty)
         // allocate fills from MM hedge first
-        hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(event.filledPrice, event.filledQty, side, event.exchangeOrderId.value(), order.oid.value(), batch.bid);
+        hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(filledPrice, filledQty, side, order.exchangeOrderId.value(), order.oid.value(), bid);
         if (unmatchedFills > 0) {
             // allocate unmatched fills from MM Quote or RV which ever is the best
             if (side == BID) {
-                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _bidLevels, _bids, event, batch);
+                allocateExternalQuoteFill(filledPrice, unmatchedFills, order, _bidLevels, _bids, bid);
                 const hf::qty_t restingSize = _om[BID].getRestingSize();
-                startFillBanner<BID>(event.filledPrice, restingSize);
+                startFillBanner<BID>(filledPrice, restingSize);
             } else {
-                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _askLevels, _asks, event, batch);
+                allocateExternalQuoteFill(filledPrice, unmatchedFills, order, _askLevels, _asks, bid);
                 const hf::qty_t restingSize = _om[ASK].getRestingSize();
-                startFillBanner<ASK>(event.filledPrice, restingSize);
+                startFillBanner<ASK>(filledPrice, restingSize);
             }
         }
         if (_executor->onEndOfFills(_internalId, side, false, _lastMMOrderExecution + 1)) {
@@ -1371,7 +1371,7 @@ public:
     }
 
     template <typename LevelsT, typename MapT>
-    void allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map, const om::OMExecutionEvent &event, const om::OMBatch& batch) {
+    void allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map, hf::batch_id_t bid) {
         LOG(0, "IME {C[i1]}. External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(filledPrice), filledQty)
         hf::qty_t filledSize = filledQty;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
@@ -1383,7 +1383,7 @@ public:
                 auto fillSource = o->_type == Order::Type::Quoting ? FillSource::Quote : FillSource::Hedge;
                 if (o->_externalSize == filledSize) {
                     LOG(0, "IME {C[i1]}. Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
-                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource, event.exchangeOrderId.value(), order.oid.value(), batch.bid);
+                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource, order.exchangeOrderId.value(), order.oid.value(), bid);
                     orderIt = orders.erase(orderIt);
                     o->priceLevel = nullptr;
                     LOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
@@ -1396,7 +1396,7 @@ public:
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
                     LOG(0, "IME {C[i1]}. Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
-                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, oneFill, o->_side, fillSource, event.exchangeOrderId.value(), order.oid.value(), batch.bid);
+                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, oneFill, o->_side, fillSource, order.exchangeOrderId.value(), order.oid.value(), bid);
                     orderIt = orders.erase(orderIt);
                     o->priceLevel = nullptr;
                     LOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
@@ -1409,7 +1409,7 @@ public:
                     }
                 } else {
                     LOG(0, "IME {C[i1]}. Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), o->_externalSize)
-                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource, event.exchangeOrderId.value(), order.oid.value(), batch.bid);
+                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource, order.exchangeOrderId.value(), order.oid.value(), bid);
                     o->_externalSize -= filledSize;
                     doInternalReductionAfterExternalFill(o, filledSize, map);
                     return;
@@ -1484,10 +1484,10 @@ public:
         }
     }
 
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::OMBatch& batch, const om::order_t &order) {
+    void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, hf::batch_id_t bid, const om::order_t &order) {
         uint32_t side = ToViperSide(order.side);
-        _om[side].onOrderExecution(event, order);
-        allocateExternalFills(event, batch, order, side);
+        _om[side].onOrderExecution(filledPrice, filledQty, totalExecutedQty, order);
+        allocateExternalFills(filledPrice, filledQty, totalExecutedQty, bid, order, side);
         sendInternalMarketData();
     }
 

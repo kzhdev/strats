@@ -1,6 +1,6 @@
 #include "ViperLoggerQueue.h"
 #include <hf/ResourceManager.h>
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 
 using namespace hf;
 using namespace hf::queue;

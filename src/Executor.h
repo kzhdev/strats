@@ -1,10 +1,10 @@
 #ifndef VIPER_EXECUTOR_H
 #define VIPER_EXECUTOR_H
 
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 #include <stdint.h>
 #include <hf/hf.h>
-#include <hf/log.h>
+#include <util/log.h>
 #include <md/md_event.h>
 #include <om/om_event.h>
 #include <strat/Strategy.hpp>
@@ -23,7 +23,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <unordered_set>
-#include <ven/VenueUtils.h>
+#include <util/VenueUtils.h>
 #include "OrderRequestManager.h"
 #include "ViperStrategyBase.h"
 #include "ViperResource.h"
@@ -807,7 +807,7 @@ public:
                 auto internalId = _viperConfig.getInternalId(order.sid);
 
                 if (internalId != INVALID_INTERNAL_ID) {
-                    handleFillForUnassignedGtcOrder(event, event.venue, internalId, order);
+                    handleFillForUnassignedGtcOrder(event.filledPrice, event.filledQty, event.venue, internalId, order);
                     auto message = boost::str(boost::format(
                             "GTC Order filled.  Contract=%1% Side=%2% FillQty=%3% FillPrice=%4% OrderPrice=%5% LeavesQty=%6%")
                             % getContractName(internalId) % hf::SIDE_NAMES.at(static_cast<unsigned char>(order.side))
@@ -842,7 +842,7 @@ public:
 
             if (_viperConfig._allContracts[internalId]._toMarketMake) {
                 uint32_t side = (event.fill_side == hf::SIDE::BUY ? BID : ASK);
-                handleFillForUnassignedGtcOrder(event, event.venue, internalId, side);
+                handleFillForUnassignedGtcOrder(event.filledPrice, event.filledQty, event.venue, internalId, side);
                 sendErrorMessage(message, ErrorType::Normal);
             }
             LOG_INFO(message);
@@ -1857,24 +1857,12 @@ public:
     void onMDSettlementPublished(const md::MDSettlementPublishedEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDChannelStateChange(const md::MDChannelStateChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDTransactionEvent(const md::MDTransactionEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent& event, const om::strategy_order_t& order, const md::MDBatch& /*batch*/) {
-        const uint32_t internalId = sidToInternalId(event.sid);
-        if(BOOST_LIKELY(internalId != INVALID_INTERNAL_ID)) {
-            LOG(0, "EXE {C[i1]}. onMDFirmOrderExecutionEventBeforeFillArbitration called.  This event should not be triggered.  oid={i2}", getContract(internalId), order.oid.value());
-            //Conditional is md::MDEventType::FIRM_ORDER_EXECUTION path that leads to order.is_active = false
-            if(BOOST_UNLIKELY(order.action_flags.is_active && event.totalExecutedQty > order.executedQty && event.totalExecutedQty >= order.qty)) {
-                using ExecutorSpace::s_log;
-                LOG(0, "EXE {C[i1]} onMDFirmOrderExecutionEventBeforeFillArbitration will likely suppress OE event!  oid={i2}", getContract(internalId), event.oid.value());
-                std::string errorMessage = "MD Fill event likely suppressing fill processing by viper.  OM will be in a bad state for contract=" + getContractName(internalId) + " oid=" + std::to_string(order.oid.value());
-                sendErrorMessage(errorMessage, ErrorType::Critical);
-                LOG_ERROR(errorMessage);
-            }
-        }
-        else {
-            LOG(0, "EXE onMDFirmOrderExecutionEventBeforeFillArbitration called before with unknown contract.  oid={i1}", order.oid.value());
-        }
+    void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent& event, const om::strategy_order_t& order, const md::MDBatch& /*batch*/) {}
+    void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &event, const om::strategy_order_t &order, const md::MDBatch &batch) {
+        //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
+        onOrderExecution(event.filledPrice, event.filledQty, event.totalExecutedQty, 0, order);
+
     }
-    void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventLostFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
 
     void onPreMDBatch(const md::MDBatch &batch) override {
@@ -2504,9 +2492,8 @@ public:
 
     void onOMOrderExecutionWonFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
         const_cast<om::order_t&> (order).action_flags.is_active = event.is_active; //Is this set on full fill?
-        const_cast<om::order_t&> (order).executedQty = event.totalExecutedQty;
         //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
-        onOrderExecution(event, batch, order);
+        onOrderExecution(event.filledPrice, event.filledQty, event.totalExecutedQty, batch.bid, order);
     }
 
     void onOMQuote(const om::OMQuoteEvent& event, const om::OMBatch& batch) {}
@@ -2841,12 +2828,12 @@ public:
         }
     }
 
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::OMBatch& batch, const om::order_t &order) {
+    void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, hf::batch_id_t bid, const om::order_t &order, bool fillArb = false) {
         if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
             LOG(0, "EXE Fill for unprocessable GTC.  sid={i1} oid={i2} px={i3} fill_qty={i4} cumul_fill_qty={i5] total_qty={i6} leaves_qty={i7}", order.sid, order.oid.value(),
-                    event.filledPrice, event.filledQty, event.totalExecutedQty, order.qty, order.leavesQty);
+                    filledPrice, filledQty, totalExecutedQty, order.qty, order.leavesQty);
             sendErrorMessage(boost::str(boost::format("Fill for unprocessable GTC.  Cancel rejected for unprocessable GTC!  sid=%1% oid=%2% px=%3% fill_qty=%4% cumul_fill_qty=%5% total_qty=%6% leaves_qty=%7%")
-                % order.sid % order.oid % event.filledPrice % event.filledQty % event.totalExecutedQty % order.qty % order.leavesQty), ErrorType::Critical);
+                % order.sid % order.oid % filledPrice % filledQty % totalExecutedQty % order.qty % order.leavesQty), ErrorType::Critical);
             return;
         }
 
@@ -2856,19 +2843,19 @@ public:
             sendMessageToFront<FillMessage>(ViperMessageType::Fill, [=](FillMessage& message) {
                 message._contractId = ime._internalId;
                 message._side = ToViperSide(order.side);
-                message._qty = event.filledQty;
+                message._qty = filledQty;
                 message._strategy = StrategyId::Execution;  // not used
                 message._type = FillType::NegativeScalpCheck;
-                message._price = event.filledPrice;
+                message._price = filledPrice;
                 message._source = FillSource::Quote;    // not used
                 message._rvStf = 0;
             });
 
             if (!isFAKHedge(order)) {
                 if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER || order.debug.i[ORDER_OWNER] == GTC_OWNER)) {
-                    handleFillForUnassignedGtcOrder(event, ime._contract._venue, ime._internalId, order);
+                    handleFillForUnassignedGtcOrder(filledPrice, filledQty, ime._contract._venue, ime._internalId, order);
                 } else {
-                    ime.onOrderExecution(event, batch, order);
+                    ime.onOrderExecution(filledPrice, filledQty, totalExecutedQty, bid, order);
                 }
                 sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, order.qp.qtyInFront, ime._internalId);
             } else {
@@ -2878,24 +2865,22 @@ public:
                 getStrategy(strategy)->sendGenericMessage(ViperMessageType::FAKDone, 1 - ToViperSide(order.side), internalId, order.oid.value());
                 LOG(0, "EXE {C[i1]}. FAK Hedge order filled. OID={i2}", getContract(internalId), order.oid.value())
             }
-            ime._messages._fills += event.filledQty;
+            ime._messages._fills += filledQty;
         } else {
-            LOG(0, "Received Order Replace Executed when logged out. {i1}", event.strat_oid.value())
+            LOG(0, "Received Order Replace Executed when logged out. {i1}", order.oid.value())
         }
     }
 
-    template <typename FillT>
-    void handleFillForUnassignedGtcOrder(const FillT& event, hf::VENUE venue, uint32_t internalId, uint32_t side) {
-        onExternalFill(internalId, StrategyId::MarketMaker, event.filledPrice, event.filledQty, side, FillSource::ViperOff);
+    void handleFillForUnassignedGtcOrder(hf::price_t filledPrice, hf::qty_t filledQty, hf::VENUE venue, uint32_t internalId, uint32_t side) {
+        onExternalFill(internalId, StrategyId::MarketMaker, filledPrice, filledQty, side, FillSource::ViperOff);
         const auto& state = _contractStates[internalId];
         onEndOfFills(internalId, side, false, state._ime._lastMMOrderExecution);
     }
 
-    template <typename FillT>
-    void handleFillForUnassignedGtcOrder(const FillT& event, hf::VENUE venue, uint32_t internalId, const om::order_t &order) {
+    void handleFillForUnassignedGtcOrder(hf::price_t filledPrice, hf::qty_t filledQty, hf::VENUE venue, uint32_t internalId, const om::order_t &order) {
         BOOST_ASSERT(order.leavesQty >= 0);
         uint32_t side = order.side == hf::SIDE::BUY ? BID : ASK;
-        handleFillForUnassignedGtcOrder(event, venue, internalId, side);
+        handleFillForUnassignedGtcOrder(filledPrice, filledQty, venue, internalId, side);
         if((!order.action_flags.is_active) || (!order.leavesQty)) {
             getInternalMatchingEngine(order).tryRemoveGtcOrder(order);
             _slow._iopTracking.stopTrackingOrder(internalId, order.oid);

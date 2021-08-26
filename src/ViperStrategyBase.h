@@ -4,7 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <hf/Service.h>
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 #include "Common.h"
 #include "RingBufferQueue.h"
 #include "ViperResource.h"

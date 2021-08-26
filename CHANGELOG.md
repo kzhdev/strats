@@ -6,6 +6,9 @@
 - Added outliers statistics in perf monitor
 - Made perf monitor timestamp more accurate
 - Disable AbieSpreader if it self matched 50 times in IME
+- Enable fillArb
+- [rhonepublic] updated to 4.1.5
+- [rhonepublic] fix simulator TradeSummary message
 
 #Version 1.54.0.9
 - Reduce MD feed logging

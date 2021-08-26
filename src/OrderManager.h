@@ -1013,20 +1013,19 @@ public:
             LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
-        void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+        void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, const om::order_t &order) {
             LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={d1} Price={d2} Size={i3} OID={i4}", getContractName(),
-                _om->_side, _dollar, ToDollars(event.filledPrice), event.filledQty, order.oid.value())
+                _om->_side, _dollar, ToDollars(filledPrice), filledQty, order.oid.value())
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
                 _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
 
-            _traded += event.filledQty;
+            _traded += filledQty;
 
             //Note !order.is_active is most likely because of a full fill
             //Note : we don't want to send any new orders here since _target could change
 
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
-//            mutableOrder.leavesQty = getRestingQty(order) - event.totalExecutedQty;
-            BOOST_ASSERT_MSG(mutableOrder.leavesQty == getRestingQty(order) - event.totalExecutedQty, "leavesqty managed by Strategy.hpp in Rhone4");
+            BOOST_ASSERT_MSG(mutableOrder.leavesQty == getRestingQty(order) - totalExecutedQty, "leavesqty managed by Strategy.hpp in Rhone4");
 
             if (!order.action_flags.is_active) {
                 removeOrder(order);
@@ -1036,7 +1035,7 @@ public:
             }
 
             if (isModifying(order)) {
-                modifyWorkingQuantityInChain(mutableOrder, event.filledQty);
+                modifyWorkingQuantityInChain(mutableOrder, filledQty);
                 auto* targetLevel = getTargetLevel(order);
                 LOG(0, "OM {C[i1]}. Order TargetLevel. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
                     targetLevel->_dollar, targetLevel->_target[0], targetLevel->_target[1], targetLevel->_acknowledged,
@@ -1062,13 +1061,13 @@ public:
                 }
             } else if (order.action_flags.is_cancelling) {
                 //We need to deal with an implicit node on the end of the modify tracker
-                _flight += event.filledQty;             
+                _flight += filledQty;
             }
 
             notifyIfLevelFree();
 
             // Reduce target
-            hf::qty_t remainingQty = reduceTargetOnFill(*this, event.filledQty);
+            hf::qty_t remainingQty = reduceTargetOnFill(*this, filledQty);
             if (remainingQty) {
                 LOG(0, "OM {C[i1]}. Level {d1} over filled {i2}", getContractName(), _dollar, remainingQty)
             }
@@ -2301,10 +2300,10 @@ public:
         }
     }
 
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::order_t &order) {
+    void onOrderExecution(hf::qty_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, const om::order_t &order) {
         bool requiresRequote = (!order.action_flags.is_active) && testOrderAndDecrementCounter<om::OMExecutionEvent>(order);
         Level* level = getLevelForExchangeAction(order);
-        level->onOrderExecution(event, order);
+        level->onOrderExecution(filledPrice, filledQty, totalExecutedQty, order);
         if(requiresRequote) {
             //We really don't want to do anything here since the IME doesn't update _target until after this method returns
         }

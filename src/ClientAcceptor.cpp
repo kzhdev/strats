@@ -1,7 +1,7 @@
 #include <sys/socket.h>
 #include <cstdlib>
 #include <boost/format.hpp>
-#include <hf/log.h>
+#include <util/log.h>
 #include <netdb.h>
 #include <hf/hf.h>
 #include "ClientAcceptor.h"

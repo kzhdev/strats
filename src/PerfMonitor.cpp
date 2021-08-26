@@ -2,7 +2,7 @@
 #include <hf/ResourceManager.h>
 
 #ifdef ENABLE_PERF
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 #endif
 
 using namespace Python;

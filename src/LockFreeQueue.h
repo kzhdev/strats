@@ -4,7 +4,7 @@
 #include <hf/mem/DataBlock.h>
 #include <atomic>
 #include "RingBufferQueue.h"
-#include <hf/log.h>
+#include <util/log.h>
 #include <boost/format.hpp>
 
 namespace hf {

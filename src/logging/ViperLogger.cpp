@@ -1,6 +1,6 @@
 #include "ViperLogger.h"
 #include <../utils/LoggerUtils.h>
-#include <hf/log.h>
+#include <util/log.h>
 #include "LogMessage.h"
 
 LOG_DECLARE();

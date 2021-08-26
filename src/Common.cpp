@@ -1,5 +1,5 @@
 #include "Common.h"
-#include <hf/log.h>
+#include <util/log.h>
 #include <boost/format.hpp>
 
 #define STR_EXPAND(tok) #tok

@@ -3,7 +3,7 @@
 
 #include <experimental/filesystem>
 #include <hf/Service.h>
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 #include <hf/ResourceManager.h>
 #include "ClientAcceptor.h"
 #include "ViperConfig.h"
@@ -21,7 +21,7 @@
 #include "PnlLimitsChecker.h"
 #include <sys/types.h>
 #include <signal.h>
-#include <ven/VenueUtils.h>
+#include <util/VenueUtils.h>
 
 namespace Python {
 
