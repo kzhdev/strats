@@ -53,6 +53,7 @@ struct ContractState {
     md::top_t _books[2];
     int8_t _mdPriceChangeIndex[2] = {-1, -1};
     int8_t _mdQtyChangeIndex[2] = {-1, -1};
+    bool _bookCleaned[2] {false, false};
     ConfigContract _contract;
     RhoneRouter<B3_ROUTER_VENUE> _rhoneRouter;
 
@@ -1966,15 +1967,17 @@ public:
         }
 
         if (state._mdQtyChangeIndex[BID] >= 0) {
-            state._ime.template onMDUpdate<BID>(state._books[BID], state._mdPriceChangeIndex[BID], state._mdQtyChangeIndex[BID]);
+            state._ime.template onMDUpdate<BID>(state._books[BID], state._mdPriceChangeIndex[BID], state._mdQtyChangeIndex[BID], state._bookCleaned[BID]);
             state._mdQtyChangeIndex[BID] = -1;
             state._mdPriceChangeIndex[BID] = -1;
+            state._bookCleaned[BID] = false;
         }
 
         if (state._mdQtyChangeIndex[ASK] >= 0) {
-            state._ime.template onMDUpdate<ASK>(state._books[ASK], state._mdPriceChangeIndex[ASK], state._mdQtyChangeIndex[ASK]);
+            state._ime.template onMDUpdate<ASK>(state._books[ASK], state._mdPriceChangeIndex[ASK], state._mdQtyChangeIndex[ASK], state._bookCleaned[ASK]);
             state._mdQtyChangeIndex[ASK] = -1;
             state._mdPriceChangeIndex[ASK] = -1;
+            state._bookCleaned[ASK] = false;
         }
     }
 
@@ -2967,6 +2970,7 @@ public:
                 book.l[0].q = 0;
             }
 
+            state._bookCleaned[side] = true;
             state._mdQtyChangeIndex[side] = 0;
             state._mdPriceChangeIndex[side] = 0;
             _updatedContracts.emplace(internalId);

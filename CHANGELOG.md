@@ -10,6 +10,9 @@
 - [rhonepublic] updated to 4.1.5
 - [rhonepublic] fix simulator TradeSummary message
 
+#Version 1.53.0.31
+- Add logging to debug EXE hang
+
 #Version 1.54.0.9
 - Reduce MD feed logging
 - Do not send AS quote update if the price and size did not change only the hedge path changed.
