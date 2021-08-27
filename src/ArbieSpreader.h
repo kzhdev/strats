@@ -529,20 +529,25 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     constexpr auto otherSide = GetOtherSide<Side>();
     if (isInternal) {
         if (contract._markets[Side][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
-            _affected_markets.emplace(&contract._markets[Side][Market::Internal]);
+            markContractDirty(contract, &contract._markets[Side][Market::Internal]);
         }
 
         // If AS internally crossed, side AS Quote will be unadjusted when ASK fill received
         // this could cause bid hedge switch path. We will try to undo AS quote on both side
         if (contract._markets[Side][Market::External].getASQuoteAdjustment() &&
             contract._markets[Side][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[Side][Market::External].getASQuoteAdjustment()), _affected_markets)) {
-            _affected_markets.emplace(&contract._markets[Side][Market::External]);
+            markContractDirty(contract, &contract._markets[Side][Market::External]);
         }
     }
     if (contract._markets[otherSide][Market::External].getASQuoteAdjustment() &&
         contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _affected_markets)) {
-        _affected_markets.emplace(&contract._markets[otherSide][Market::External]);
+        markContractDirty(contract, &contract._markets[otherSide][Market::External]);
     }
+
+    for (auto market : _affected_markets) {
+        markContractDirty(_contracts[market->getContractId()], market);
+    }
+    _affected_markets.clear();
 
     auto pBest = contract._paths[Side][0];
     if (!pBest->canHedge(qty)) {
@@ -646,11 +651,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                         }
                     }, dataSize);
         }
-
-        for (auto market : _affected_markets) {
-            markContractDirty(_contracts[market->getContractId()], market);
-        }
-        _affected_markets.clear();
 
         // Adjust FAK in separate loop so that the hedges are send out ASAP.
         for (const auto& hedgeContract : pBest->_leanContracts) {
