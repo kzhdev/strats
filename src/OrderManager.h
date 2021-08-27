@@ -2804,7 +2804,7 @@ public:
                 if (book.l[i].pr == hf::NULL_PRICE) {
                     break;
                 }
-                LOG(0, "{i1} implied_qty={i2}", book.l[i].to_string().c_str(),
+                LOG(0, "{i1}@{d1} implied_qty={i2}", book.l[i].q, ToDollars(book.l[i].pr),
                     book.l[i].ext.implied.impliedQtyNotTrackedByQueuePosition);
             }
         }
