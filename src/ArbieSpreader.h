@@ -525,7 +525,7 @@ inline Market* getLeanMarkets<ASK>(const ArbieSpreader::PathContract& pathContra
 
 template<uint32_t Side>
 inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const std::function<void()>& sendFillToFront, bool isInternal) {
-    SCOPED_PERF_POINT(PerfId::AS_UpdateHedge);
+    ADD_PERF_POINT_BEGIN(PerfId::AS_UpdateHedge);
     constexpr auto otherSide = GetOtherSide<Side>();
     if (isInternal) {
         if (contract._markets[Side][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
@@ -573,6 +573,8 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                                hedgeId, hedgeMarket->getId(), pBest->_id);
             }
         }
+
+        ADD_PERF_POINT_END(PerfId::AS_UpdateHedge);
 
         if (!pBest->_stfOffset._id.empty()) {
             // This is a switch path, forward the fill to RV
@@ -659,6 +661,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
         }
         return true;
     }
+    ADD_PERF_POINT_END(PerfId::AS_UpdateHedge);
     LOG(0, "AS {C[i1]}. Unable to hedge. No valid path.", contract.name())
     sendErrorMessage(boost::str(boost::format("AS %1%. Unable to hedge. No valid path.") % contract._def._name), ErrorType::Critical);
     return false;
