@@ -16,6 +16,7 @@ unset TESTMODE
 unset VERSION
 unset COPY_TO_NAME
 unset ENABLE_PERF
+unset ENABLE_LATENCY_TRACK
 
 echo "Viper root: $PROJECT_ROOT"
 
@@ -35,6 +36,8 @@ function parseArgs() {
                 TESTMODE=1
             elif [ $1 == "-p" ]; then
                 ENABLE_PERF=1
+            elif [ $1 == "-l" ]; then
+                ENABLE_LATENCY_TRACK=1
             else
                 VERSION="$1"
             fi
@@ -118,6 +121,13 @@ function main() {
         fi
     fi
 
+    if [ -z ${ENABLE_LATENCY_TRACK+x} ]; then
+        read -p "Enable Latency Track? [y/n] " latency
+        if [ "${latency,,}" == "y" ]; then
+            ENABLE_LATENCY_TRACK=1
+        fi
+    fi
+
     echo "Version:                                     $VERSION"
     echo "viper hash:                                  $GITHASH"
     echo "rhonepublic hash:                            $RHONEPUBLIC_GITHASH"
@@ -126,6 +136,7 @@ function main() {
     if [ ! -v EXE_NAME ]; then EXE_NAME=RhoneDs; fi
     echo "Produced exe:                                $EXE_NAME"
     echo "Enable Perf:                                 $ENABLE_PERF"
+    echo "Enable Latency Track:                        $ENABLE_LATENCY_TRACK"
     echo
 
     cd $PROJECT_ROOT
@@ -194,17 +205,34 @@ function main() {
             touch ../bin/${EXE_NAME}
         else
             if [ -z ${ENABLE_PERF+x} ]; then
+                if [ -z ${ENABLE_LATENCY_TRACK+x} ]; then
+                    cmake -DCMAKE_BUILD_TYPE=Release \
+                        -DVIPER_GITHASH=${GITHASH} \
+                        -DVIPER_VERSION=${VERSION} \
+                        -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
+                        ..
+                else
+                    cmake -DCMAKE_BUILD_TYPE=Release \
+                        -DVIPER_GITHASH=${GITHASH} \
+                        -DVIPER_VERSION=${VERSION} \
+                        -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
+                        -DENABLE_LATENCY_TRACK=1 \
+                        ..
+                fi
+            elif [ -z ${ENABLE_LATENCY_TRACK+x} ]; then
                 cmake -DCMAKE_BUILD_TYPE=Release \
-                    -DVIPER_GITHASH=${GITHASH} \
-                    -DVIPER_VERSION=${VERSION} \
-                    -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
-                    ..
+                      -DVIPER_GITHASH=${GITHASH} \
+                      -DVIPER_VERSION=${VERSION} \
+                      -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
+                      -DENABLE_PERF=1 \
+                      ..
             else
                 cmake -DCMAKE_BUILD_TYPE=Release \
                       -DVIPER_GITHASH=${GITHASH} \
                       -DVIPER_VERSION=${VERSION} \
                       -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
                       -DENABLE_PERF=1 \
+                      -DENABLE_LATENCY_TRACK=1 \
                       ..
             fi
             # make -j$(expr $(grep -c ^processor /proc/cpuinfo) / 2)
