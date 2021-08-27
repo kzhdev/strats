@@ -248,10 +248,10 @@ private:
                         break;
 
                     case PerfStatistics::Type::Value:
-                        log << std::setw(25) << "num_observations: " << stat.n << std::endl;
-                        log << std::setw(25) << "avg: " << stat.mean << std::endl;
-                        log << std::setw(25) << "min: " << stat.min << std::endl;
-                        log << std::setw(25) << "max: " << stat.max << std::endl;
+                        log << std::setw(25) << "num_observations: " << stat.n[0] << std::endl;
+                        log << std::setw(25) << "avg: " << stat.mean[0] << std::endl;
+                        log << std::setw(25) << "min: " << stat.min[0] << std::endl;
+                        log << std::setw(25) << "max: " << stat.max[0] << std::endl;
                         log << std::setw(25) << "std_div: " << sqrt(stat.variance) << std::endl;
                         break;
 
@@ -260,7 +260,7 @@ private:
                         break;
 
                     case PerfStatistics::Type::Count:
-                        log << std::setw(25) << stat.max << std::endl;
+                        log << std::setw(25) << stat.max[0] << std::endl;
                         break;
                 }
                 log << std::endl;
