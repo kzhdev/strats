@@ -30,6 +30,8 @@ enum PerfId : uint8_t {
     RV_CalcAfterMDChange,
     RV_CalculateQuote,
 
+    FillArbRate,
+
     __PerfId_END__,
 };
 
@@ -63,6 +65,8 @@ inline const char* to_string(PerfId id) noexcept {
             "RV_HedgeProcess",
             "RV_CalcAfterMDChange",
             "RV_CalculateQuote",
+
+            "FillArbRate",
     };
     static_assert(sizeof(strPerfId) / sizeof(const char*) == std::underlying_type_t<PerfId>(PerfId::__PerfId_END__),
                   "Update to_string for new PerfId element.");

@@ -1861,7 +1861,11 @@ public:
     void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &event, const om::strategy_order_t &order, const md::MDBatch &batch) {
         //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
         onOrderExecution(event.filledPrice, event.filledQty, event.totalExecutedQty, 0, order);
-
+#ifdef ENABLE_PERF
+        ++_fillArbCount;
+        ++_totalFills;
+        ADD_PERF_PERCENTAGE(PerfId::FillArbRate, _fillArbCount, _totalFills);
+#endif
     }
     void onMDFirmOrderExecutionEventLostFillArbitration(const md::MDFirmOrderExecutionEvent &/*event*/, const om::strategy_order_t &/*order*/, const md::MDBatch &/*batch*/) {}
 
@@ -2490,10 +2494,18 @@ public:
         return FillProcessingStatus::FillAccepted;
     }
 
+#ifdef ENABLE_PERF
+    uint64_t _fillArbCount = 0;
+    uint64_t _totalFills = 0;
+#endif
+
     void onOMOrderExecutionWonFillArbitration(const om::OMExecutionEvent& event, const om::strategy_order_t& order, const om::OMBatch& batch) {
         const_cast<om::order_t&> (order).action_flags.is_active = event.is_active; //Is this set on full fill?
         //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
         onOrderExecution(event.filledPrice, event.filledQty, event.totalExecutedQty, batch.bid, order);
+#ifdef ENABLE_PERF
+        ++_totalFills;
+#endif
     }
 
     void onOMQuote(const om::OMQuoteEvent& event, const om::OMBatch& batch) {}
