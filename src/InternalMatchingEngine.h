@@ -2052,11 +2052,11 @@ public:
     }
 
     template<uint32_t Side>
-    void onMDUpdate(md::top_t& book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
+    void onMDUpdate(md::top_t& book, int8_t priceChangeIndex, int8_t qtyChangeIndex, bool log) {
         if (priceChangeIndex == 0 && _outsideMaxOffTopLevel[Side]) {
             synchronizeQuote<Side>(clockUtil::GetCycles());
         }
-        _om[Side].template onMDUpdate<Side>(book, priceChangeIndex, qtyChangeIndex);
+        _om[Side].template onMDUpdate<Side>(book, priceChangeIndex, qtyChangeIndex, log);
     }
 
 #ifdef IS_DEV
