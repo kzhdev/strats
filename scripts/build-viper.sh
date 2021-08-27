@@ -218,6 +218,7 @@ function main() {
                         -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
                         -DENABLE_LATENCY_TRACK=1 \
                         ..
+                fi
             elif [ -z ${ENABLE_LATENCY_TRACK+x} ]; then
                 cmake -DCMAKE_BUILD_TYPE=Release \
                       -DVIPER_GITHASH=${GITHASH} \
