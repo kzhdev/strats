@@ -1,3 +1,6 @@
+#Version 1.53.0.31
+- Add logging to debug EXE hang
+
 #Version 1.53.0.30
 - [rhonepublic] Fixed missing FAK done event. When multiple FAK fills in same OM batch, only the first order issued FAK done event.
 - [rhonepublic] Add Tag 9175 in ICE ExecutionReport in Simulator
