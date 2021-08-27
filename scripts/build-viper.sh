@@ -211,7 +211,7 @@ function main() {
                         -DVIPER_VERSION=${VERSION} \
                         -DRHONEPUBLIC_GITHASH=${RHONEPUBLIC_GITHASH} \
                         ..
-                else:
+                else
                     cmake -DCMAKE_BUILD_TYPE=Release \
                         -DVIPER_GITHASH=${GITHASH} \
                         -DVIPER_VERSION=${VERSION} \
