@@ -2855,7 +2855,7 @@ public:
             }
         } else if (qtyChangeIndex >= 0 && qtyChangeIndex < md::top_t::LEVEL_NUM) {
             if (BOOST_UNLIKELY(log)) {
-                LOG(0, "OM {C[i1]}. priceChangeIndex < 0. update level {i1}", getContractName(), qtyChangeIndex)
+                LOG(0, "OM {C[i1]}. priceChangeIndex < 0. update level {i2}", getContractName(), qtyChangeIndex)
             }
 
             // only 1 level changed
@@ -2868,7 +2868,7 @@ public:
             }
 
             if (BOOST_UNLIKELY(log)) {
-                LOG(0, "OM {C[i1]}. priceChangeIndex < 0. find new bottom", getContractName(), qtyChangeIndex)
+                LOG(0, "OM {C[i1]}. priceChangeIndex < 0. find new bottom", getContractName())
             }
 
             for (auto i = qtyChangeIndex + 1; i < md::top_t::LEVEL_NUM; ++i) {
@@ -2920,7 +2920,7 @@ public:
         }
         else {
             if (BOOST_UNLIKELY(log)) {
-                LOG(0, "OM {C[i1]}. _preTob={i1} _preBob {i2} newBestPrice={i3} newBottom={i4}. Clean top", getContractName(),
+                LOG(0, "OM {C[i1]}. _preTob={i1} _preBob={i2} newBestPrice={i3} newBottom={i4}. Clean top", getContractName(),
                     _preTob, _preBob, newBestPrice, newBottom);
             }
             if (_preTob != hf::NULL_PRICE) {
@@ -2947,7 +2947,7 @@ public:
         _preTob = newBestPrice;
         _preBob = newBottom;
         if (BOOST_UNLIKELY(log)) {
-            LOG(0, "OM {C[i1]}. onMDUpdate done");
+            LOG(0, "OM {C[i1]}. onMDUpdate done", getContractName())
         }
     }
 
