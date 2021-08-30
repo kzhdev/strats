@@ -98,6 +98,7 @@ class PerfMonitor : public virtual hf::Service {
         uint64_t max[2] {0, 0};
         uint64_t beginTime = 0;
         uint32_t n[2] = {0, 0};
+        static uint64_t outlierThreshold;
 
         enum Type {
             Latency,
@@ -139,7 +140,7 @@ class PerfMonitor : public virtual hf::Service {
                 value = point._value[0] - beginTime;
                 beginTime = 0;
 
-                if (value > 999999) {
+                if (value > outlierThreshold) {
                     calc<1>(value);
                     return;
                 }
