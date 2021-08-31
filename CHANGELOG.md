@@ -1,3 +1,7 @@
+#Version 1.54.0.X
+- Fix outlier statistics
+- Fix ENABLE_LATENCY_TRACK build
+
 #Version 1.54.0.10
 - Fix Candidate > target when order filled while modify in-flight
 - AbieSpreader hedge w/o updatePath if the hedging market still present
