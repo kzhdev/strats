@@ -292,10 +292,12 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
                 if (updateBestMarket<Side>(updated)) {
                     for (auto path : _affectedPaths[Side]) {
                         path->onBestMarketDataUpdate<Side>(this, oldBestPrice);
+#ifdef IS_DEV
                         TLOG(0, "AS {C[i1]}. Path {i2} {C[i3]} best market updated. side={i4} price={i5} oldPrice={i6} size={i7} path {i8}@{i9} dirty={i10} recalc={i11}", path->_contract->name(),
                              path->_name, name(), Side, getExtCommissionAdjustedBestPrice<Side>(), oldBestPrice,
                              _bestMarket[Side]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
                              path->_dirty, path->_recalc)
+#endif
                     }
 
                     setMarketDirty(Side);
