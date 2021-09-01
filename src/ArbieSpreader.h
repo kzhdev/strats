@@ -86,6 +86,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         Contract* _sizeDetermineContract = nullptr;
         bool _dirty {false};
         bool _recalc {false};
+        bool _resort {false};
         bool _leanOnRV {false};
         std::string _name;
 
@@ -244,7 +245,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         void setMarketDirty(uint32_t side) {
             for (auto* path : _affectedPaths[side]) {
-                if (path->_dirty | path->_recalc) {
+                if (path->_dirty | path->_recalc | path->_resort) {
                     ArbieSpreader::get()->pushUpdatedContract(path->_contract);
                 }
             }
@@ -833,7 +834,7 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
 
     if (price == hf::NULL_PRICE) {
         _priceSize.reset();
-        _dirty = true;
+        _resort = true;
         return;
     }
 
@@ -845,20 +846,21 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
     auto priceDelta = price - oldPrice;
     auto multiplier = _multipliers[contract->_def._internalId];
     _priceSize._price += multiplier * priceDelta;
+    _dirty = priceDelta;
     if (IsBetterPrice<Side>(price, oldPrice)) {
         // If best path price getting better, we don't need to re-sort
-        _dirty =  (this != contract->_paths[Side][0]);
+        _resort = (this != _contract->_paths[_side][0]);
     } else {
         // If best path price getting worse, we need to re-sort.
         // If other path price getting worse, we don't need to re-sort
-        _dirty = (this == contract->_paths[Side][0]) && priceDelta;
+        _resort = (this == _contract->_paths[_side][0]) && priceDelta;
     }
     auto size = bestMarket->getAdjustedSize();
 
     if (size == 0) {
         if (_contract->_markets[1 - _side][Market::External].getASQuoteAdjustment() == 0) {
             _priceSize.reset();
-            _dirty = true;
+            _resort = true;
             return;
         }
 
@@ -868,7 +870,7 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
             // still get 0 size, other contract must have adjusted the hedge contract too, switch to
             // other path.
             _priceSize.reset();
-            _dirty = true;
+            _resort = true;
             return;
         }
     }
@@ -876,7 +878,7 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
     if (size < _priceSize._size) {
         _priceSize._size = size;
         _sizeDetermineContract = contract;
-        _dirty = true;
+        _resort = true;
     } else if (size > _priceSize._size && _priceSize._size < _contract->_quoteSize && contract == _sizeDetermineContract) {
         _priceSize._size = size;
         for (auto& pathContract : _leanContracts) {
@@ -886,10 +888,10 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
                 _sizeDetermineContract = pathContract._contract;
             }
         }
-        _dirty = true;
+        _resort = true;
     }
 
-    if (_dirty) {
+    if (_resort | _dirty) {
         contract->_bestCache[_side] = price;
     }
 }
@@ -907,9 +909,10 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
         if (path->_recalc | force) {
             sort |= path->calculate<Side>(force, pathCount);
         } else {
-            sort |= path->_dirty;
-            path->_dirty = false;
+            sort |= path->_resort;
+            path->_resort = false;
         }
+        path->_dirty = false;
     }
     if (sort) {
         auto oldBest = _paths[Side][0];
