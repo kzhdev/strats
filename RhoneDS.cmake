@@ -13,7 +13,7 @@ if (${ENABLE_PERF})
     target_compile_definitions(${BINARY_NAME} PRIVATE -DENABLE_PERF)
 endif()
 
-if ($(ENABLE_LATENCY_TRACK))
+if (${ENABLE_LATENCY_TRACK})
     target_compile_definitions(${BINARY_NAME} PRIVATE -DENABLE_LATENCY_TRACK)
 endif()
 

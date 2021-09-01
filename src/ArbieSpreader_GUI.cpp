@@ -237,8 +237,8 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                         LOG(0, "AS {C[i1]}. Path {i2} commission changed. {i3}->{i4}", contract.name(), path->_id, path->_config->_commission, value)
                         path->_config->_commission = value;
                         path->_commission = path->_otherSidePath->_commission = ToRhonePrice(value);
-                        path->_otherSidePath->_dirty = true;
-                        path->_dirty = true;
+                        path->_otherSidePath->_recalc = true;
+                        path->_recalc = true;
                         updatedContracts.emplace_back(&contract);
                         break;
                     }
@@ -248,8 +248,15 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                             path->_config->_enabled, value)
                         if (path->_config->_enabled != value) {
                             path->_config->_enabled = value;
-                            path->_dirty = true;
-                            path->_otherSidePath->_dirty = true;
+                            if (!value) {
+                                path->_priceSize.reset();
+                                path->_dirty = true;
+                                path->_otherSidePath->_priceSize.reset();
+                                path->_otherSidePath->_dirty = true;
+                            } else {
+                                path->_recalc = true;
+                                path->_otherSidePath->_recalc = true;
+                            }
                         }
                         updatedContracts.emplace_back(&contract);
                         break;
@@ -273,7 +280,7 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                     contract._extCommission = ToRhonePrice(value);
                     for (auto& pathsBySide : contract._affectedPaths) {
                         for (auto* path : pathsBySide) {
-                            path->_dirty = true;
+                            path->_recalc = true;
                             updatedContracts.emplace_back(path->_contract);
                         }
                     }
@@ -319,7 +326,7 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
             if (configContract) {
                 auto& contract = _contracts[configContract->_internalId];
                 contract._edge = ToRhonePrice(asConfig._edge * _edgeMultiplier);
-                updateQuotes(contract, true);
+                updateQuotes(contract);
             } else {
                 assert(false);
             }

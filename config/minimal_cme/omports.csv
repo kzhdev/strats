@@ -1,5 +1,5 @@
 gid,name,venue,Host,Port,SenderCompID,SenderSubID,Password,SelfMatchPreventionID,CME_Account,CME_CtiCode,CME_Location,SessionID,SessionPassword,TraderID,TraderPassword,ICE_ClientID,ICE_OnBehalfOfLocationID,ICE_ClearingFirm,ICE_ClearingAccount,CME_TargetSubID,EUREX_Account,EUREX_ClearingAccount,ICE_DTTRD,ICE_MIFID_II_ID,Euronext_Account,Euronext_ExecutionWithinFirmShortCode,Euronext_InvestmentDecisionWFirmShortCode,Eurex_ExecutingTrader,Eurex_PartitionID,CME_AccessKey,CME_SecretKey,ICE_teamPrefix,CQG_Account,digest
-3041,CME_M5C_80,CME,69.50.112.183,61311,M5C8K1N,8K1N,,8553836,CMEA,4,"US,IL",,,,,,,,,80,,,,,,,,,,xBs7fyS74SVT17WGp7Mo,sP0KKvCKtvv0gd-SwYY1dMn6NqeyZDJiPIEe_amuFss
-3051,CME_MR8_80,CME,69.50.112.183,63092,MR8154N,154N,,5955599,CMEA,4,"US,IL",,,,,,,,,80,,,,,,,,,,WY0fOefDFLBlWv50BUkl,tPF63f3KN5315j3iTywa2CYMFwgD-OFpwrNnXfxo4Do
+3041,CME_M5C_80,CME,69.50.112.183,61311,M5C8K1N,8K1N,,8553836,CMEA,4,"US,IL",,,,,,,,,80,,,,,,,,,,YD6GtWJyEI8rlJ82hECj,xi03_GYC_KdEOQrFMfY5j1SyHwheNlSLy4rXCERaSVo
+3051,CME_MR8_80,CME,69.50.112.183,63092,MR8154N,154N,,5955599,CMEA,4,"US,IL",,,,,,,,,80,,,,,,,,,,8gQDFm5s7xr4YqXo3Sqh,Hxj0QaAouyUD1UI0KmvjVWRtCQMdF7RUIwQ06JwNImk
 3080,CME_M5C_80_RR1_1,CME,69.50.112.183,61311,M5C8K1N,8K1N,,8553836,CMEA,4,"US,IL",,,,,,,,,80,,,,,,,,,,xBs7fyS74SVT17WGp7Mo,sP0KKvCKtvv0gd-SwYY1dMn6NqeyZDJiPIEe_amuFss
 3081,CME_MR8_80_RR1_2,CME,69.50.112.183,63092,MR8154N,154N,,5955599,CMEA,4,"US,IL",,,,,,,,,80,,,,,,,,,,WY0fOefDFLBlWv50BUkl,tPF63f3KN5315j3iTywa2CYMFwgD-OFpwrNnXfxo4Do

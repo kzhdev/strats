@@ -67,16 +67,14 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
         case md::MDStatusEvent::TYPE::TIMEOUT:
         case md::MDStatusEvent::TYPE::NOT_CONFIGURED: {
             if (contract._canTrade) {
-                contract._canTrade = false;
-                contract.markAffectedPathDirty();
+                contract.setCanTrade(false);
             }
             LOG(0, "AS {C[i1]}. market data not working. Reason={i2}", getContract(internalId), toUInt(event.statusType))
             break;
         }
         case md::MDStatusEvent::TYPE::RECOVERED: {
             LOG(0, "AS {C[i1]}. market data recovered.", contract.name())
-            contract._canTrade = true;
-            contract.markAffectedPathDirty();
+            contract.setCanTrade(true);
             break;
         }
         case md::MDStatusEvent::TYPE::TRADING_STATUS: {
@@ -95,9 +93,6 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
                 default:
                     break;
             }
-            if (contractCanTrade != contract._canTrade) {
-                contract.markAffectedPathDirty();
-            }
             break;
         }
         case md::MDStatusEvent::TYPE::UNKNOWN: {
@@ -114,24 +109,24 @@ void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MD
 void ArbieSpreader::handleICEMDStatus(const md::MDStatusEvent& event, Contract& contract) {
     switch (event.extStatus) {
         case 'O': {
-            contract._canTrade = true;
+            contract.setCanTrade(true);
             LOG(0, "AS {C[i1]}. market data - open.", contract.name())
             break;
         }
         case 'C': {
-            contract._canTrade = false;
+            contract.setCanTrade(false);
             LOG(0, "AS {C[i1]}. market data - closed. Used in pricing={i2}", contract.name(), contract._enabled)
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing=%2%") % contract._def._name % contract._enabled));
             break;
         }
         case 'E': {
-            contract._canTrade = false;
+            contract.setCanTrade(false);
             LOG(0, "AS {C[i1]}. market data - expired. Used in pricing={i2}", contract.name(), contract._enabled)
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing=%2%") % contract._def._name % contract._enabled));
             break;
         }
         case '1': {
-            contract._canTrade = false;
+            contract.setCanTrade(false);
             LOG(0, "AS {C[i1]}. market data - entered pre-open. Used in pricing={i2}", contract.name(), contract._enabled)
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.  Used in pricing=%2%") % contract._def._name % contract._enabled));
             break;
@@ -144,25 +139,25 @@ void ArbieSpreader::handleICEMDStatus(const md::MDStatusEvent& event, Contract& 
 void ArbieSpreader::handle_CME_B3_MDStatus(const md::MDStatusEvent& event, Contract& contract) {
     switch (event.extStatus) {
         case 17: {
-            contract._canTrade = true;
+            contract.setCanTrade(true);
             LOG(0, "AS {C[i1]}. market data - opened.", contract.name())
             break;
         }
         case 2: {
-            contract._canTrade = false;
+            contract.setCanTrade(false);
             LOG(0, "AS {C[i1]}. market data - halted. Used in pricing={i2}", contract.name(), contract._enabled)
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing=%2%.") % contract._def._name % contract._enabled));
             break;
         }
         case 18:
         case 4: {
-            contract._canTrade = false;
+            contract.setCanTrade(false);
             LOG(0, "AS {C[i1]} market data - closed({i2}). Used in pricing={i3}", contract.name(), (uint32_t)(event.extStatus), contract._enabled)
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing=%3%.") % contract._def._name % event.extStatus % contract._enabled));
             break;
         }
         case 21: {
-            contract._canTrade = false;
+            contract.setCanTrade(false);
             LOG(0, "AS {C[i1]} market data - entered pre-open. Used in pricing={i2}", contract.name(), contract._enabled)
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing=%2%") % contract._def._name % contract._enabled));
             break;
@@ -178,11 +173,11 @@ void ArbieSpreader::handleEUREXMDStatus(const md::MDStatusEvent& event, Contract
     //See notes in Executor.h handleEUREXMDStatus for more notes on state
     switch(event.extStatus) {
         case 203: //Continuous
-            contract._canTrade = true;
+            contract.setCanTrade(true);
             LOG(0, "AS {C[i1]}. market data - opened.", contract.name())
             break;
         case 200: //Closed
-            contract._canTrade = false;
+            contract.setCanTrade(false);
             LOG(0, "AS {C[i1]}. market data - closed. extStatus={i2}", contract.name(), event.extStatus);
             break;
         case 2:   /* Halt */
@@ -199,14 +194,14 @@ void ArbieSpreader::handleEUREXMDStatus(const md::MDStatusEvent& event, Contract
         case 208: /* Circuit Breaker Auction */
         case 210: /* Closing Auction */
         case 212: /* IPO Auction */
-            contract._canTrade = false;
+            contract.setCanTrade(false);
             LOG(0, "AS {C[i1]}. market data - auction. extStatus={i2}", contract.name(), event.extStatus);
             break;
         case 205: /* Opening Auction Freeze */
         case 207: /* Intraday Auction Freeze */
         case 209: /* Circuit Breaker Auction Freeze */
         case 211: /* Closing Auction Freeze */
-            contract._canTrade = false;
+            contract.setCanTrade(false);
             LOG(0, "AS {C[i1]}. market data - auction freeze. extStatus={i2}", contract.name(), event.extStatus);
             break;
         case 202: //Book

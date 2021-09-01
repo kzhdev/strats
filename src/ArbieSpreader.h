@@ -22,7 +22,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
     struct PriceQtyPair {
         hf::price_t _price {hf::NULL_PRICE};
-        hf::qty_t _size {0};
+        hf::qty_t _size {std::numeric_limits<hf::qty_t>::max()};
 
         PriceQtyPair() = default;
 
@@ -56,18 +56,11 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     struct PathContract {
         Contract* _contract;
         int32_t _multiplier;
+        uint32_t _internalId;
         uint32_t _side;
-        PriceQtyPair _priceSizeCache;
 
-        PathContract(Contract* contract, int32_t multiplier) : _contract(contract), _multiplier(multiplier) {}
-
-        bool shouldRecalculate(hf::qty_t quoteSize) const noexcept {
-            auto market = bestMarket();
-            auto bestSize = market->getAdjustedSize();
-            return (market->getPrice() != _priceSizeCache._price) |
-                ((_priceSizeCache._size > bestSize) & (bestSize < quoteSize)) |             // need to quote less
-                ((_priceSizeCache._size < bestSize) & (_priceSizeCache._size < quoteSize)); // can quote more
-        }
+        PathContract(Contract* contract, int32_t multiplier, uint32_t internalId)
+            : _contract(contract), _multiplier(multiplier), _internalId(internalId) {}
 
         Market* bestMarket() const noexcept {
             return _contract->_bestMarket[_side];
@@ -85,11 +78,14 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         hf::price_t _rvSTFMove = 0;
         hf::price_t _commission;
         std::vector<PathContract> _leanContracts;
+        std::vector<int32_t> _multipliers;
         PriceQtyPair _priceSize;
         PriceQtyPair _oldPriceSize;
         uint32_t _id;
         uint32_t _side;
+        Contract* _sizeDetermineContract = nullptr;
         bool _dirty {false};
+        bool _recalc {false};
         bool _leanOnRV {false};
         std::string _name;
 
@@ -98,10 +94,15 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         Path(uint32_t side, std::string name, uint32_t id, Contract* contract,
              const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig,
-             const ShortTermFairOffset* stfOffset);
+             const ShortTermFairOffset* stfOffset, uint32_t numAllContracts);
+
+        template<uint32_t Side>
+        void onBestMarketDataUpdate(Contract* contract, hf::price_t oldPrice);
+
+        template<uint32_t Side>
+        void onBestMarketAdjusted(Market* market);
 
         bool marketDirty(Contract* contract);
-        void forceMarketDirty(Contract* contract);
 
         bool canHedge(hf::qty_t size) const noexcept;
         void log() const noexcept;
@@ -190,6 +191,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         hf::price_t _extCommission = 0.;
         hf::price_t _hedgeOffsetPrice = 0;
         hf::qty_t _quoteSize = 0;
+        hf::price_t _bestCache[2];
 
         struct Quote {
             hf::price_t _leanPrice = hf::NULL_PRICE;
@@ -242,18 +244,33 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         void setMarketDirty(uint32_t side) {
             for (auto* path : _affectedPaths[side]) {
-                if (path->marketDirty(this)) {
+                if (path->_dirty | path->_recalc) {
                     ArbieSpreader::get()->pushUpdatedContract(path->_contract);
                 }
             }
         }
 
-        void markAffectedPathDirty() {
+        void setCanTrade(bool canTrade) {
+            _canTrade = canTrade;
             for (auto& affectedPathBySide : _affectedPaths) {
                 for (auto* path : affectedPathBySide) {
-                    path->forceMarketDirty(this);
+                    if (_canTrade) {
+                        path->_recalc = true;
+                    } else if (path->_priceSize.valid()) {
+                        path->_priceSize.reset();
+                        path->_dirty = true;
+                    }
                 }
             }
+            ArbieSpreader::get()->pushUpdatedContract(this);
+        }
+
+        template<uint32_t Side>
+        hf::price_t getExtCommissionAdjustedBestPrice() const noexcept {
+            auto price = _bestMarket[Side]->getPrice();
+            return (_bestMarket[Side]->getId() == MarketIds::MARKET_ID_EXTERNAL && price != hf::NULL_PRICE)
+                ? applyPriceOffset<Side>(price, -_extCommission)
+                : price;
         }
 
         template<uint32_t Side>
@@ -261,6 +278,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
             LOG(0, "AS {C[i1]}. MD update Side={i2} marketId={i3} {i4}@{d1}", name(), Side, toUInt(marketId), qty, ToDollars(price))
             Market* updated;
             bool changed = false;
+            hf::price_t oldBestPrice = getExtCommissionAdjustedBestPrice<Side>();
             if (marketId == MarketIds::MARKET_ID_EXTERNAL) {
                 updated = &_markets[Side][Market::Type::External];
                 changed = updated->update(price, qty, affected_markets);
@@ -272,9 +290,18 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
             if (changed) {  // can quote more
                 if (updateBestMarket<Side>(updated)) {
+                    for (auto path : _affectedPaths[Side]) {
+                        path->onBestMarketDataUpdate<Side>(this, oldBestPrice);
+                        TLOG(0, "AS {C[i1]}. Path {i2} {C[i3]} best market updated. side={i4} price={i5} oldPrice={i6} size={i7} path {i8}@{i9} dirty={i10} recalc={i11}", path->_contract->name(),
+                             path->_name, name(), Side, getExtCommissionAdjustedBestPrice<Side>(), oldBestPrice,
+                             _bestMarket[Side]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
+                             path->_dirty, path->_recalc)
+                    }
+
                     setMarketDirty(Side);
                     return true;
                 }
+
             }
             return false;
         }
@@ -366,6 +393,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::unordered_set<Market*> _affected_markets;
     std::unordered_set<ShortTermFairOffset*> _updatedSTFOffsets;
     std::unordered_multimap<uint32_t, ShortTermFairOffset*> _mapShortTermFairOffset;
+    std::unordered_map<Market*, hf::price_t> _delayedBestMarketUpdate;
     Matrix _riskMatrix; // x,y - vectors - square
     std::vector<double> _vectorsRange;
     std::vector<double> _vectorsMaxPosition;
@@ -498,7 +526,7 @@ private:
     void handleFakDone(uint32_t side, uint32_t internalId, om::strategy_order_id_t::value_type orderId);
     void handleInternalHedgeDone(const InternalHedgeDone& message);
     void handleASInternalMatchingDone(uint32_t contractId, hf::qty_t bidFills, hf::qty_t askFills);
-    void markContractDirty(Contract& contract, Market* updatedMarket);
+    void markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate = false);
     void handleSTFUpdate(const STFUpdate& msg);
 
     template<uint32_t Side>
@@ -508,6 +536,7 @@ private:
     void onEconomicNumberEnded(EconomicNumber::Color color);
     void onShiftUpdate(uint32_t shift);
     void handleVectorParameterUpdate(const VectorParameterUpdate& msg);
+    void processDelayedBestMarketUpdate();
 };
 
 template<uint32_t Side>
@@ -529,28 +558,29 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     constexpr auto otherSide = GetOtherSide<Side>();
     if (isInternal) {
         if (contract._markets[Side][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
-            markContractDirty(contract, &contract._markets[Side][Market::Internal]);
+            markContractDirty(contract, &contract._markets[Side][Market::Internal], true);
         }
 
         // If AS internally crossed, side AS Quote will be unadjusted when ASK fill received
         // this could cause bid hedge switch path. We will try to undo AS quote on both side
         if (contract._markets[Side][Market::External].getASQuoteAdjustment() &&
             contract._markets[Side][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[Side][Market::External].getASQuoteAdjustment()), _affected_markets)) {
-            markContractDirty(contract, &contract._markets[Side][Market::External]);
+            markContractDirty(contract, &contract._markets[Side][Market::External], true);
         }
     }
     if (contract._markets[otherSide][Market::External].getASQuoteAdjustment() &&
         contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _affected_markets)) {
-        markContractDirty(contract, &contract._markets[otherSide][Market::External]);
+        markContractDirty(contract, &contract._markets[otherSide][Market::External], true);
     }
 
     for (auto market : _affected_markets) {
-        markContractDirty(_contracts[market->getContractId()], market);
+        markContractDirty(_contracts[market->getContractId()], market, true);
     }
     _affected_markets.clear();
 
     auto pBest = contract._paths[Side][0];
     if (!pBest->canHedge(qty)) {
+        processDelayedBestMarketUpdate();
         uint32_t pathCount = 0;
         contract.template updatePaths<Side>(pathCount);
         ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractHedge, pathCount);
@@ -567,13 +597,13 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
             if (hedgeContract._multiplier > 0) {
                 auto internalHedgePrice = applyPriceOffset<otherSide>(hedgeMarket->getPrice(), hedgeContract._contract->_hedgeOffsetPrice);
                 auto externalHedgePrice = hedgeMarket->getPrice();
-                sendHedgeOrder(contract._def._internalId, hedgeContract._contract->_def._internalId, otherSide,
+                sendHedgeOrder(contract._def._internalId, hedgeContract._internalId, otherSide,
                                internalHedgePrice, externalHedgePrice, qty, hedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL,
                                hedgeId, hedgeMarket->getId(), pBest->_id);
             } else {
                 auto internalHedgePrice = applyPriceOffset<Side>(hedgeMarket->getPrice(), hedgeContract._contract->_hedgeOffsetPrice);
                 auto externalHedgePrice = hedgeMarket->getPrice();
-                sendHedgeOrder(contract._def._internalId, hedgeContract._contract->_def._internalId, Side,
+                sendHedgeOrder(contract._def._internalId, hedgeContract._internalId, Side,
                                internalHedgePrice, externalHedgePrice, qty, hedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL,
                                hedgeId, hedgeMarket->getId(), pBest->_id);
             }
@@ -622,7 +652,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                         for (const auto& hedgeContract : pBest->_leanContracts) {
                             sendMessageToFront<FillMessage>(ViperMessageType::Fill,
                                                             [&hedgeContract, otherSide, qty, now](FillMessage& message) {
-                                                                message._contractId = hedgeContract._contract->_def._internalId;
+                                                                message._contractId = hedgeContract._internalId;
                                                                 message._strategy = StrategyId::ArbieSpreader;
                                                                 message._price = hedgeContract._contract->_stf;
                                                                 message._qty = qty;
@@ -637,7 +667,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                                                             });
 
                             ++fill;
-                            fill->_contractId = hedgeContract._contract->_def._internalId;
+                            fill->_contractId = hedgeContract._internalId;
                             fill->_strategy = StrategyId::RelativeValue;
                             fill->_price = hedgeContract._contract->_stf;
                             fill->_qty = qty;
@@ -652,15 +682,17 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                     }, dataSize);
         }
 
-        // Adjust FAK in separate loop so that the hedges are send out ASAP.
+        // Adjust FAK in separate loop so that the hedges are sent out ASAP.
         for (const auto& hedgeContract : pBest->_leanContracts) {
             auto* hedgeMarket = hedgeContract.bestMarket();
             hedgeMarket->addFAKAdjustment(hedgeId, qty);
             assert(hedgeMarket->getSide() == (1 - Side) || (hedgeContract._multiplier > 0));
             markContractDirty(*hedgeContract._contract, hedgeMarket);
         }
+        processDelayedBestMarketUpdate();
         return true;
     }
+    processDelayedBestMarketUpdate();
     ADD_PERF_POINT_END(PerfId::AS_UpdateHedge);
     LOG(0, "AS {C[i1]}. Unable to hedge. No valid path.", contract.name())
     sendErrorMessage(boost::str(boost::format("AS %1%. Unable to hedge. No valid path.") % contract._def._name), ErrorType::Critical);
@@ -669,8 +701,8 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
 
 template<uint32_t Side>
 inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
-    if (_dirty | force) {
-        _dirty = false;
+    if (_recalc | force) {
+        _recalc = false;
 
         if (!_config->_enabled) {
             if (_priceSize.valid()) {
@@ -701,7 +733,8 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
 
         _oldPriceSize = _priceSize;
         _priceSize._price = 0;
-        _priceSize._size = std::numeric_limits<hf::qty_t>::max();
+        _priceSize._size = _contract->_quoteSize;
+        _sizeDetermineContract = nullptr;
         _leanOnRV = false;
         for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
             auto& pathContract = _leanContracts[i];
@@ -748,10 +781,13 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
                  ToDollars(bestHedgeMarket->getPrice()), ToDollars(marketPrice))
 #endif
 
-            pathContract._priceSizeCache._price = marketPrice;
-            pathContract._priceSizeCache._size = size;
+            pathContract._contract->_bestCache[_side] = marketPrice;
             _priceSize._price += pathContract._multiplier * marketPrice;
-            _priceSize._size = std::min<hf::qty_t>(_priceSize._size, size);
+
+            if (_priceSize._size > size) {
+                _sizeDetermineContract = _contract;
+                _priceSize._size = size;
+            }
         }
 
         if (_priceSize.valid()) {
@@ -776,6 +812,81 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
 }
 
 template<uint32_t Side>
+void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t oldPrice) {
+    if (_recalc) {
+        // need to re-calc anyway
+        return;
+    }
+
+    auto bestMarket = contract->_bestMarket[Side];
+    auto price = contract->getExtCommissionAdjustedBestPrice<Side>();
+
+    if (_priceSize._price == hf::NULL_PRICE) {
+        if (price != hf::NULL_PRICE) {
+            // need to recalculate
+            _recalc = true;
+        }
+        return;
+    }
+
+    if (price == hf::NULL_PRICE) {
+        _priceSize.reset();
+        _dirty = true;
+        return;
+    }
+
+    if (oldPrice == hf::NULL_PRICE) {
+        _recalc = true;
+        return;
+    }
+
+    auto priceDelta = price - oldPrice;
+    auto multiplier = _multipliers[contract->_def._internalId];
+    _priceSize._price += multiplier * priceDelta;
+    _dirty = priceDelta;
+    auto size = bestMarket->getAdjustedSize();
+
+    if (size == 0) {
+        if (_contract->_markets[1 - _side][Market::External].getASQuoteAdjustment() == 0) {
+            _priceSize.reset();
+            _dirty = true;
+            return;
+        }
+
+        // if 0 size was due to the aggressive AS quoting, exclude the FAK Pre Adjustment
+        size = bestMarket->getAdjustedSizeExcludeFAKPreAdj();
+        if (size == 0) {
+            // still get 0 size, other contract must have adjusted the hedge contract too, switch to
+            // other path.
+            _priceSize.reset();
+            _dirty = true;
+            return;
+        }
+    }
+
+    if (size < _priceSize._size) {
+        _priceSize._size = size;
+        _sizeDetermineContract = contract;
+        _dirty = true;
+    } else if (size > _priceSize._size && _priceSize._size < _contract->_quoteSize && contract == _sizeDetermineContract) {
+        _priceSize._size = size;
+        for (auto& pathContract : _leanContracts) {
+            auto sz = pathContract.bestMarket()->getAdjustedSize();
+            if (sz < _priceSize._size) {
+                _priceSize._size = sz;
+                _sizeDetermineContract = pathContract._contract;
+            }
+        }
+        _dirty = true;
+    }
+
+    if (_dirty) {
+        contract->_bestCache[_side] = price;
+    }
+}
+
+
+template<uint32_t Side>
 inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force) {
     SCOPED_PERF_POINT(PerfId::AS_UpdatePaths);
 #ifdef ENABLE_PERF
@@ -784,7 +895,12 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
 #endif
     bool sort = false;
     for (auto path : _paths[Side]) {
-        sort |= path->calculate<Side>(force, pathCount);
+        if (path->_recalc | force) {
+            sort |= path->calculate<Side>(force, pathCount);
+        } else {
+            sort |= path->_dirty;
+            path->_dirty = false;
+        }
     }
     if (sort) {
         auto oldBest = _paths[Side][0];
@@ -889,7 +1005,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
     if (pBestPath->_priceSize.valid()) {
         quote._leanPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, pBestPath->_commission);
         quote._internalPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, -contract._edge);
-        quote._internalSize = std::min<hf::qty_t>(pBestPath->_priceSize._size, contract._quoteSize);
+        quote._internalSize = pBestPath->_priceSize._size;
         quote._hedgePath = pBestPath->_id;
         if (canQuoteExternal) {
             quote._externalPrice = (quote._internalPrice != hf::NULL_PRICE) ? RoundToTickSize(quote._internalPrice, contract._def._tickSize, Side) : hf::NULL_PRICE;

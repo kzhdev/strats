@@ -4,7 +4,7 @@ using namespace Python;
 
 ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract* contract,
                           const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig,
-                          const ShortTermFairOffset* stfOffset)
+                          const ShortTermFairOffset* stfOffset, uint32_t numAllContracts)
     : _contract(contract)
     , _config(&pathConfig)
     , _stfOffset(*stfOffset)
@@ -13,38 +13,12 @@ ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract
     , _id(id)
     , _side(side)
     , _name(std::move(name)) {
+    _multipliers.resize(numAllContracts, 0);
     for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
         auto& pathContract = _leanContracts[i];
         pathContract._side = pathContract._multiplier > 0 ? _side : (1 - _side);
         pathContract._contract->_usedInPath = true;
-    }
-}
-
-bool ArbieSpreader::Path::marketDirty(Contract* contract) {
-    if (_config->_enabled) {
-        for (auto& leanContract : _leanContracts) {
-            if (leanContract._contract == contract) {
-                _dirty = leanContract.shouldRecalculate(_contract->_quoteSize);
-                if (!_dirty) {
-                    DLOG(0, "AS {C[i1]}. {C[i2]} best market change didn't trigger recalc. Side={i3} oldBestPrice={d1} oldBestSize={i4}", _contract->name(),
-                         contract->name(), leanContract._side, leanContract._priceSizeCache._price,
-                         leanContract._priceSizeCache._size)
-                }
-                return _dirty;
-            }
-        }
-    }
-    return false;
-}
-
-void ArbieSpreader::Path::forceMarketDirty(Contract* contract) {
-    if (_config->_enabled) {
-        for (auto& leanContract : _leanContracts) {
-            if (leanContract._contract == contract) {
-                _dirty = true;
-                break;
-            }
-        }
+        _multipliers[pathContract._internalId] = pathContract._multiplier;
     }
 }
 
@@ -64,7 +38,7 @@ bool ArbieSpreader::Path::canHedge(hf::qty_t size) const noexcept {
         auto side = market->getSide();
         auto price = market->getPrice();
         if (price == hf::NULL_PRICE || market->getId() == MarketIds::__end__ ||
-        IsBetter(pathContract._priceSizeCache._price, price, side) ||
+        IsBetter(pathContract._contract->_bestCache[side], price, side) ||
         market->getAdjustedSize() < size) {
             return false;
         }

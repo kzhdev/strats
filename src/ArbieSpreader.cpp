@@ -32,7 +32,8 @@ void ArbieSpreader::initializeContracts() {
     auto numContracts = _viperConfig._allContracts.size();
     _contracts.resize(numContracts);
     _lastOrderRequests.resize(numContracts);
-    _affected_markets.reserve(numContracts);
+    _affected_markets.reserve(numContracts * 2);
+    _delayedBestMarketUpdate.reserve(numContracts);
     _allPaths.reserve(65536);
     if (_viperConfig._allContracts.size() > _contractUpdatedFlag.size()) {
         logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Number of contracts > %1%") % _contractUpdatedFlag.size()));
@@ -71,7 +72,7 @@ void ArbieSpreader::initializeContracts() {
                     if (!pathContract) {
                         logging::GetLogger().logErrorAndThrow("Contract " + configPathContract._contract + " not found");
                     }
-                    pathContracts.emplace_back(&_contracts[pathContract->_internalId], configPathContract._multiplier);
+                    pathContracts.emplace_back(&_contracts[pathContract->_internalId], configPathContract._multiplier, pathContract->_internalId);
 
                     if (pathContract->_legs.empty()) {
                         auto it = pathShortTermFares.find(pathContract->_internalId);
@@ -148,13 +149,13 @@ void ArbieSpreader::initializeContracts() {
                     };
                 }
 
-                _allPaths.emplace_back(BID, path._name, id, &contract, pathContracts, path, stfOffset);
+                _allPaths.emplace_back(BID, path._name, id, &contract, pathContracts, path, stfOffset, numContracts);
                 auto& bidPath = _allPaths.back();
                 for (auto& pathContract : bidPath._leanContracts) {
                     pathContract._contract->_affectedPaths[pathContract._side].emplace_back(&bidPath);
                 }
                 contract._paths[BID].emplace_back(&bidPath);
-                _allPaths.emplace_back(ASK, path._name, id, &contract, pathContracts, path, stfOffset);
+                _allPaths.emplace_back(ASK, path._name, id, &contract, pathContracts, path, stfOffset, numContracts);
                 auto& askPath = _allPaths.back();
                 bidPath._otherSidePath = &askPath;
                 askPath._otherSidePath = &bidPath;
@@ -379,15 +380,39 @@ void ArbieSpreader::pushUpdatedContract(Contract* contract) {
     _updatedContracts.publish(index);
 }
 
-void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket) {
-    bool bestMarketChanged= false;
+void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate) {
     if (updatedMarket->getSide() == BID) {
-        bestMarketChanged = contract.updateBestMarket<BID>(updatedMarket);
+        auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<BID>();
+        if (contract.updateBestMarket<BID>(updatedMarket)) {
+            if (!delayPathUpdate) {
+                for (auto path : contract._affectedPaths[BID]) {
+                    path->onBestMarketDataUpdate<BID>(&contract, oldBestPrice);
+                    TLOG(0, "AS {C[i1]}. Path {i2} {C[i3]} best market updated. side={i4} price={i5} oldPrice={i6} size={i7} path {i8}@{i9} dirty={i10} recalc={i11}", path->_contract->name(),
+                         path->_name, contract.name(), BID, contract.getExtCommissionAdjustedBestPrice<BID>(), oldBestPrice,
+                         contract._bestMarket[BID]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
+                         path->_dirty, path->_recalc)
+                }
+                contract.setMarketDirty(BID);
+            } else {
+                _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
+            }
+        }
     } else {
-        bestMarketChanged = contract.updateBestMarket<ASK>(updatedMarket);
-    }
-    if (bestMarketChanged) {
-        contract.setMarketDirty(updatedMarket->getSide());
+        auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<ASK>();
+        if (contract.updateBestMarket<ASK>(updatedMarket)) {
+            if (!delayPathUpdate) {
+                for (auto path : contract._affectedPaths[ASK]) {
+                    path->onBestMarketDataUpdate<ASK>(&contract, oldBestPrice);
+                    TLOG(0, "AS {C[i1]}. Path {i2} {C[i3]} best market updated. side={i4} price={i5} oldPrice={i6} size={i7} path {i8}@{i9} dirty={i10} recalc={i11}", path->_contract->name(),
+                         path->_name, contract.name(), ASK, contract.getExtCommissionAdjustedBestPrice<ASK>(), oldBestPrice,
+                         contract._bestMarket[ASK]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
+                         path->_dirty, path->_recalc)
+                }
+                contract.setMarketDirty(ASK);
+            } else {
+                _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
+            }
+        }
     }
 }
 
@@ -435,4 +460,23 @@ void ArbieSpreader::sendHedgeOrder(uint32_t internalId,
             hedgeContractId, orderId(StrategyId::ArbieSpreader, Order::Type::Hedging), side, internalPrice,
             externalPrice, size, external, false, 0, 0, marketId, hedgeId);
     _orderRequestMgr.notifyOrderRequest(hedgeContractId, StrategyId::ArbieSpreader, _lastOrderRequests[hedgeContractId]);
+}
+
+void ArbieSpreader::processDelayedBestMarketUpdate() {
+    for (auto& marketOldPricePair : _delayedBestMarketUpdate) {
+        auto market = marketOldPricePair.first;
+        auto& contract = _contracts[market->getContractId()];
+        if (market->getSide() == BID) {
+            for (auto& path : contract._affectedPaths[BID]) {
+                path->onBestMarketDataUpdate<BID>(&contract, marketOldPricePair.second);
+            }
+            contract.setMarketDirty(BID);
+        } else {
+            for (auto& path : contract._affectedPaths[ASK]) {
+                path->onBestMarketDataUpdate<ASK>(&contract, marketOldPricePair.second);
+            }
+            contract.setMarketDirty(ASK);
+        }
+    }
+    _delayedBestMarketUpdate.clear();
 }

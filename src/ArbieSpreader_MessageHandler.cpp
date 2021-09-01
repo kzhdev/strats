@@ -215,12 +215,28 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
     }
 
     if (_stfOffset != stfOffset) {
-        _stfOffset = stfOffset;
         LOG(0, "AS {C[i1]}. Path {i2} STFOffset={d1} RvSTFMove={d2}", _contract->name(), (*_paths.begin())->_id,
-            ToDollars(_stfOffset), ToDollars(_rvSTFMove))
-        for (auto path : _paths) {
-            path->_dirty = true;
+            ToDollars(stfOffset), ToDollars(_rvSTFMove))
+        if (stfOffset == hf::NULL_PRICE) {
+            for (auto path : _paths) {
+                path->_priceSize.reset();
+                path->_dirty = true;
+            }
         }
+        else if (_stfOffset == hf::NULL_PRICE) {
+            for (auto path : _paths) {
+                path->_recalc = true;
+            }
+        } else {
+            auto diff =  stfOffset - _stfOffset;
+            for (auto path : _paths) {
+                if (path->_priceSize.valid()) {
+                    path->_priceSize._price += diff;
+                    path->_dirty = true;
+                }
+            }
+        }
+        _stfOffset = stfOffset;
         return true;
     }
     return false;
