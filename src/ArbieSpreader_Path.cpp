@@ -38,8 +38,9 @@ bool ArbieSpreader::Path::canHedge(hf::qty_t size) const noexcept {
         auto side = market->getSide();
         auto price = market->getPrice();
         if (price == hf::NULL_PRICE || market->getId() == MarketIds::__end__ ||
-        IsBetter(pathContract._contract->_bestCache[side], price, side) ||
-        market->getAdjustedSize() < size) {
+            pathContract._contract->_bestCache[side] ||
+            IsBetter(pathContract._contract->_bestCache[side], price, side) ||
+            market->getAdjustedSize() < size) {
             return false;
         }
     }
