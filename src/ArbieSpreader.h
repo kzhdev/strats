@@ -843,7 +843,14 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
     auto priceDelta = price - oldPrice;
     auto multiplier = _multipliers[contract->_def._internalId];
     _priceSize._price += multiplier * priceDelta;
-    _dirty = priceDelta;
+    if (IsBetterPrice<Side>(price, oldPrice)) {
+        // If best path price getting better, we don't need to re-sort
+        _dirty =  (this != contract->_paths[Side][0]);
+    } else {
+        // If best path price getting worse, we need to re-sort.
+        // If other path price getting worse, we don't need to re-sort
+        _dirty = (this == contract->_paths[Side][0]) && priceDelta;
+    }
     auto size = bestMarket->getAdjustedSize();
 
     if (size == 0) {
