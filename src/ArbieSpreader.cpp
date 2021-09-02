@@ -385,16 +385,7 @@ void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket,
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<BID>();
         if (contract.updateBestMarket<BID>(updatedMarket)) {
             if (!delayPathUpdate) {
-                for (auto path : contract._affectedPaths[BID]) {
-                    path->onBestMarketDataUpdate<BID>(&contract, oldBestPrice);
-#ifdef IS_DEV
-                    TLOG(0, "AS {C[i1]}. BID Path {i2} {C[i3]} best market updated. side={i4} price={i5} oldPrice={i6} size={i7} path {i8}@{i9} dirty={i10} recalc={i11} resort={i12}", path->_contract->name(),
-                         path->_name, contract.name(), BID, contract.getExtCommissionAdjustedBestPrice<BID>(), oldBestPrice,
-                         contract._bestMarket[BID]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
-                         path->_dirty, path->_recalc, path->_resort)
-#endif
-                }
-                contract.setMarketDirty(BID);
+                contract.updateAffectedPathsBestMarket<BID>(oldBestPrice);
             } else {
                 _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
             }
@@ -403,16 +394,7 @@ void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket,
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<ASK>();
         if (contract.updateBestMarket<ASK>(updatedMarket)) {
             if (!delayPathUpdate) {
-                for (auto path : contract._affectedPaths[ASK]) {
-                    path->onBestMarketDataUpdate<ASK>(&contract, oldBestPrice);
-#ifdef IS_DEV
-                    TLOG(0, "AS {C[i1]}. ASK Path {i2} {C[i3]} best market updated. side={i4} price={i5} oldPrice={i6} size={i7} path {i8}@{i9} dirty={i10} recalc={i11} resort={i12}", path->_contract->name(),
-                         path->_name, contract.name(), ASK, contract.getExtCommissionAdjustedBestPrice<ASK>(), oldBestPrice,
-                         contract._bestMarket[ASK]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
-                         path->_dirty, path->_recalc, path->_resort)
-#endif
-                }
-                contract.setMarketDirty(ASK);
+                contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice);
             } else {
                 _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
             }
@@ -470,28 +452,11 @@ void ArbieSpreader::processDelayedBestMarketUpdate() {
     for (auto& marketOldPricePair : _delayedBestMarketUpdate) {
         auto market = marketOldPricePair.first;
         auto& contract = _contracts[market->getContractId()];
+        auto oldBestPrice = marketOldPricePair.second;
         if (market->getSide() == BID) {
-            for (auto& path : contract._affectedPaths[BID]) {
-                path->onBestMarketDataUpdate<BID>(&contract, marketOldPricePair.second);
-#ifdef IS_DEV
-                TLOG(0, "AS {C[i1]}. BID Path {i2} {C[i3]} best market updated. side={i4} price={i5} oldPrice={i6} size={i7} path {i8}@{i9} dirty={i10} recalc={i11} resort={i12}", path->_contract->name(),
-                     path->_name, contract.name(), BID, contract.getExtCommissionAdjustedBestPrice<BID>(), marketOldPricePair.second,
-                     contract._bestMarket[BID]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
-                     path->_dirty, path->_recalc, path->_resort)
-#endif
-            }
-            contract.setMarketDirty(BID);
+            contract.updateAffectedPathsBestMarket<BID>(oldBestPrice);
         } else {
-            for (auto& path : contract._affectedPaths[ASK]) {
-                path->onBestMarketDataUpdate<ASK>(&contract, marketOldPricePair.second);
-#ifdef IS_DEV
-                TLOG(0, "AS {C[i1]}. ASK Path {i2} {C[i3]} best market updated. side={i4} price={i5} oldPrice={i6} size={i7} path {i8}@{i9} dirty={i10} recalc={i11} resort={i12}", path->_contract->name(),
-                     path->_name, contract.name(), ASK, contract.getExtCommissionAdjustedBestPrice<ASK>(), marketOldPricePair.second,
-                     contract._bestMarket[ASK]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
-                     path->_dirty, path->_recalc, path->_resort)
-#endif
-            }
-            contract.setMarketDirty(ASK);
+            contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice);
         }
     }
     _delayedBestMarketUpdate.clear();

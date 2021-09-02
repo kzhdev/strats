@@ -98,7 +98,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
              const ShortTermFairOffset* stfOffset, uint32_t numAllContracts);
 
         template<uint32_t Side>
-        void onBestMarketDataUpdate(Contract* contract, hf::price_t oldPrice);
+        void onBestMarketDataUpdate(Contract* contract, hf::price_t oldPrice, hf::price_t newPirce, hf::price_t delta, hf::qty_t size);
 
         template<uint32_t Side>
         void onBestMarketAdjusted(Market* market);
@@ -192,7 +192,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         hf::price_t _extCommission = 0.;
         hf::price_t _hedgeOffsetPrice = 0;
         hf::qty_t _quoteSize = 0;
-        hf::price_t _bestCache[2];
+        hf::price_t _lastPriceInPathCalculation[2];
 
         struct Quote {
             hf::price_t _leanPrice = hf::NULL_PRICE;
@@ -291,17 +291,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
             if (changed) {  // can quote more
                 if (updateBestMarket<Side>(updated)) {
-                    for (auto path : _affectedPaths[Side]) {
-                        path->onBestMarketDataUpdate<Side>(this, oldBestPrice);
-#ifdef IS_DEV
-                        TLOG(0, "AS {C[i1]}. {i2} Path {i3} {C[i4]} best market updated. side={i5} price={i6} oldPrice={i7} size={i8} path {i9}@{i10} dirty={i11} recalc={i12} resort={i13}", path->_contract->name(),
-                             path->_side, path->_name, name(), Side, getExtCommissionAdjustedBestPrice<Side>(), oldBestPrice,
-                             _bestMarket[Side]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
-                             path->_dirty, path->_recalc, path->_resort)
-#endif
-                    }
-
-                    setMarketDirty(Side);
+                    updateAffectedPathsBestMarket<Side>(oldBestPrice);
                     return true;
                 }
 
@@ -380,6 +370,9 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
                 _markets[side][Market::External].init(StrategyId::ArbieSpreader, side, MarketIds::MARKET_ID_EXTERNAL, _def._internalId);
             }
         }
+
+        template<uint32_t Side>
+        inline void updateAffectedPathsBestMarket(hf::price_t oldBestPrice);
     };
 
     static ArbieSpreader* _self;
@@ -582,15 +575,17 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     _affected_markets.clear();
 
     auto pBest = contract._paths[Side][0];
-    if (!pBest->canHedge(qty)) {
+    bool canHedge = pBest->canHedge(qty);
+    if (!canHedge) {
         processDelayedBestMarketUpdate();
         uint32_t pathCount = 0;
         contract.template updatePaths<Side>(pathCount);
         ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractHedge, pathCount);
         pBest = contract._paths[Side][0];
+        canHedge = pBest->_priceSize.valid();
     }
 
-    if (BOOST_LIKELY(pBest->_priceSize.valid())) {
+    if (canHedge) {
         sendFillToFront();
         auto hedgeId = ++_hedgeId;
         LOG(0, "AS {C[i1]}. Hedge on Path {i2} {i3}@{d1}.", contract.name(), pBest->_id, pBest->_priceSize._size, ToDollars(pBest->_priceSize._price))
@@ -685,6 +680,8 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
                     }, dataSize);
         }
 
+        processDelayedBestMarketUpdate();
+
         // Adjust FAK in separate loop so that the hedges are sent out ASAP.
         for (const auto& hedgeContract : pBest->_leanContracts) {
             auto* hedgeMarket = hedgeContract.bestMarket();
@@ -692,7 +689,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
             assert(hedgeMarket->getSide() == (1 - Side) || (hedgeContract._multiplier > 0));
             markContractDirty(*hedgeContract._contract, hedgeMarket);
         }
-        processDelayedBestMarketUpdate();
         return true;
     }
     processDelayedBestMarketUpdate();
@@ -701,6 +697,11 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     for (auto path : contract._paths[Side]) {
         LOG(0, "AS {C[i1]}. Path {i2} {i3}@{d1}", contract.name(), path->_id, path->_priceSize._size,
             ToDollars(path->_priceSize._price))
+        for (auto& pathContract : path->_leanContracts) {
+            auto bestMarket = pathContract.bestMarket();
+            LOG(0, "    - {C[i1]}. {i2} {i3}({i4})@{d1}", pathContract._contract->name(), pathContract._side,
+                bestMarket->getUnAdjustedSize(), bestMarket->getAdjustedSize(), ToDollars(bestMarket->getPrice()))
+        }
     }
     sendErrorMessage(boost::str(boost::format("AS %1%. Unable to hedge. No valid path.") % contract._def._name), ErrorType::Critical);
     return false;
@@ -788,7 +789,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
                  ToDollars(bestHedgeMarket->getPrice()), ToDollars(marketPrice))
 #endif
 
-            pathContract._contract->_bestCache[_side] = marketPrice;
+            pathContract._contract->_lastPriceInPathCalculation[_side] = marketPrice;
             _priceSize._price += pathContract._multiplier * marketPrice;
 
             if (_priceSize._size > size) {
@@ -819,25 +820,24 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
 }
 
 template<uint32_t Side>
-void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t oldPrice) {
+void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t oldPrice, hf::price_t newPrice,
+                                                 hf::price_t priceDelta, hf::qty_t size) {
     if (_recalc) {
         // need to re-calc anyway
         return;
     }
 
     auto bestMarket = contract->_bestMarket[Side];
-    auto price = contract->getExtCommissionAdjustedBestPrice<Side>();
-    auto size = bestMarket->getAdjustedSize();
 
     if (_priceSize._price == hf::NULL_PRICE) {
-        if (price != hf::NULL_PRICE && size != 0) {
+        if (newPrice != hf::NULL_PRICE && size != 0) {
             // need to recalculate
             _recalc = true;
         }
         return;
     }
 
-    if (price == hf::NULL_PRICE) {
+    if (newPrice == hf::NULL_PRICE) {
         _priceSize.reset();
         _resort = true;
         return;
@@ -848,11 +848,10 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         return;
     }
 
-    auto priceDelta = price - oldPrice;
     auto multiplier = _multipliers[contract->_def._internalId];
     _priceSize._price += multiplier * priceDelta;
     _dirty = priceDelta;
-    if (IsBetterPrice<Side>(price, oldPrice)) {
+    if (IsBetterPrice<Side>(newPrice, oldPrice)) {
         // If best path price getting better, we don't need to re-sort
         _resort = (this != _contract->_paths[_side][0]);
     } else {
@@ -895,8 +894,8 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         _resort = true;
     }
 
-    if (_resort | _dirty) {
-        contract->_bestCache[_side] = price;
+    if (priceDelta) {
+        contract->_lastPriceInPathCalculation[_side] = newPrice;
     }
 }
 
@@ -922,24 +921,26 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
         auto oldBest = _paths[Side][0];
         std::sort(_paths[Side].begin(), _paths[Side].end(), PathSorter<Side>());
 
-#ifdef IS_DEV
-        for (auto* path : _paths[Side]) {
-            TLOG(0, " - AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", path->_contract->name(), path->_id, Side,
-                path->_priceSize._size, ToDollars(path->_priceSize._price))
-            for (auto& contract : path->_leanContracts) {
-                TLOG(0, " - LeanContract={C[i1]}", contract._contract->name())
-                auto markets = getLeanMarkets<Side>(contract);
-                TLOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
-                    markets[Market::Internal].getId(), markets[Market::Internal].getSide(),
-                    ToDollars(markets[Market::Internal].getPrice()), markets[Market::Internal].getUnAdjustedSize(),
-                    markets[Market::Internal].getAdjustedSize())
-                TLOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}", markets[Market::Internal].getContractId(),
-                    markets[Market::External].getId(), markets[Market::Internal].getSide(),
-                    ToDollars(markets[Market::External].getPrice()), markets[Market::External].getUnAdjustedSize(),
-                    markets[Market::External].getAdjustedSize())
+        if (BOOST_UNLIKELY(logging::loggingLevel() > logging::LOG_LEVEL::TRACE)) {
+            for (auto* path: _paths[Side]) {
+                TLOG(0, " - AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", path->_contract->name(), path->_id, Side,
+                     path->_priceSize._size, ToDollars(path->_priceSize._price))
+                for (auto& contract: path->_leanContracts) {
+                    TLOG(0, " - LeanContract={C[i1]}", contract._contract->name())
+                    auto markets = getLeanMarkets<Side>(contract);
+                    TLOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}",
+                         markets[Market::Internal].getContractId(),
+                         markets[Market::Internal].getId(), markets[Market::Internal].getSide(),
+                         ToDollars(markets[Market::Internal].getPrice()), markets[Market::Internal].getUnAdjustedSize(),
+                         markets[Market::Internal].getAdjustedSize())
+                    TLOG(0, " - Market {C[i1]} Id={i2} Side={i3} Price={d1} Size={i4} AdjustedSize={i5}",
+                         markets[Market::Internal].getContractId(),
+                         markets[Market::External].getId(), markets[Market::Internal].getSide(),
+                         ToDollars(markets[Market::External].getPrice()), markets[Market::External].getUnAdjustedSize(),
+                         markets[Market::External].getAdjustedSize())
+                }
             }
         }
-#endif
 
         auto bestPath = _paths[Side][0];
         if (oldBest != bestPath) {
@@ -1088,6 +1089,21 @@ inline bool ArbieSpreader::checkMaxTicksThroughMarket(Contract& contract, Contra
         return true;
     }
     return calculateTicksThroughMarket<Side>(quote._externalPrice, otherSideBestMarket->getPrice()) < contract._maxTicksThroughMarket;
+}
+
+template<uint32_t Side>
+inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t oldBestPrice) {
+    auto newBestPrice = getExtCommissionAdjustedBestPrice<Side>();
+    auto delta = newBestPrice - oldBestPrice;
+    auto size = getBestMarket<Side>()->getAdjustedSize();
+    for (auto& path : _affectedPaths[Side]) {
+        path->onBestMarketDataUpdate<Side>(this, oldBestPrice, newBestPrice, delta, size);
+        DLOG(0, "AS {C[i1]}. {i2} Path {i3} {C[i4]} best market updated. side={i5} price={i6} oldPrice={i7} size={i8} path {i9}@{i10} dirty={i11} recalc={i12} resort={i13}", path->_contract->name(),
+             path->_side, path->_id, name(), Side, getExtCommissionAdjustedBestPrice<Side>(), oldBestPrice,
+             _bestMarket[Side]->getAdjustedSize(), path->_priceSize._size, path->_priceSize._price,
+             path->_dirty, path->_recalc, path->_resort)
+    }
+    setMarketDirty(Side);
 }
 
 }

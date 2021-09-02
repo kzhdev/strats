@@ -923,7 +923,7 @@ public:
 
             const hf::qty_t fillSize = std::min(order->_size, size);
 
-            LOG(0, "IME {C[i1]}. Matched with {i2}@{d1} ID={i3} fillSize={fillSize}",
+            LOG(0, "IME {C[i1]}. Matched with {i2}@{d1} ID={i3} fillSize={i4}",
                 getContractName(), order->_size, ToDollars(order->_price), order->_id, fillSize)
 
             _internalFills.push_back({order, order->_price, fillSize});
