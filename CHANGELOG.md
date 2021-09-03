@@ -1,3 +1,6 @@
+#Version 1.53.1.0
+- Fix candidate > target when modify order canceled due to exected qty greater than modified qty.
+
 #Version 1.53.0.31
 - Add logging to debug EXE hang
 
