@@ -1327,11 +1327,13 @@ public:
                 hf::qty_t overfillQty = -(getTargetQuantity(order) - order.executedQty);
                 if (overfillQty > 0) {
                     targetLevel = getTargetLevel(order);
-                    targetLevel->_potentialOverfill -= overfillQty;
-                    LOG(0, "OM {C[i1]}. Reduce PotentialOverfill. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
-                        targetLevel->_dollar, targetLevel->_target[0], targetLevel->_target[1],
-                        targetLevel->_acknowledged, targetLevel->_flight,
-                        targetLevel->_traded, targetLevel->_potentialOverfill, targetLevel->_flightout)
+                    if (targetLevel->_potentialOverfill) {
+                        targetLevel->_potentialOverfill = std::max<hf::qty_t>(targetLevel->_potentialOverfill - overfillQty, 0);
+                        LOG(0, "OM {C[i1]}. Reduce PotentialOverfill. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
+                            targetLevel->_dollar, targetLevel->_target[0], targetLevel->_target[1],
+                            targetLevel->_acknowledged, targetLevel->_flight,
+                            targetLevel->_traded, targetLevel->_potentialOverfill, targetLevel->_flightout)
+                    }
                 }
             }
             else {
