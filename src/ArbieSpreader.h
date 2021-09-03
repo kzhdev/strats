@@ -807,6 +807,9 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
             ((_oldPriceSize._size > _priceSize._size) & (_priceSize._size < _contract->_quoteSize)) ||      // need to quote less
             ((_oldPriceSize._size < _priceSize._size) & (_oldPriceSize._size < _contract->_quoteSize))) {   // can quote more
             LOG(0, "AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", _contract->name(), _id, _side, _priceSize._size, ToDollars(_priceSize._price))
+            if (_leanContracts.size() == 1 && IsPriceBetterOrEqual<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
+                LOG(0, "!!!! AS {C[i1]}. Path price better than best market")
+            }
             return true;
         }
 #ifdef ENABLE_PERF
@@ -849,6 +852,7 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
     }
 
     auto multiplier = _multipliers[contract->_def._internalId];
+    TLOG(0, "AS {C[i1]}. {i2} Path {i3} {i4}@{i5} Apply delta {i6}", _contract->name(), Side, _side, _priceSize._size, _priceSize._price, (multiplier * priceDelta))
     _priceSize._price += multiplier * priceDelta;
     _dirty = priceDelta;
     if (IsBetterPrice<Side>(newPrice, oldPrice)) {
@@ -989,6 +993,7 @@ inline bool ArbieSpreader::Contract::addAggressiveQuoteAdjustment(Path* path, co
     auto addAggQuoteAdjustment = [this, path, &effected_contract](Market& otherSideMarket, hf::price_t quote_price, hf::qty_t quote_size) -> bool {
         assert(otherSideMarket.getId() != MarketIds::__end__);
         if (isAggressiveQuote<Side>(otherSideMarket, quote_price)) {
+            auto oldBestPrice = getExtCommissionAdjustedBestPrice<otherSide>();
             otherSideMarket.addAsQuoteAdjustment(quote_size, effected_contract);
             for (const auto& pathContract : path->_leanContracts) {
                 auto hedgeMarket = pathContract.bestMarket();
@@ -997,7 +1002,7 @@ inline bool ArbieSpreader::Contract::addAggressiveQuoteAdjustment(Path* path, co
                 effected_contract.emplace(hedgeMarket);
             }
             if (updateBestMarket<otherSide>(&otherSideMarket)) {
-                setMarketDirty(otherSide);
+                updateAffectedPathsBestMarket<otherSide>(oldBestPrice);
             }
             return true;
         }
@@ -1101,6 +1106,9 @@ inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t o
         DLOG(0, "AS {C[i1]}. {i2} Path {i3} {C[i4]} best market updated. side={i5} price={i6} oldPrice={i7} size={i8} path {i9}@{i10} dirty={i11} recalc={i12} resort={i13}", path->_contract->name(),
              path->_side, path->_id, name(), Side, newBestPrice, oldBestPrice, _bestMarket[Side]->getAdjustedSize(),
              path->_priceSize._size, path->_priceSize._price, path->_dirty, path->_recalc, path->_resort)
+        if (path->_contract == this && IsPriceBetterOrEqual<Side>(path->_priceSize._price, newBestPrice)) {
+            LOG(0, "!!!! AS {C[i1]}. Path price better than best market", name())
+        }
     }
     setMarketDirty(Side);
 }

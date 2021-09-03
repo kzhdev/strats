@@ -753,8 +753,6 @@ struct Market {
 
     void addFAKPreAdjustment(Market* market) {
         _fakPreAdjustedMarkets.push_back(market);
-        TLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} add FAK market {C[i5]} Id={i6} Side={i7} _fakPreAdjustedMarkets.size={i8}", _strategy,
-             _contractId, _id, _side, market->_contractId, market->_id, market->_id, _fakPreAdjustedMarkets.size())
         market->addFAKPreAdjustment(_asQuoteAdjustment);
     }
 
