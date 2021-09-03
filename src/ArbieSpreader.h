@@ -1109,7 +1109,8 @@ inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t o
         DLOG(0, "AS {C[i1]}. {i2} Path {i3} {C[i4]} best market updated. side={i5} price={i6} oldPrice={i7} size={i8} path {i9}@{i10} dirty={i11} recalc={i12} resort={i13}", path->_contract->name(),
              path->_side, path->_id, name(), Side, newBestPrice, oldBestPrice, _bestMarket[Side]->getAdjustedSize(),
              path->_priceSize._size, path->_priceSize._price, path->_dirty, path->_recalc, path->_resort)
-        if (path->_contract == this && IsPriceBetterOrEqual<Side>(path->_priceSize._price, newBestPrice)) {
+        if (path->_contract == this && newBestPrice != hf::NULL_PRICE && path->_priceSize._price != hf::NULL_PRICE &&
+            IsPriceBetterOrEqual<Side>(path->_priceSize._price, newBestPrice)) {
             LOG(0, "!!!! AS {C[i1]}. Path price better than best market", name())
         }
     }
