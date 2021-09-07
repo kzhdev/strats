@@ -588,7 +588,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::qty_t qty, const 
     if (canHedge) {
         sendFillToFront();
         auto hedgeId = ++_hedgeId;
-        LOG(0, "AS {C[i1]}. Hedge on Path {i2} {i3}@{d1}.", contract.name(), pBest->_id, pBest->_priceSize._size, ToDollars(pBest->_priceSize._price))
+        LOG(0, "AS {C[i1]}. Hedge on Path {i2} {i3}@{d1}. IsSwitchPath={i4}", contract.name(), pBest->_id, pBest->_priceSize._size, ToDollars(pBest->_priceSize._price), !pBest->_stfOffset._id.empty())
         for (uint32_t i = 0; i < pBest->_leanContracts.size(); ++i) {
             auto& hedgeContract = pBest->_leanContracts[i];
             auto* hedgeMarket = hedgeContract.bestMarket();
@@ -807,7 +807,8 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
             ((_oldPriceSize._size > _priceSize._size) & (_priceSize._size < _contract->_quoteSize)) ||      // need to quote less
             ((_oldPriceSize._size < _priceSize._size) & (_oldPriceSize._size < _contract->_quoteSize))) {   // can quote more
             LOG(0, "AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", _contract->name(), _id, _side, _priceSize._size, ToDollars(_priceSize._price))
-            if (_leanContracts.size() == 1 && IsPriceBetterOrEqual<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
+            if (_leanContracts.size() == 1 && _priceSize._price != hf::NULL_PRICE && _leanContracts[0].bestMarket()->getPrice() != hf::NULL_PRICE &&
+                IsPriceBetterOrEqual<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
                 LOG(0, "!!!! AS {C[i1]}. {i2} Path {i3} price better than best market {i4}", _contract->name(), Side, _id, _leanContracts[0].bestMarket()->getPrice())
             }
             return true;
@@ -837,9 +838,22 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
 
     if (_priceSize._price == hf::NULL_PRICE) {
         if (newPrice != hf::NULL_PRICE && size != 0) {
+            if (BOOST_UNLIKELY(!_stfOffset._id.empty() && _stfOffset._stfOffset == hf::NULL_PRICE)) {
+                // STF hasn't received from RV yet
+                return;
+            }
+
             // need to recalculate
             _recalc = true;
         }
+        return;
+    }
+
+    if (BOOST_UNLIKELY(!_stfOffset._id.empty() && _stfOffset._stfOffset == hf::NULL_PRICE)) {
+        // STF hasn't received from RV yet or reset when RV disabled
+        LOG(0, "**** AS {C[i1]}. shouldn't bee here", _contract->name())
+        _priceSize.reset();
+        _resort = true;
         return;
     }
 
@@ -890,7 +904,7 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         _sizeDetermineContract = contract;
         _resort = true;
     } else if (size > _priceSize._size && _priceSize._size < _contract->_quoteSize && contract == _sizeDetermineContract) {
-        _priceSize._size = size;
+        _priceSize._size = std::min<hf::qty_t>(size, _contract->_quoteSize);
         for (auto& pathContract : _leanContracts) {
             auto sz = pathContract.bestMarket()->getAdjustedSize();
             if (sz < _priceSize._size) {
