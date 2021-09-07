@@ -1102,7 +1102,7 @@ public:
                 if(priorLevel != currentLevel) {
                     priorLevel->_flight += filledQty;
                     priorLevel->_flightout -= filledQty;
-                    currentLevel->_flight = std::max<hf::qty_t>(0, currentLevel->_flight - filledQty);
+                    currentLevel->_flight -= filledQty;
                 }
                 else {
                     //
@@ -1461,7 +1461,7 @@ public:
                     mutableOrder.action_flags.is_modifying = false;
                 }
             }
-            LOG(0, "OM {C[i1]}. After. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         //All the state cleanup for Cancel-Due-To-Modify-Down should be handled on the ModifyAck
@@ -1471,7 +1471,7 @@ public:
 #else
             LOG(0, "OM {C[i1]}. Cancel order rejected. OID={i2} Reason={i3}", getContractName(), order.oid.value(), event.reasonCodeExt)
 #endif
-            LOG(0, "OM {C[i1]}. Before. Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
 
             //There are some unit tests for this.  Enough?
             BOOST_ASSERT_MSG(_om->_venue != hf::VENUE::EUREX, "Rhone will throttle cancels on Eurex, must handle it in the onCriticalError path below as a non-pathological case");

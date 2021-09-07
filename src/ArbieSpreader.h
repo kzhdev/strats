@@ -808,7 +808,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
             ((_oldPriceSize._size < _priceSize._size) & (_oldPriceSize._size < _contract->_quoteSize))) {   // can quote more
             LOG(0, "AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", _contract->name(), _id, _side, _priceSize._size, ToDollars(_priceSize._price))
             if (_leanContracts.size() == 1 && _priceSize._price != hf::NULL_PRICE && _leanContracts[0].bestMarket()->getPrice() != hf::NULL_PRICE &&
-                IsPriceBetterOrEqual<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
+                IsBetterPrice<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
                 LOG(0, "!!!! AS {C[i1]}. {i2} Path {i3} price better than best market {i4}", _contract->name(), Side, _id, _leanContracts[0].bestMarket()->getPrice())
             }
             return true;
@@ -820,7 +820,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
         }
 #endif
     }
-    if (_leanContracts.size() == 1 && _priceSize._price != hf::NULL_PRICE && IsPriceBetterOrEqual<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
+    if (_leanContracts.size() == 1 && _priceSize._price != hf::NULL_PRICE && IsBetterPrice<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
         LOG(0, "!!!! AS {C[i1]}. {i2} Path {i3} {i4}@{i5} price better than best market {i6}", _contract->name(), Side, _id, _priceSize._size, _priceSize._price, _leanContracts[0].bestMarket()->getPrice())
     }
     return false;
@@ -1124,7 +1124,7 @@ inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t o
              path->_side, path->_id, name(), Side, newBestPrice, oldBestPrice, _bestMarket[Side]->getAdjustedSize(),
              path->_priceSize._size, path->_priceSize._price, path->_dirty, path->_recalc, path->_resort)
         if (path->_contract == this && newBestPrice != hf::NULL_PRICE && path->_priceSize._price != hf::NULL_PRICE &&
-            IsPriceBetterOrEqual<Side>(path->_priceSize._price, newBestPrice)) {
+            IsBetterPrice<Side>(path->_priceSize._price, newBestPrice)) {
             LOG(0, "!!!! AS {C[i1]}. Path price better than best market", name())
         }
     }
