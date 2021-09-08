@@ -1484,9 +1484,9 @@ public:
         }
     }
 
-    void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, hf::batch_id_t bid, const om::order_t &order) {
+    void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, hf::batch_id_t bid, const om::order_t &order, bool fromMDFeed) {
         uint32_t side = ToViperSide(order.side);
-        _om[side].onOrderExecution(filledPrice, filledQty, totalExecutedQty, order);
+        _om[side].onOrderExecution(filledPrice, filledQty, totalExecutedQty, order, fromMDFeed);
         allocateExternalFills(filledPrice, filledQty, totalExecutedQty, bid, order, side);
         sendInternalMarketData();
     }

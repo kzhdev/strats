@@ -2843,7 +2843,7 @@ public:
         }
     }
 
-    void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, hf::batch_id_t bid, const om::order_t &order, bool fillArb = false) {
+    void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, hf::batch_id_t bid, const om::order_t &order, bool fromMDFeed = false) {
         if(BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNPROCESSABLE_RELOADED_ORDER)) {
             LOG(0, "EXE Fill for unprocessable GTC.  sid={i1} oid={i2} px={i3} fill_qty={i4} cumul_fill_qty={i5] total_qty={i6} leaves_qty={i7}", order.sid, order.oid.value(),
                     filledPrice, filledQty, totalExecutedQty, order.qty, order.leavesQty);
@@ -2870,7 +2870,7 @@ public:
                 if (BOOST_UNLIKELY(order.debug.i[ORDER_OWNER] == UNASSIGNED_OWNER || order.debug.i[ORDER_OWNER] == GTC_OWNER)) {
                     handleFillForUnassignedGtcOrder(filledPrice, filledQty, ime._contract._venue, ime._internalId, order);
                 } else {
-                    ime.onOrderExecution(filledPrice, filledQty, totalExecutedQty, bid, order);
+                    ime.onOrderExecution(filledPrice, filledQty, totalExecutedQty, bid, order, fromMDFeed);
                 }
                 sendOrderUpdateToMM(order.oid.value(), ToViperSide(order.side), order.pr, order.leavesQty, order.qp.qtyInFront, ime._internalId);
             } else {

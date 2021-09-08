@@ -67,84 +67,87 @@ public:
             Level* _level;
         };
 
-        void setNewOrder(hf::qty_t size, Level* level) {
+        void setNewOrder(hf::qty_t size, Level* level) noexcept {
             setQuantityToModify(size, level);
         }
 
-        void setQuantityToModify(hf::qty_t size, Level* level) {
-            _entries[_insertIndex] = { size, level };
-            _insertIndex = getNextIndex(_insertIndex);
+        void setQuantityToModify(hf::qty_t size, Level* level) noexcept {
+            _entries[_insertIndex & MASK] = { size, level };
+            ++_insertIndex;
+        }
+
+        const Entry* getEntry(uint32_t index) const noexcept {
+            return &_entries[index & MASK];
         }
 
         //"Target" Methods
         ///////////////////
 
         //This is the level we are at or will eventually get to via all pending modifies
-        Level* getTargetLevel() const {
+        Level* getTargetLevel() const noexcept {
             return getTarget()->_level;
         }
 
         //This is the level we are at or will eventually get to via all pending modifies
-        hf::qty_t getTargetQty() const {
+        hf::qty_t getTargetQty() const noexcept {
             return getTarget()->_qty;
         }
 
         //This is the entry we are at or will eventually get to via all pending modifies
-        const Entry* getTarget() const {
+        const Entry* getTarget() const noexcept {
             uint32_t targetIndex = getPriorIndex(_insertIndex);
-            return &_entries[targetIndex];
+            return &_entries[targetIndex & MASK];
         }
 
         //"In-Flight" Methods
         /////////////////////
 
         //Gets the current in-flight level, ASSUMING THERE IS A LEVEL IN FLIGHT
-        Level* getInFlightLevel() const {
+        Level* getInFlightLevel() const noexcept {
             return getInFlightEntry()->_level;
         }
 
         //Gets the current in-flight quantity, ASSUMING THERE IS A LEVEL IN FLIGHT
-        hf::qty_t getInFlightQty() const {
+        [[nodiscard]] hf::qty_t getInFlightQty() const noexcept {
             return getInFlightEntry()->_qty;
         }
 
         //Gets the current in-flight entry, ASSUMING THERE IS A LEVEL IN FLIGHT
-        const Entry* getInFlightEntry() const {
-            return &_entries[_popIndex];
+        const Entry* getInFlightEntry() const noexcept {
+            return &_entries[_popIndex & MASK];
         }
 
         //"Resting" Methods
         ///////////////////
 
         //Gets the current resting level, ASSUMING THE ORDER HAS BEEN ACKED
-        Level* getRestingLevel() const {
+        Level* getRestingLevel() const noexcept {
             return getRestingEntry()->_level;
         }
 
         //Gets the current resting qty, ASSUMING THE ORDER HAS BEEN ACKED
-        hf::qty_t getRestingQty() const {
+        [[nodiscard]] hf::qty_t getRestingQty() const noexcept {
             return getRestingEntry()->_qty;
         }
 
         //Gets the current resting level, ASSUMING THE ORDER HAS BEEN ACKED
-        const Entry* getRestingEntry() const {
-            uint32_t restingIndex = getPriorIndex(_popIndex);
-            return &_entries[restingIndex];
+        const Entry* getRestingEntry() const noexcept {
+            return &_entries[(_popIndex - 1) & MASK];
         }
 
-        void pop() {
-            _popIndex = getNextIndex(_popIndex);
+        ALWAYS_INLINE void pop() noexcept {
+            ++_popIndex;
         }
 
-        uint32_t getPriorIndex(uint32_t current) const {
-            return current == 0 ? SIZE - 1 : current - 1;
+        [[nodiscard]] ALWAYS_INLINE uint32_t getPriorIndex(uint32_t current) const noexcept {
+            return current - 1;
         }
 
-        uint32_t getNextIndex(uint32_t current) const {
-            return current == SIZE - 1 ? 0 : current + 1;
+        [[nodiscard]] ALWAYS_INLINE uint32_t getNextIndex(uint32_t current) const noexcept {
+            return current + 1;
         }
 
-        bool isModifying() const {
+        [[nodiscard]] ALWAYS_INLINE bool isModifying() const noexcept {
             return _insertIndex != _popIndex;
         }
 
@@ -153,25 +156,26 @@ public:
             auto priorIndex = getPriorIndex(_popIndex);
             auto currentIndex = _popIndex;
             auto nextIndex = getNextIndex(_popIndex);
-            Entry* priorEntry = &_entries[priorIndex];
-            Entry* currentEntry = &_entries[currentIndex];
+            Entry* priorEntry = &_entries[priorIndex & MASK];
+            Entry* currentEntry = &_entries[currentIndex & MASK];
             action(currentEntry->_qty, currentEntry->_level, priorEntry->_qty, priorEntry->_level, true, nextIndex == _insertIndex);
             if(!StopAfterFirstIteration) {
                 while (nextIndex != _insertIndex) {
                     priorIndex = currentIndex;
                     currentIndex = nextIndex;
                     nextIndex = getNextIndex(currentIndex);
-                    priorEntry = &_entries[priorIndex];
-                    currentEntry = &_entries[currentIndex];
+                    priorEntry = &_entries[priorIndex & MASK];
+                    currentEntry = &_entries[currentIndex & MASK];
                     action(currentEntry->_qty, currentEntry->_level, priorEntry->_qty, priorEntry->_level, false,
                            nextIndex == _insertIndex);
                 }
             }
         }
 
-        static const uint32_t SIZE = 50;
+        static const uint32_t SIZE = 64;
+        static constexpr const uint32_t MASK = 63;
         Entry _entries[SIZE];
-        uint32_t _index;
+        uint32_t _index = 0;
         uint32_t _insertIndex = 0;
         uint32_t _popIndex = 0;
     };
@@ -1013,9 +1017,9 @@ public:
             LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
-        void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, const om::order_t &order) {
-            LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={d1} Price={d2} Size={i3} OID={i4}", getContractName(),
-                _om->_side, _dollar, ToDollars(filledPrice), filledQty, order.oid.value())
+        void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, const om::order_t &order, bool fromMDFeed) {
+            LOG(0, "OM {C[i1]}. Fill. Side={i2} LevelPrice={d1} Price={d2} Size={i3} OID={i4} fromMDFeed={i5}", getContractName(),
+                _om->_side, _dollar, ToDollars(filledPrice), filledQty, order.oid.value(), fromMDFeed)
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
                 _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
 
@@ -2302,10 +2306,40 @@ public:
         }
     }
 
-    void onOrderExecution(hf::qty_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, const om::order_t &order) {
+    void onOrderExecution(hf::qty_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, const om::order_t &order, bool fromMDFeed) {
         bool requiresRequote = (!order.action_flags.is_active) && testOrderAndDecrementCounter<om::OMExecutionEvent>(order);
-        Level* level = getLevelForExchangeAction(order);
-        level->onOrderExecution(filledPrice, filledQty, totalExecutedQty, order);
+        Level* level = getRestingLevel(order);
+        if (level->_price != filledPrice) {
+            // If the fill came from MD Feed due to fill arb.
+            // the fill might be on the target level
+            assert(fromMDFeed);
+            switch(_contract._venue) {
+                case hf::VENUE::EUREX:
+                case hf::VENUE::B3:
+                case hf::VENUE::CME:
+                    level = nullptr;
+                    for (auto index = _mtt.getModifyTracker(order)->_popIndex;
+                         index < _mtt.getModifyTracker(order)->_insertIndex; ++index) {
+                        const auto entry = _mtt.getModifyTracker(order)->getEntry(index);
+                        if (entry->_level->_price == filledPrice) {
+                            level = entry->_level;
+                            break;
+                        }
+                    }
+                    break;
+                case hf::VENUE::ICE:
+                    level = reinterpret_cast<Level*>(GetQuantity(order, LEVEL_POINTER));
+                    break;
+                default:
+                    throw std::runtime_error("unrecognized venue");
+            }
+        }
+        if (BOOST_UNLIKELY(!level | (level->_price != filledPrice))) {
+            LOG(0, "OM {C[i1]}. No level find for fill {i2}@{d1} side={i3} OID={i4} fromMDFeed={i5}", getContractName(),
+                filledQty, ToDollars(filledPrice), ToViperSide(order.side), order.oid.value(), fromMDFeed)
+            return;
+        }
+        level->onOrderExecution(filledPrice, filledQty, totalExecutedQty, order, fromMDFeed);
         if(requiresRequote) {
             //We really don't want to do anything here since the IME doesn't update _target until after this method returns
         }
@@ -2447,10 +2481,6 @@ public:
         return level;
     }
 
-    Level* getLevelForExchangeAction(const om::order_t& order) {
-        return getRestingLevel(order);
-    }
-
     Level* getRestingLevel(const om::order_t& order) {
         Level* level;
 
@@ -2472,7 +2502,7 @@ public:
     Level* getLevelForCancel(const om::order_t& order) {
         //A cancel, solicited or unsolicited, resembles an exchange action in that it can't change the price, i.e.
         //it doesn't touch the modify trackers
-        return getLevelForExchangeAction(order);
+        return getRestingLevel(order);
     }
 
     void sendMessageToGUI(const std::string& message, ErrorType errorType = ErrorType::Normal) {
