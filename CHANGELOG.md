@@ -1,6 +1,8 @@
-#Version 1.54.0.X
+#Version 1.54.1.0
 - Fix outlier statistics
 - Fix ENABLE_LATENCY_TRACK build
+- Fix Fills from FillArbs applied to wrong level
+- Optimize ArbieSpreader path calculation by applying market data delta
 
 #Version 1.53.1.0
 - Fix candidate > target when modify order canceled due to exected qty greater than modified qty.
