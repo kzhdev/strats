@@ -2354,7 +2354,8 @@ public:
     void onOrderExecution(hf::qty_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, const om::order_t &order, bool fromMDFeed) {
         bool requiresRequote = (!order.action_flags.is_active) && testOrderAndDecrementCounter<om::OMExecutionEvent>(order);
         Level* level = getRestingLevel(order);
-        if (level->_price != filledPrice) {
+        auto side = ToViperSide(order.side);
+        if (BOOST_UNLIKELY(fromMDFeed && IsBetter(filledPrice, level->_price, side))) {
             // If the fill came from MD Feed due to fill arb.
             // the fill might be on the target level
             assert(fromMDFeed);
@@ -2366,7 +2367,7 @@ public:
                     for (auto index = _mtt.getModifyTracker(order)->_popIndex;
                          index < _mtt.getModifyTracker(order)->_insertIndex; ++index) {
                         const auto entry = _mtt.getModifyTracker(order)->getEntry(index);
-                        if (entry->_level->_price == filledPrice) {
+                        if (!IsBetter(filledPrice, entry->_level->_price, side)) {
                             level = entry->_level;
                             break;
                         }
@@ -2378,11 +2379,11 @@ public:
                 default:
                     throw std::runtime_error("unrecognized venue");
             }
-        }
-        if (BOOST_UNLIKELY(!level | (level->_price != filledPrice))) {
-            LOG(0, "OM {C[i1]}. No level find for fill {i2}@{d1} side={i3} OID={i4} fromMDFeed={i5}", getContractName(),
-                filledQty, ToDollars(filledPrice), ToViperSide(order.side), order.oid.value(), fromMDFeed)
-            return;
+            if (BOOST_UNLIKELY(!level | IsBetter(filledPrice, level->_price, side))) {
+                LOG(0, "OM {C[i1]}. No level found for fill {i2}@{d1} side={i3} OID={i4} fromMDFeed=true. Apply fill to resting level", getContractName(),
+                    filledQty, ToDollars(filledPrice), ToViperSide(order.side), order.oid.value())
+                level = getRestingLevel(order);
+            }
         }
         level->onOrderExecution(filledPrice, filledQty, totalExecutedQty, order, fromMDFeed);
         if(requiresRequote) {
