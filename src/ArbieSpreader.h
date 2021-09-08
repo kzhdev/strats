@@ -807,10 +807,12 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
             ((_oldPriceSize._size > _priceSize._size) & (_priceSize._size < _contract->_quoteSize)) ||      // need to quote less
             ((_oldPriceSize._size < _priceSize._size) & (_oldPriceSize._size < _contract->_quoteSize))) {   // can quote more
             LOG(0, "AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", _contract->name(), _id, _side, _priceSize._size, ToDollars(_priceSize._price))
+#ifdef IS_DEV
             if (_leanContracts.size() == 1 && _priceSize._price != hf::NULL_PRICE && _leanContracts[0].bestMarket()->getPrice() != hf::NULL_PRICE &&
                 IsBetterPrice<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
                 LOG(0, "!!!! AS {C[i1]}. {i2} Path {i3} price better than best market {i4}", _contract->name(), Side, _id, _leanContracts[0].bestMarket()->getPrice())
             }
+#endif
             return true;
         }
 #ifdef ENABLE_PERF
@@ -820,9 +822,11 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
         }
 #endif
     }
+#ifdef IS_DEV
     if (_leanContracts.size() == 1 && _priceSize._price != hf::NULL_PRICE && IsBetterPrice<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
         LOG(0, "!!!! AS {C[i1]}. {i2} Path {i3} {i4}@{i5} price better than best market {i6}", _contract->name(), Side, _id, _priceSize._size, _priceSize._price, _leanContracts[0].bestMarket()->getPrice())
     }
+#endif
     return false;
 }
 
@@ -942,6 +946,7 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
         auto oldBest = _paths[Side][0];
         std::sort(_paths[Side].begin(), _paths[Side].end(), PathSorter<Side>());
 
+#ifdef IS_DEV
         if (BOOST_UNLIKELY(logging::loggingLevel() > logging::LOG_LEVEL::TRACE)) {
             for (auto* path: _paths[Side]) {
                 TLOG(0, " - AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", path->_contract->name(), path->_id, Side,
@@ -962,7 +967,7 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
                 }
             }
         }
-
+#endif
         auto bestPath = _paths[Side][0];
         if (oldBest != bestPath) {
             LOG(0, "AS {C[i1]}. {i2} Lean on path {i3} {i4}@{d1}", bestPath->_contract->name(),
@@ -1120,6 +1125,7 @@ inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t o
     auto size = getBestMarket<Side>()->getAdjustedSize();
     for (auto& path : _affectedPaths[Side]) {
         path->onBestMarketDataUpdate<Side>(this, oldBestPrice, newBestPrice, delta, size);
+#ifdef IS_DEV
         DLOG(0, "AS {C[i1]}. {i2} Path {i3} {C[i4]} best market updated. side={i5} price={i6} oldPrice={i7} size={i8} path {i9}@{i10} dirty={i11} recalc={i12} resort={i13}", path->_contract->name(),
              path->_side, path->_id, name(), Side, newBestPrice, oldBestPrice, _bestMarket[Side]->getAdjustedSize(),
              path->_priceSize._size, path->_priceSize._price, path->_dirty, path->_recalc, path->_resort)
@@ -1127,6 +1133,7 @@ inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t o
             IsBetterPrice<Side>(path->_priceSize._price, newBestPrice)) {
             LOG(0, "!!!! AS {C[i1]}. Path price better than best market", name())
         }
+#endif
     }
     setMarketDirty(Side);
 }

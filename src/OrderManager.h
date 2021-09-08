@@ -172,6 +172,42 @@ public:
             }
         }
 
+        template<typename ActionType, bool StopAfterFirstIteration = false>
+        void performOnEachNode(const ActionType&& action, Level* from) {
+            auto priorIndex = getPriorIndex(_popIndex);
+            auto targetLevelIndex = _insertIndex - 1;
+            while (_entries[priorIndex & MASK]._level != from && priorIndex != targetLevelIndex) {
+                ++priorIndex;
+            }
+
+            if (BOOST_UNLIKELY(_entries[priorIndex & MASK]._level != from)) {
+                assert(false);
+                // from level not found
+                return;
+            }
+
+            if (priorIndex == targetLevelIndex) {
+                // The from level is the target level
+                return;
+            }
+
+            auto currentIndex = priorIndex + 1;
+            auto nextIndex = currentIndex + 1;
+            Entry* priorEntry = &_entries[priorIndex & MASK];
+            Entry* currentEntry = &_entries[currentIndex & MASK];
+            action(currentEntry->_qty, currentEntry->_level, priorEntry->_qty, priorEntry->_level, true, nextIndex == _insertIndex);
+            if(!StopAfterFirstIteration) {
+                while (nextIndex != _insertIndex) {
+                    priorIndex = currentIndex;
+                    currentIndex = nextIndex++;
+                    priorEntry = &_entries[priorIndex & MASK];
+                    currentEntry = &_entries[currentIndex & MASK];
+                    action(currentEntry->_qty, currentEntry->_level, priorEntry->_qty, priorEntry->_level, false,
+                           nextIndex == _insertIndex);
+                }
+            }
+        }
+
         static const uint32_t SIZE = 64;
         static constexpr const uint32_t MASK = 63;
         Entry _entries[SIZE];
@@ -1041,10 +1077,6 @@ public:
             if (isModifying(order)) {
                 modifyWorkingQuantityInChain(mutableOrder, filledQty);
                 auto* targetLevel = getTargetLevel(order);
-                LOG(0, "OM {C[i1]}. Order TargetLevel. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
-                    targetLevel->_dollar, targetLevel->_target[0], targetLevel->_target[1], targetLevel->_acknowledged,
-                    targetLevel->_flight, targetLevel->_traded, order.leavesQty, targetLevel->_potentialOverfill,
-                    targetLevel->_flightout)
                 // add potentialOverfill only when the order modify down on same level
                 if (targetLevel == this) {
                     hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
@@ -1059,6 +1091,10 @@ public:
                         }
                     }
                 }
+                LOG(0, "OM {C[i1]}. Order TargetLevel. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
+                    targetLevel->_dollar, targetLevel->_target[0], targetLevel->_target[1], targetLevel->_acknowledged,
+                    targetLevel->_flight, targetLevel->_traded, order.leavesQty, targetLevel->_potentialOverfill,
+                    targetLevel->_flightout)
 
                 if (order.action_flags.is_cancelling && targetLevel != this) {
                     targetLevel->notifyIfLevelFree(); //Fencepost, since we don't have a way to check this in the above call
@@ -1152,11 +1188,20 @@ public:
             if ((_om->_contract._venue == hf::VENUE::CME) | (_om->_contract._venue == hf::VENUE::EUREX) |
                 (_om->_contract._venue == hf::VENUE::B3)) {
                 ModifyTracker* tracker = getModifyTracker(order);
-                if(fullFill) {
-                    tracker->performOnEachNode(std::move(foreachNodeOnFullFill));
-                }
-                else {
-                    tracker->performOnEachNode(std::move(foreachNodeOnPartialFill));
+                if (this != _om->getRestingLevel(order)) {
+                    if(fullFill) {
+                        tracker->performOnEachNode(std::move(foreachNodeOnFullFill), this);
+                    }
+                    else {
+                        tracker->performOnEachNode(std::move(foreachNodeOnPartialFill), this);
+                    }
+                } else {
+                    if(fullFill) {
+                        tracker->performOnEachNode(std::move(foreachNodeOnFullFill));
+                    }
+                    else {
+                        tracker->performOnEachNode(std::move(foreachNodeOnPartialFill));
+                    }
                 }
             }
             else if (_om->_contract._venue == hf::VENUE::ICE) {

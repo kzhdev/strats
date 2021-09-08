@@ -1861,7 +1861,7 @@ public:
     void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent& event, const om::strategy_order_t& order, const md::MDBatch& /*batch*/) {}
     void onMDFirmOrderExecutionEventWonFillArbitration(const md::MDFirmOrderExecutionEvent &event, const om::strategy_order_t &order, const md::MDBatch &batch) {
         //Note that leavesqty is set in various places around the code.  One day we should clean it up and just set it here.
-        onOrderExecution(event.filledPrice, event.filledQty, event.totalExecutedQty, 0, order);
+        onOrderExecution(event.filledPrice, event.filledQty, event.totalExecutedQty, 0, order, true);
 #ifdef ENABLE_PERF
         ++_fillArbCount;
         ++_totalFills;
