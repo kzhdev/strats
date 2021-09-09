@@ -1100,7 +1100,7 @@ public:
             }
 
             if (isModifying(order)) {
-                modifyWorkingQuantityInChain(mutableOrder, filledQty, fromMDFeed);
+                modifyWorkingQuantityInChain(mutableOrder, filledQty);
                 auto* targetLevel = getTargetLevel(order);
                 // add potentialOverfill only when the order modify down on same level
                 if (targetLevel == this) {
