@@ -1116,6 +1116,11 @@ public:
                         }
                     }
                 }
+
+                if (targetLevel->_flight < 0) {
+                    targetLevel->_flight = 0;
+                }
+
                 LOG(0, "OM {C[i1]}. Order TargetLevel. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
                     targetLevel->_dollar, targetLevel->_target[0], targetLevel->_target[1], targetLevel->_acknowledged,
                     targetLevel->_flight, targetLevel->_traded, order.leavesQty, targetLevel->_potentialOverfill,
@@ -1171,7 +1176,7 @@ public:
                 if(priorLevel != currentLevel) {
                     priorLevel->_flight += filledQty;
                     priorLevel->_flightout -= filledQty;
-                    currentLevel->_flight -= std::max<hf::qty_t>(currentLevel->_flight - filledQty, 0);
+                    currentLevel->_flight -= filledQty;
                 }
                 else {
                     //
