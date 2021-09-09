@@ -947,7 +947,7 @@ public:
                             _om->_side, order.oid.value(), _om->_hedge->_dollar, hedgeChange)
                     }
                     else {
-                        LOG(0, "OM {C[i1]}. Side={i2} tryStealOrderForHedge Stole quote order for hedge level. OID={i3} hedgePrice={i4} hedgeChange={i5}", getContractName(),
+                        LOG(0, "OM {C[i1]}. Side={i2} tryStealOrderForHedge Stole quote order for hedge level. OID={i3} hedgePrice={d1} hedgeChange={i4}", getContractName(),
                             _om->_side, order.oid.value(), _om->_hedge->_dollar, hedgeChange)
                         ApplyModifyToLevelState(*this, *_om->_hedge, leavesQty, hedgeChange, order, newTargetQty, [this, &order]() {
                             auto orderIter = std::find(_orders.begin(), _orders.end(), &order);
@@ -1140,21 +1140,17 @@ public:
             return reduceTarget;
         }
 
-        void modifyWorkingQuantityInChain(om::order_t& order, hf::qty_t filledQty, bool log = false) {
+        void modifyWorkingQuantityInChain(om::order_t& order, hf::qty_t filledQty) {
 
             bool fullFill = order.leavesQty <= 0;   // Theoretically leavesQty should not become negative, to be safe here, just in case the leavesQty messed up in rhone.
 
-            if (log) {
-                LOG(0, "**** OM {C[i1]}. OID={i2} Price={d1} qty={i3} leavesQty={i4} isFullFill={i5} isActive={i6} isCanceling={i7}", getContractName(),
-                    order.oid.value(), ToDollars(order.pr), order.qty, order.leavesQty, fullFill, (int)order.action_flags.is_active,
-                    (int)order.action_flags.is_cancelling)
-            }
+            LOG(0, "**** OM {C[i1]}. OID={i2} Price={d1} qty={i3} leavesQty={i4} isFullFill={i5} isActive={i6} isCanceling={i7}", getContractName(),
+                order.oid.value(), ToDollars(order.pr), order.qty, order.leavesQty, fullFill, (int)order.action_flags.is_active,
+                (int)order.action_flags.is_cancelling)
 
             //CME and ICE are doing the same thing conceptually, it's just with ICE we can't have a chain with more than 1 level
-            const auto foreachNodeOnPartialFill = [filledQty, &order, log](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
-                if (log) {
-                    LOG(0, "**** partialFill. currentLevel={d1} priorLevel={d2}", currentLevel->_dollar, priorLevel->_dollar)
-                }
+            const auto foreachNodeOnPartialFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
+                LOG(0, "**** partialFill. currentLevel={d1} priorLevel={d2}", currentLevel->_dollar, priorLevel->_dollar)
                 if(priorLevel != currentLevel) {
                     priorLevel->_flight += filledQty;
                     priorLevel->_flightout -= filledQty;
@@ -1172,13 +1168,11 @@ public:
                 }
             };
 
-            const auto foreachNodeOnFullFill = [filledQty, &order, log](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
+            const auto foreachNodeOnFullFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
                 //Since we want to do nothing on Modify Rejects, we need to undo the entire modify chain here
 
-                if (log) {
-                    LOG(0, "**** FullFill. currentQty={i1} currentLevel={d1} priorQty={i2} priorLevel={d2}", currentQty,
-                        currentLevel->_dollar, priorQty, priorLevel->_dollar)
-                }
+                LOG(0, "**** FullFill. currentQty={i1} currentLevel={d1} priorQty={i2} priorLevel={d2} isPriorLevelRestingLevel={i3} isLastLevel={i4}", currentQty,
+                    currentLevel->_dollar, priorQty, priorLevel->_dollar, isPriorLevelRestingLevel, isLastLevel)
 
                 if(priorLevel != currentLevel) {
                     hf::qty_t priorFilledQty = order.executedQty - filledQty;
@@ -1231,7 +1225,7 @@ public:
                 const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
                 const hf::qty_t& prior_qty = GetQuantity(order, PRIOR_QUANTITY);
                 bool isLastLevel = true;
-                bool isPriorLevelRestingLevel = true;
+                bool isPriorLevelRestingLevel = (this == _om->getRestingLevel(order));
 
                 if(fullFill) {
                     foreachNodeOnFullFill(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
@@ -1802,11 +1796,11 @@ public:
                                     ApplyModifyToLevelState(from, to, leavesQty, change, order, newTargetQty, [&iter, &from]() {from._orders.erase(std::next(iter).base()); });
 
                                     LOG(0, "OM {C[i1]}. After stealing. From Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", level->getContractName(),
-                                        from._target[0], from._target[1], from._acknowledged, from._flight,
+                                        from._dollar, from._target[0], from._target[1], from._acknowledged, from._flight,
                                         from._traded, leavesQty, from._potentialOverfill, from._flightout)
 
                                     LOG(0, "OM {C[i1]}. After stealing. To Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} OrderLeaves={i7} PotentialOverfill={i8} NumFlightout={i9}", level->getContractName(),
-                                        to._target[0], to._target[1], to._acknowledged, to._flight, to._traded,
+                                        to._dollar, to._target[0], to._target[1], to._acknowledged, to._flight, to._traded,
                                         leavesQty, to._potentialOverfill, to._flightout)
 
                                     return Result::MODIFIED;
