@@ -1171,13 +1171,7 @@ public:
                 if(priorLevel != currentLevel) {
                     priorLevel->_flight += filledQty;
                     priorLevel->_flightout -= filledQty;
-                    if (priorLevel->_flightout > 0) {
-                        currentLevel->_flight -= filledQty;
-                    } else {
-                        LOG(0, "**** prior level flightout <= 0, the order will be canceled. set current flight to {i1}", 0)
-                        currentLevel->_flight = 0;
-                        currentLevel->_flightout = 0;
-                    }
+                    currentLevel->_flight -= std::max<hf::qty_t>(currentLevel->_flight - filledQty, 0);
                 }
                 else {
                     //
