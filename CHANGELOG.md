@@ -3,6 +3,8 @@
 - Fix ENABLE_LATENCY_TRACK build
 - Fix Fills from FillArbs applied to wrong level
 - Optimize ArbieSpreader path calculation by applying market data delta
+- Fix candidate > target issue when an order modified multiple times, and the order filled in the middle of modify chain
+  and caused an unsolicited order cancel
 
 #Version 1.53.1.0
 - Fix candidate > target when modify order canceled due to exected qty greater than modified qty.

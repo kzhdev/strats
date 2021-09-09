@@ -1171,7 +1171,13 @@ public:
                 if(priorLevel != currentLevel) {
                     priorLevel->_flight += filledQty;
                     priorLevel->_flightout -= filledQty;
-                    currentLevel->_flight -= filledQty;
+                    if (priorLevel->_flightout > 0) {
+                        currentLevel->_flight -= filledQty;
+                    } else {
+                        LOG(0, "**** prior level flightout <= 0, the order will be canceled. set current flight to {i1}", 0)
+                        currentLevel->_flight = 0;
+                        currentLevel->_flightout = 0;
+                    }
                 }
                 else {
                     //
@@ -1183,6 +1189,10 @@ public:
                 if(isLastLevel && order.action_flags.is_cancelling) {
                     currentLevel->_flight += filledQty;
                 }
+                LOG(0, "**** priorLevel: Target={i1}|{i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", priorLevel->_target[0],
+                    priorLevel->_target[1], priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, order.leavesQty, priorLevel->_flightout)
+                LOG(0, "**** current: Target={i1}|{i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", priorLevel->_target[0],
+                    currentLevel->_target[1], currentLevel->_acknowledged, currentLevel->_flight, currentLevel->_traded, order.leavesQty, currentLevel->_flightout)
             };
 
             const auto foreachNodeOnFullFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
@@ -1215,6 +1225,10 @@ public:
                     hf::qty_t priorFilledQty = order.executedQty - filledQty;
                     currentLevel->_flight += currentQty - priorFilledQty;
                 }
+                LOG(0, "**** priorLevel: Target={i1}|{i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", priorLevel->_target[0],
+                    priorLevel->_target[1], priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, order.leavesQty, priorLevel->_flightout)
+                LOG(0, "**** current: Target={i1}|{i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", priorLevel->_target[0],
+                    currentLevel->_target[1], currentLevel->_acknowledged, currentLevel->_flight, currentLevel->_traded, order.leavesQty, currentLevel->_flightout)
             };
 
             if ((_om->_contract._venue == hf::VENUE::CME) | (_om->_contract._venue == hf::VENUE::EUREX) |
@@ -1292,6 +1306,7 @@ public:
                 Level *currentLevel = getTargetLevel(order);
                 const hf::qty_t& priorQty = GetQuantity(order, PRIOR_QUANTITY);
                 const hf::qty_t& currentQty = GetQuantity(order, QUANTITY_TO_MODIFY);
+                LOG(0, "**** undoModifyInFrontChain. currentQty={i1} currentLevel={d1} priorQty={i2} priorLevel={d2}", currentQty, currentLevel->_dollar, priorQty, priorLevel->_dollar)
                 if(priorLevel != currentLevel) {
                     //Undo the previous modify at this level
                     hf::qty_t fillAdjustmentQty = priorQty - order.executedQty;
@@ -1317,6 +1332,12 @@ public:
                 else {
                     _flight -= currentQty - priorQty;
                 }
+
+                LOG(0, "**** priorLevel: Target={i1}|{i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", priorLevel->_target[0],
+                    priorLevel->_target[1], priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, order.leavesQty, priorLevel->_flightout)
+                LOG(0, "**** current: Target={i1}|{i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", priorLevel->_target[0],
+                    currentLevel->_target[1], currentLevel->_acknowledged, currentLevel->_flight, currentLevel->_traded, order.leavesQty, currentLevel->_flightout)
+
                 SetQuantity(order, reinterpret_cast<int64_t>(this), LEVEL_POINTER);
                 SetQuantity(order, reinterpret_cast<int64_t>(this), PRIOR_LEVEL);
                 SetQuantity(order, priorQty, PRIOR_QUANTITY);
@@ -1337,6 +1358,7 @@ public:
                                                     Level* priorLevel,
                                                     bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
 
+                LOG(0, "**** cancelWorkingInChain: currentQty={i1} currentLevel={d1} priorQty={i2} priorLevel={d2} isPriorLevelRestingLevel={i3} isLastLevel={i4}")
                 if (isPriorLevelRestingLevel) {
                     hf::qty_t priorLeavesQty = priorQty - order.executedQty;
                     if (priorLeavesQty < 0) {
@@ -1365,6 +1387,10 @@ public:
                 if(order.action_flags.is_cancelling & isLastLevel) {
                     currentLevel->_flight += currentQty - order.executedQty;
                 }
+                LOG(0, "**** priorLevel: Target={i1}|{i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", priorLevel->_target[0],
+                    priorLevel->_target[1], priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, order.leavesQty, priorLevel->_flightout)
+                LOG(0, "**** current: Target={i1}|{i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", priorLevel->_target[0],
+                    currentLevel->_target[1], currentLevel->_acknowledged, currentLevel->_flight, currentLevel->_traded, order.leavesQty, currentLevel->_flightout)
             };
 
             if ((_om->_contract._venue == hf::VENUE::CME) | (_om->_contract._venue == hf::VENUE::EUREX) |
