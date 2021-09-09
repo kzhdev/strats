@@ -1358,7 +1358,7 @@ public:
                                                     Level* priorLevel,
                                                     bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
 
-                LOG(0, "**** cancelWorkingInChain: currentQty={i1} currentLevel={d1} priorQty={i2} priorLevel={d2} isPriorLevelRestingLevel={i3} isLastLevel={i4}")
+                LOG(0, "**** cancelWorkingInChain: currentQty={i1} currentLevel={d1} priorQty={i2} priorLevel={d2} isPriorLevelRestingLevel={i3} isLastLevel={i4}", currentQty, currentLevel->_dollar, priorQty, priorLevel, isPriorLevelRestingLevel, isLastLevel)
                 if (isPriorLevelRestingLevel) {
                     hf::qty_t priorLeavesQty = priorQty - order.executedQty;
                     if (priorLeavesQty < 0) {
