@@ -258,7 +258,8 @@ public:
     struct Level {
 
         Level(OrderManager* om, hf::price_t price) : _price(price), _dollar(ToDollars(price)), _om(om) {
-            _orders.reserve(8);
+            _orders.reserve(256);
+            _blockingOrders.reserve(256);
         }
 
         ModifyTracker* getAvailableModifyTracker() const {
@@ -823,36 +824,52 @@ public:
                     totalLevelSizeDecrease = result.first;
                     modifyGated = result.second;
                     if (totalLevelSizeDecrease == 0) {
+                        _blockingOrders.clear();
                         return true;
                     }
                 }
                 else {
                     LOG(0, "OM {C[i1]}. Could not change order. OID={i2}", getContractName(), order->oid.value())
+                    _blockingOrders.emplace_back(order);
                 }
             }
 
-            //There is quantity left, we're going to tag one order that is preventing the decrement.  Maybe we should tag all?
+            //There is quantity left, we're going to tag one order that is preventing the decrement.
             LOG(0, "OM {C[i1]}. Quantity left after reduceSize; looking for order preventing decrement", getContractName());
-            bool allCancelling = !_orders.empty();
-            for(auto it = _orders.rbegin(); it != _orders.rend(); ++it) {
+            bool allCancelling = !_blockingOrders.empty();
+            bool blockingOrderFound = false;
+            for(auto it = _blockingOrders.rbegin(); it != _blockingOrders.rend(); ++it) {
                 om::order_t* order = *it;
-                if(inflightStatePreventsDecrement(*order)) {
+                if (inflightStatePreventsDecrement(*order)) {
                     bool alreadyCounted = _om->_overfillProtection.incrementIfNecessary(*order, _om);
-                    LOG(0, "OM {C[i1]}. Found candidate blocking order. Side={i2} OID={i3} alreadyCounted={i4} _markedOrder={i5}", getContractName(), _om->_side, order->oid.value(), alreadyCounted, _om->_overfillProtection.getMarkedOrderCountForLogging());
-                    return false;
+                    LOG(0, "OM {C[i1]}. Found candidate blocking order. Side={i2} OID={i3} alreadyCounted={i4} _markedOrder={i5}", getContractName(),
+                        _om->_side, order->oid.value(), alreadyCounted,
+                        _om->_overfillProtection.getMarkedOrderCountForLogging());
+                    blockingOrderFound = true;
+                    continue;
                 }
+
                 if(IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED)) {
-                    LOG(0, "OM {C[i1]}. Found candidate blocking order due to SOF_IOP_ORDER_SHOULD_BE_CANCELLED. Side={i2} OID={i3}", getContractName(), _om->_side, order->oid.value());
-                    return false;
+                    LOG(0, "OM {C[i1]}. Found candidate blocking order due to SOF_IOP_ORDER_SHOULD_BE_CANCELLED. Side={i2} OID={i3}", getContractName(),
+                        _om->_side, order->oid.value())
+                    blockingOrderFound = true;
+                    continue;
                 }
-                if(!order->action_flags.is_cancelling) {
+
+                if (!order->action_flags.is_cancelling) {
                     //PotentialOverfill != 0 implies order will be unsolicitedly cancelled
-                    if(_potentialOverfill && (GetQuantity(*order, POTENTIAL_OVERFILL_QTY) != 0)) {
-                        LOG(0, "OM {C[i1]}. Found order with potential overfill.   Side={i2} OID={i3} _markedOrder={i4}", getContractName(), _om->_side, order->oid.value(), _om->_overfillProtection.getMarkedOrderCountForLogging());
-                        return false;
+                    if (_potentialOverfill && (GetQuantity(*order, POTENTIAL_OVERFILL_QTY) != 0)) {
+                        LOG(0, "OM {C[i1]}. Found order with potential overfill. Side={i2} OID={i3} _markedOrder={i4}", getContractName(),
+                            _om->_side, order->oid.value(), _om->_overfillProtection.getMarkedOrderCountForLogging());
+                        blockingOrderFound = true;
                     }
                     allCancelling = false;
                 }
+            }
+
+            _blockingOrders.clear();
+            if (blockingOrderFound) {
+                return false;
             }
 
             //If we have an overfill condition but every order is cancelling, we want to wait for it all to resolve before alerting the user
