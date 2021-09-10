@@ -873,8 +873,9 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
     }
 
     auto multiplier = _multipliers[contract->_def._internalId];
-    TLOG(0, "AS {C[i1]}. {i2} Path {i3} {i4}@{i5} Apply delta {i6}", _contract->name(), Side, _side, _priceSize._size, _priceSize._price, (multiplier * priceDelta))
-    _priceSize._price += multiplier * priceDelta;
+    auto delta = (multiplier * priceDelta);
+    TLOG(0, "AS {C[i1]}. {i2} Path {i3} Side={i4} {i5}@{i6} Apply delta {i7}", _contract->name(), Side, _id, _side, _priceSize._size, _priceSize._price, delta)
+    _priceSize._price += delta;
     _dirty = priceDelta;
     if (IsBetterPrice<Side>(newPrice, oldPrice)) {
         // If best path price getting better, we don't need to re-sort
@@ -1125,10 +1126,10 @@ inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t o
     auto size = getBestMarket<Side>()->getAdjustedSize();
     for (auto& path : _affectedPaths[Side]) {
         path->onBestMarketDataUpdate<Side>(this, oldBestPrice, newBestPrice, delta, size);
-#ifdef IS_DEV
-        DLOG(0, "AS {C[i1]}. {i2} Path {i3} {C[i4]} best market updated. side={i5} price={i6} oldPrice={i7} size={i8} path {i9}@{i10} dirty={i11} recalc={i12} resort={i13}", path->_contract->name(),
+        TLOG(0, "AS {C[i1]}. {i2} Path {i3} {C[i4]} best market updated. side={i5} price={i6} oldPrice={i7} size={i8} path {i9}@{i10} dirty={i11} recalc={i12} resort={i13}", path->_contract->name(),
              path->_side, path->_id, name(), Side, newBestPrice, oldBestPrice, _bestMarket[Side]->getAdjustedSize(),
              path->_priceSize._size, path->_priceSize._price, path->_dirty, path->_recalc, path->_resort)
+#ifdef IS_DEV
         if (path->_contract == this && newBestPrice != hf::NULL_PRICE && path->_priceSize._price != hf::NULL_PRICE &&
             IsBetterPrice<Side>(path->_priceSize._price, newBestPrice)) {
             LOG(0, "!!!! AS {C[i1]}. Path price better than best market", name())
