@@ -793,7 +793,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
             _priceSize._price += pathContract._multiplier * marketPrice;
 
             if (_priceSize._size > size) {
-                _sizeDetermineContract = _contract;
+                _sizeDetermineContract = pathContract._contract;
                 _priceSize._size = size;
             }
         }
