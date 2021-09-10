@@ -908,7 +908,8 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         _priceSize._size = size;
         _sizeDetermineContract = contract;
         _resort = true;
-    } else if (size > _priceSize._size && _priceSize._size < _contract->_quoteSize && contract == _sizeDetermineContract) {
+    } else if (size > _priceSize._size && _priceSize._size < _contract->_quoteSize &&
+               (!_sizeDetermineContract || contract == _sizeDetermineContract)) {
         _priceSize._size = std::min<hf::qty_t>(size, _contract->_quoteSize);
         for (auto& pathContract : _leanContracts) {
             auto sz = pathContract.bestMarket()->getAdjustedSize();
