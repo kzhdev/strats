@@ -701,6 +701,12 @@ public:
                         _potentialOverfill = 0;
                         return newCandidate;
                     }
+                } else if (_potentialOverfill == 0 && _flight < 0) {
+                    hf::qty_t newCandidate = candidate + _flight;
+                    if(newCandidate >= 0 && newCandidate <= target) {
+                        LOG(0, "OM {C[i1]} Ignore negative flight {i2}. The order probably filled while modify in-flight. The flight size should be change in the following order ack.", getContractName(), _flight);
+                        return newCandidate;
+                    }
                 }
 
                 isInLoop = true;
@@ -1118,10 +1124,6 @@ public:
                             SetQuantity(order, potentialOverfillQty, POTENTIAL_OVERFILL_QTY);
                         }
                     }
-                }
-
-                if (targetLevel->_flight < 0) {
-                    targetLevel->_flight = 0;
                 }
 
                 LOG(0, "OM {C[i1]}. Order TargetLevel. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
