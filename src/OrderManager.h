@@ -656,6 +656,8 @@ public:
             } else {
                 LOG(0, "OM {C[i1]}. Price={d1} Cannot synchronize orders since level used by other side.", getContractName(), _dollar)
             }
+            LOG(0, "OM {C[i1]}. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
+                _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             return change;
         }
 
@@ -835,7 +837,7 @@ public:
             }
 
             //There is quantity left, we're going to tag one order that is preventing the decrement.
-            LOG(0, "OM {C[i1]}. Quantity left after reduceSize; looking for order preventing decrement", getContractName());
+            LOG(0, "OM {C[i1]}. Quantity left after reduceSize; looking for order preventing decrement blockingOrders.size={i2}", getContractName(), _blockingOrders.size());
             bool allCancelling = !_blockingOrders.empty();
             bool blockingOrderFound = false;
             for(auto it = _blockingOrders.rbegin(); it != _blockingOrders.rend(); ++it) {
@@ -1172,7 +1174,9 @@ public:
 
             //CME and ICE are doing the same thing conceptually, it's just with ICE we can't have a chain with more than 1 level
             const auto foreachNodeOnPartialFill = [filledQty, &order](hf::qty_t currentQty, Level* currentLevel, hf::qty_t priorQty, Level* priorLevel, bool isPriorLevelRestingLevel, bool isLastLevel) ALWAYS_INLINE {
-                LOG(0, "**** partialFill. currentLevel={d1} priorLevel={d2}", currentLevel->_dollar, priorLevel->_dollar)
+                LOG(0, "**** partialFill. currentQty={i1} currentLevel={d1} priorQty={i2} priorLevel={d2} isPriorLevelRestingLevel={i3} isLastLevel={i4}", currentQty,
+                    currentLevel->_dollar, priorQty, priorLevel->_dollar, isPriorLevelRestingLevel, isLastLevel)
+
                 if(priorLevel != currentLevel) {
                     priorLevel->_flight += filledQty;
                     priorLevel->_flightout -= filledQty;
@@ -2341,7 +2345,8 @@ public:
     void cancel(om::order_t* order) {
         auto isAcked = IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IS_ACKED);
         auto isDelayedCancel = IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_IOP_ORDER_SHOULD_BE_CANCELLED);
-        LOG(0, "OM {C[i1]}. Cancel order. OID={i2} isAcked={i3} isDelayedcancel={i4}", getContractName(), order->oid.value(), isAcked, isDelayedCancel);
+        LOG(0, "OM {C[i1]}. Cancel order. OID={i2} isAcked={i3} isDelayedcancel={i4} leavesQty={i5}", getContractName(),
+            order->oid.value(), isAcked, isDelayedCancel, order->leavesQty);
         _ime->_executor->cancelOrder(_contract._internalId, order);
         if(!isAcked && _contract._venue == hf::VENUE::EUREX) {
             _overfillProtection.incrementIfNecessary(*order, this);
