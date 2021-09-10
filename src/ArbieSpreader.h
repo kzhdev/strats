@@ -838,8 +838,6 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         return;
     }
 
-    auto bestMarket = contract->_bestMarket[Side];
-
     if (_priceSize._price == hf::NULL_PRICE) {
         if (newPrice != hf::NULL_PRICE && size != 0) {
             if (BOOST_UNLIKELY(!_stfOffset._id.empty() && _stfOffset._stfOffset == hf::NULL_PRICE)) {
@@ -874,7 +872,8 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
 
     auto multiplier = _multipliers[contract->_def._internalId];
     auto delta = (multiplier * priceDelta);
-    TLOG(0, "AS {C[i1]}. {i2} Path {i3} Side={i4} {i5}@{i6} Apply delta {i7}", _contract->name(), Side, _id, _side, _priceSize._size, _priceSize._price, delta)
+    TLOG(0, "AS {C[i1]}. {i2} Path {i3} Side={i4} {i5}@{i6} Apply delta {i7} _sizeDetermineContract={i8}", _contract->name(),
+         Side, _id, _side, _priceSize._size, _priceSize._price, delta, (_sizeDetermineContract ? _sizeDetermineContract->_def._internalId : -1))
     _priceSize._price += delta;
     _dirty = priceDelta;
     if (IsBetterPrice<Side>(newPrice, oldPrice)) {
@@ -894,6 +893,7 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         }
 
         // if 0 size was due to the aggressive AS quoting, exclude the FAK Pre Adjustment
+        auto bestMarket = contract->_bestMarket[Side];
         size = bestMarket->getAdjustedSizeExcludeFAKPreAdj();
         if (size == 0) {
             // still get 0 size, other contract must have adjusted the hedge contract too, switch to
@@ -908,8 +908,9 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         _priceSize._size = size;
         _sizeDetermineContract = contract;
         _resort = true;
-    } else if (size > _priceSize._size && _priceSize._size < _contract->_quoteSize &&
+    } else if ((size > _priceSize._size) && (_priceSize._size < _contract->_quoteSize) &&
                (!_sizeDetermineContract || contract == _sizeDetermineContract)) {
+        TLOG(0, "AS {C[i1]}. Recalculate quote size", _contract->name())
         _priceSize._size = std::min<hf::qty_t>(size, _contract->_quoteSize);
         for (auto& pathContract : _leanContracts) {
             auto sz = pathContract.bestMarket()->getAdjustedSize();
