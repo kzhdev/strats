@@ -607,6 +607,9 @@ public:
             //TODO: Stop if we hit this case
             BOOST_ASSERT(target() == 0 ? change <= 0 : true);
 
+            LOG(0, "OM {C[i1]}. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8} change={i9}", getContractName(),
+                _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout, change)
+
             if (!_usedByOtherStack) {
                 synchronizeOrders(change, isHedge, stealer);
             } else if (targetType == TargetType::Hedge) {
@@ -656,8 +659,6 @@ public:
             } else {
                 LOG(0, "OM {C[i1]}. Price={d1} Cannot synchronize orders since level used by other side.", getContractName(), _dollar)
             }
-            LOG(0, "OM {C[i1]}. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
-                _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             return change;
         }
 
