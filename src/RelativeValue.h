@@ -16,6 +16,7 @@
 #include "ViperStrategyBase.h"
 #include "OrderRequestManager.h"
 #include "MarketDataConsumer.h"
+#include "PerfMonitor.h"
 
 namespace Python {
 
@@ -93,6 +94,32 @@ struct Leans {
     std::array<Lean, 1000> _leans;
 };
 
+template<uint32_t Side>
+inline hf::price_t calculateHedgeCost(const Market& leanMarket, hf::price_t leanFair) noexcept;
+
+template<>
+inline hf::price_t calculateHedgeCost<BID>(const Market& leanMarket, hf::price_t leanFair) noexcept {
+    return leanFair - leanMarket.getPrice();
+}
+
+template<>
+inline hf::price_t calculateHedgeCost<ASK>(const Market& leanMarket, hf::price_t leanFair) noexcept {
+    return leanMarket.getPrice() - leanFair;
+}
+
+template<uint32_t Side>
+inline hf::price_t calculateQuotePrice(hf::price_t fair, hf::price_t width, hf::price_t hedgingCost, hf::price_t multipliedCommission) noexcept;
+
+template<>
+inline hf::price_t calculateQuotePrice<BID>(hf::price_t fair, hf::price_t width, hf::price_t hedgingCost, hf::price_t multipliedCommission) noexcept {
+    return fair - width - hedgingCost - multipliedCommission;
+}
+
+template<>
+inline hf::price_t calculateQuotePrice<ASK>(hf::price_t fair, hf::price_t width, hf::price_t hedgingCost, hf::price_t multipliedCommission) noexcept {
+    return fair + width + hedgingCost + multipliedCommission;
+}
+
 struct Quote {
     Leans _leans;
 
@@ -145,13 +172,15 @@ struct Quote {
             _bestSize = contracts[contractId]._definition.toValidQty(static_cast<hf::qty_t>(bestLean._size + 0.0001));
             _bestLeanIndex = bestLean._instrumentIndex;
 
+            bool hasChange = false;
+
             auto& contract = contracts[contractId];
             bool internalPriceChanged = std::abs(oldBestPrice - _bestPrice) > contract._priceChangeThreshold;
-            _hasChange |= internalPriceChanged | (oldBestSize != _bestSize);
+            hasChange |= (internalPriceChanged | (oldBestSize != _bestSize));
 
-            auto checkExternalChange = [this, &contract, oldExtPrice, oldExtSize]() {
+            auto checkExternalChange = [this, &contract, oldExtPrice, oldExtSize]() -> bool {
                 bool externalPriceChanged = std::abs(oldExtPrice - _externalPrice) > contract._priceChangeThreshold;
-                _hasChange |= externalPriceChanged | (oldExtSize != _externalSize);
+                return (externalPriceChanged | (oldExtSize != _externalSize));
             };
 
             hf::price_t roundedPrice = hf::NULL_PRICE;
@@ -182,19 +211,18 @@ struct Quote {
                                                                   logErrorFunc);
                             _externalPrice = roundedPrice;
                             _externalSize = 0;
-                            checkExternalChange();
                             return false;
                         }
                     }
                 }
                 _externalPrice = roundedPrice;
                 _externalSize = contracts[contractId]._definition.toValidQty(staticQuote ? quoteSize : std::max(_bestSize, static_cast<hf::qty_t>(clubSize / clubCount + 0.0001)));
-                checkExternalChange();
+                hasChange |= checkExternalChange();
             }
             else {
                 _externalPrice = hf::NULL_PRICE;
                 _externalSize = 0;
-                checkExternalChange();
+                hasChange |= checkExternalChange();
                 if(BOOST_LIKELY(isEnabled)) {
                     const auto &validationResult = validateMaxTicksThroughMarketFunc(bestLean._price, bestLean._instrumentIndex);
                     if (BOOST_UNLIKELY(!validationResult.isValid)) {
@@ -204,10 +232,12 @@ struct Quote {
                 }
             }
 
+            _hasChange |= hasChange;
             auto& leanContract = contracts[bestLean._instrumentIndex];
             auto& market = bestLean._isExternal ? leanContract.externalMarket(side) : leanContract.internalMarket(side);
 
-            if (_hasChange || _previousBestLeanIndex != bestLean._instrumentIndex) {
+
+            if (hasChange || (_previousBestLeanIndex != bestLean._instrumentIndex)) {
                 LOG(0, "RV {C[i1]}. Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} Lean={C[i5]} {i6}@{d3} MarketId={i7}",
                     getContract(contractId, contracts), side, _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice), getContract(bestLean._instrumentIndex, contracts),
                     market.getAdjustedSize(), ToDollars(market.getPrice()), market.getId())
@@ -244,25 +274,25 @@ private:
             auto& quoteContract = contracts[contractId];
             auto otherSide = [side](){return side==BID ? ASK : BID;};
 
-            LOG(0, "Quote Violated MaxTicksThroughMarket.  Contract={C[i1]} Side={i2} Lean={C[i3]} InternalQuote={i4}@{d1} ExternalQuote={i5}@{d2} HedgeMarket(inthedge:0;intmm:1,intas:3,ext:4)={i6} quoteWithoutCap=({d3};{d4}) leanMarket(ss)=({d6};{d7})",
+            LOG(0, "Quote Violated MaxTicksThroughMarket.  Contract={C[i1]} Side={i2} Lean={C[i3]} InternalQuote={i4}@{d1} ExternalQuote={i5}@{d2} HedgeMarket(MMHedge:0;MM:1,AS:3,EXT:4)={i6} quoteWithoutCap={d3} leanMarket(ss)=({d4};{d5})",
                 getContract(contractId, contracts), side, getContract(lean._instrumentIndex, contracts), _bestSize, ToDollars(_bestPrice), _externalSize, ToDollars(_externalPrice),
-                lean._marketIndex, ToDollars(validationResult.quotes[Market::External]), ToDollars(validationResult.quotes[Market::Internal]),
-                ToDollars(leanContract.externalMarket(side).getPrice()), ToDollars(leanContract.internalMarket(side).getPrice()))
+                lean._marketIndex, ToDollars(validationResult.quoteWithoutCap), ToDollars(leanContract.externalMarket(side).getPrice()), ToDollars(leanContract.internalMarket(side).getPrice()))
             LOG(0, "  ...QuoteViolatedMaxTicksThroughMarket (continues) quoteMarket(os)=({d1};{d2})",
                 ToDollars(quoteContract.externalMarket(otherSide()).getPrice()), ToDollars(quoteContract.internalMarket(otherSide()).getPrice()))
 
             //We really need a "log both" method . . .
-            boost::format firstFormatString("Quote Violated MaxTicksThroughMarket.  Contract=%1% Side=%2% Lean=%3% rvExternalQuote=%4%@%5% rvInternalQuote=%6%@%7% HedgeMarket(inthedge:0;intmm:1,intas:3,ext:4)=%8%");
+            boost::format firstFormatString("Quote Violated MaxTicksThroughMarket. Contract=%1% Side=%2% Lean=%3% rvExternalQuote=%4%@%5% rvInternalQuote=%6%@%7% HedgeMarket(mmhedge:0;mm:1,as:3,ext:4)=%8%");
             logErrorFunc(boost::str(firstFormatString
                                     % contracts[contractId]._definition._name % side % contracts[lean._instrumentIndex]._definition._name
                                     %  _externalSize % ToDollars(_externalPrice) % _bestSize % ToDollars(_bestPrice)
                                     % lean._marketIndex));
 
-            boost::format secondFormatString("    rvQuoteWithoutCap=(%1%,%2%) quoteMarket=(%3%,%4%) leanMarket=(%5%,%6%)");
-            logErrorFunc(boost::str(secondFormatString % ToDollars(validationResult.quotes[Market::External])
-                                    % ToDollars(validationResult.quotes[Market::Internal])
-                                    % ToDollars(quoteContract.externalMarket(otherSide()).getPrice()) % ToDollars(quoteContract.internalMarket(otherSide()).getPrice())
-                                    % ToDollars(leanContract.externalMarket(side).getPrice()) % ToDollars(leanContract.internalMarket(side).getPrice())));
+            boost::format secondFormatString("    rvQuoteWithoutCap=%1% quoteMarket=(%2%,%3%) leanMarket=(%4%,%5%)");
+            logErrorFunc(boost::str(secondFormatString % ToDollars(validationResult.quoteWithoutCap)
+                                    % ToDollars(quoteContract.externalMarket(otherSide()).getPrice())
+                                    % ToDollars(quoteContract.internalMarket(otherSide()).getPrice())
+                                    % ToDollars(leanContract.externalMarket(side).getPrice())
+                                    % ToDollars(leanContract.internalMarket(side).getPrice())));
         }
 };
 
@@ -276,9 +306,11 @@ struct RvContract {
     double _priceChangeThreshold;
     hf::qty_t _establishedLevel;
     uint32_t _internalId;
+    hf::batch_id_t _lastMDbid = 0;
     bool _canTradeStatus = false;
     bool _traded = false;
     bool _usedInPricing = false;
+    bool _logNoPrice = false;
 
     void clearLeans() {
         _quotes[BID]._leans.clear();
@@ -353,12 +385,21 @@ public:
     }
 
     void runCycle(uint64_t now) {
+#ifdef ENABLE_PERF
+        auto begin = clockUtil::getCpuTicksStart();
+#endif
         if (_numberOfFills > 0) {
             LOG(0, "RV drained number of fills. {i1}", _numberOfFills)
         }
 
         const bool calculateDueToHedges = processHedgeRequests();
+#ifdef ENABLE_PERF
+        bool addPerf = calculateDueToHedges;
+#endif
         if (_hadExternalMarketData) {
+#ifdef ENABLE_PERF
+            addPerf = true;
+#endif
             recalculateAfterExternalMarketDataChange();
         }
 
@@ -366,9 +407,15 @@ public:
         const bool recalculateQuotes = (canActOnMarketData() & (_calculateDueToFront | _hadInternalMarketData  | _hadExternalMarketData))
                 | calculateDueToHedges | checkEMAOnOffTime(now);
         if (recalculateQuotes) {
+#ifdef ENABLE_PERF
+            addPerf = true;
+#endif
             _hasPendingQuoteCalculation = _withinInternalFillsOfCycle;
             calculateQuotes();
         } else if (_endOfQuotes & _hasPendingQuoteCalculation){
+#ifdef ENABLE_PERF
+            addPerf = true;
+#endif
             _hasPendingQuoteCalculation = false;
             calculateQuotes();
         }
@@ -378,6 +425,13 @@ public:
         _hadInternalMarketData = false;
         _hadExternalMarketData = false;
         _numberOfFills = 0;
+#ifdef ENABLE_PERF
+        if (addPerf) {
+            auto end = clockUtil::getCpuTicksEnd();
+            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, begin);
+            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::End, end);
+        }
+#endif
     }
 
 #ifdef IS_DEV
@@ -460,6 +514,8 @@ public:
     bool processHedgeRequests() {
         const bool hasHedgeRequests = !_hedgeRequests.empty();
         if (hasHedgeRequests) {
+            SCOPED_PERF_POINT(PerfId::RV_HedgeProcess);
+
             LOG(0, "RV. Processing hedge requests. {i1}", _hedgeRequests.size())
             for (auto it = _hedgeRequests.begin(); it != _hedgeRequests.end(); ) {
                 const uint32_t contractId = it->first;
@@ -563,13 +619,26 @@ public:
     void handleHardShutdown() {}
 
     void handleDisabled() {
+        for (uint32_t contractIndex = 0; contractIndex < _numberOfPricingContracts; ++contractIndex) {
+            auto& stf = _shortTermFairsForContracts.getRef(contractIndex);
+            if (stf._subscribed) {
+                _shortTermFairUpdate.emplace(contractIndex, &stf);
+            }
+        }
+
         for (uint32_t contractIndex = _indexOfFirstTradedContract; contractIndex < _numberOfAllContracts; ++contractIndex) {
             RvContract &contract = _contracts[contractIndex];
             if (contract._traded) {
                 contract._quotes[BID].resetBest();
                 contract._quotes[ASK].resetBest();
             }
+
+            auto& stf = _shortTermFairsForContracts.getRef(contractIndex);
+            if (stf._subscribed) {
+                _shortTermFairUpdate.emplace(contractIndex, &stf);
+            }
         }
+        sendSTFUpdates(true);
         _orderRequestMgr.sendCancelRequest(StrategyId::RelativeValue);
     }
 
@@ -721,13 +790,13 @@ public:
         market.ackFAKAdjustment(hedgeAck._hedgeId, hedgeAck._size, hedgeAck._orderId);
     }
 
-    void handleFill(const FillMessage& fill) {
+    void handleFill(const FillMessage& fill, bool checkLimit = true) {
         RvContract& contract = _contracts[fill._contractId];
         if (fill._source == FillSource::AsToRv) {
             const_cast<FillMessage&>(fill)._rvStf = _shortTermFairsForContracts.getRef(fill._contractId)._fair;
             sendFillToFront(fill);
             LOG(0, "RV {C[i1]}. got AS filled. Side={i2} Price={d1} Qty={i3}", getContract(contract._internalId), fill._side, ToDollars(fill._price), fill._qty)
-            addPosition(contract, (fill._side == BID ? fill._qty : -fill._qty), true, false);
+            addPosition(contract, (fill._side == BID ? fill._qty : -fill._qty), checkLimit, false);
             return;
         }
 
@@ -839,6 +908,8 @@ public:
         bool shortTermFairs = false;
         std::vector<uint32_t> checkEMA;
 
+        std::vector<std::tuple<VectorParametersColumns, uint32_t, double>> changedRangeMaxPos;
+
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
@@ -852,6 +923,7 @@ public:
                         foundation = true;
                         shortTermFairs = true;
                         LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::Range, gridCell.row(), value));
                     } else {
                         LOG(0, "RV could not change range. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
@@ -860,13 +932,14 @@ public:
                     break;
                 }
                 case VectorParametersColumns::MaxPos: {
-                    double value = boost::lexical_cast<double>(gridCell.value());
+                    auto value = boost::lexical_cast<double>(gridCell.value());
                     if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
                         _vectorsMaxPosition.setValue(gridCell.row(), value);
                         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                         foundation = true;
                         shortTermFairs = true;
                         LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::MaxPos, gridCell.row(), value));
                     } else {
                         LOG(0, "RV could not change max_pos. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
@@ -959,6 +1032,22 @@ public:
             }
         }
 
+        if (!changedRangeMaxPos.empty()) {
+            getStrategy(StrategyId::ArbieSpreader)->sendMessage<VectorParameterUpdate>(
+                    ViperMessageType::VectorParameterUpdate,
+                    [&changedRangeMaxPos] (VectorParameterUpdate& msg) {
+                        msg._numUpdate = changedRangeMaxPos.size();
+                        VectorParameterUpdate::Update* data = msg._data;
+                        for (auto& change : changedRangeMaxPos) {
+                            data->_type = std::get<0>(change);
+                            data->_vectorIndex = std::get<1>(change);
+                            data->_value = std::get<2>(change);
+                            ++data;
+                        }
+                    },
+                    changedRangeMaxPos.size() * sizeof(VectorParameterUpdate::Update));
+        }
+
         if (foundation) {
             calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes();
             sendQuoteSizesToGUI();
@@ -1037,7 +1126,7 @@ public:
                 }
                 case ContractParameterRVColumns::MaxTicksThroughMarket : {
                     double value = boost::lexical_cast<double>(gridCell.value());
-                    _maxTicksThroughMarket.setValue(gridCell.row(), value);
+                    _maxTicksThroughMarket.setValue(gridCell.row(), contract._definition._tickSize * value);
                     LOG(0, "RV {C[i1]}. MaxTicksThroughMarket changes. Value={d1}", getContract(contract._internalId), value)
                     break;
                 }
@@ -1118,7 +1207,7 @@ public:
                 }
 
                 if(errorOccurredOnThisIter) {
-                    gridCell->set_value(std::to_string(_maxTicksThroughMarket.getValue(gridCell->row())));
+                    gridCell->set_value(std::to_string(((double)_maxTicksThroughMarket.getValue(gridCell->row())) / contract._definition._tickSize));
                 }
             }
         }
@@ -1446,10 +1535,11 @@ public:
                     }
                 }
                 catch (const boost::bad_lexical_cast&) {
-                    LOG(0, "Invalid width multiplier value {i1}", 0)
+                    LOG(0, "Invalid RV width multiplier value {i1}", 0)
                     gridCell.set_value(config._shifts[toUInt(shift)]);
-                    sendErrorMessage(boost::str(boost::format("Invalid width multiplier value %1%") % gridCell.value()), ErrorType::Critical);
+                    sendErrorMessage(boost::str(boost::format("Invalid RV width multiplier value %1%") % gridCell.value()), ErrorType::Critical);
                 }
+                break;
             }
         }
 
@@ -1462,7 +1552,7 @@ public:
     }
 
     bool isWidthMultiplierWithinLimits(double value) {
-        return IsSame(value, 1.0) | ((value > 1) & (value <= 10.0));
+        return (Compare(value, 1.0) >= 0) & (Compare(value, 10.0) <= 0);
     }
 
     bool isPctStfMoveWithinLimits(double value) {
@@ -1488,34 +1578,28 @@ public:
         logging::GetLogger().logError("RV Queue_threshold_exceeded");
     }
 
-    void handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBatch& batch) {
+    void handleUncommonMDEvent(const md::MDEvent &mde, const md::MDBatch& batch, uint32_t internalId) {
         switch (mde.type) {
             case md::MDEvent::TYPE::FAK_DONE: {
                 const auto &event = static_cast<const md::MDFakDonenEvent &> (mde);
-                handleFakDone(batch.venue, event);
+                handleFakDone(ToViperSide(event._side), internalId, event._oid.value());
                 break;
             }
             case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
                 const auto &event = static_cast<const md::MDIntraEventSweepEvent &> (mde);
-                const uint32_t internalId = _viperConfig.getInternalId(event.sid);
 
-                if(BOOST_UNLIKELY(internalId == INVALID_INTERNAL_ID)) {
-                    LOG(0, "EXE Sweep detected in unknown product.  sid={i1} extSeqNum={i2} diff={i3} qty={i4}", event.sid, batch.extSequenceNumber, event.diff, event.qty);
-                }
-                else {
-                    LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
-                    const auto &sweepLimits = _sweepDefinition.getRef(internalId);
-                    if (sweepLimits.sweepDetected(event)) {
-                        if (BOOST_LIKELY(isEnabled())) {
-                            LOG(0, "RV {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
-                                getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
-                            disableRelativeValue("Sweep detected by RV (more info to follow)", true);
-                            disableQuoteExternal();
-                            sendErrorMessage("Sweep info: disabling RV, disabling RV external quoting.  Contract=" + getContractName(internalId) + " PriceLimit=" +
-                                             std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
-                                             " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
-                        }
-                    } 
+                LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
+                const auto &sweepLimits = _sweepDefinition.getRef(internalId);
+                if (sweepLimits.sweepDetected(event)) {
+                    if (BOOST_LIKELY(isEnabled())) {
+                        LOG(0, "RV {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
+                            getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
+                        disableRelativeValue("Sweep detected by RV (more info to follow)", true);
+                        disableQuoteExternal();
+                        sendErrorMessage("Sweep info: disabling RV, disabling RV external quoting.  Contract=" + getContractName(internalId) + " PriceLimit=" +
+                                         std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
+                                         " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
+                    }
                 }
                 break;
             }
@@ -1524,23 +1608,31 @@ public:
         }
     }
 
-    void onEndMDBatch() {
+    void onEndMDBatch(hf::batch_id_t bid) {
         _hadExternalMarketData = true;
+        for (uint32_t contractId : _mdUpdated) {
+            auto& rvContract = _contracts[contractId];
+            rvContract._lastMDbid = bid;
+        }
     }
 
-    void onMDTrade(hf::VENUE venue, const md::MDTradeEvent &event) {
-        if (venue == hf::VENUE::CME) {
+    void onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent &event, uint32_t internalId) {
+        RvContract& contract = _contracts[internalId];
+
+        if (BOOST_UNLIKELY(contract._lastMDbid >= batch.bid)) {
+            logging::GetLogger().logWarning(boost::str(boost::format("RV %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batch.bid % contract._lastMDbid));
+            return;
+        }
+
+        if (batch.venue == hf::VENUE::CME) {
             for (uint32_t i = 0; i < event.num; ++i) {
                 auto& trade = event.trades[i];
-                const uint32_t internalId = _viperConfig.getInternalId(event.sid);
-                if (internalId != INVALID_INTERNAL_ID) {
-                    if (trade.side == hf::SIDE::BUY) {
-                        //LOG(0, "RV: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        onMarketDataUpdate(internalId, true, trade.pr, trade.q, false, 0, 0);
-                    } else if (trade.side == hf::SIDE::SELL) {
-                        //LOG(0, "RV: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
-                        onMarketDataUpdate(internalId, false, 0, 0, true, trade.pr, trade.q);
-                    }
+                if (trade.side == hf::SIDE::BUY) {
+                    //LOG(0, "RV: Contract {C[i1]} Bid book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
+                    onMarketDataUpdate(contract, internalId, true, trade.pr, trade.q, false, 0, 0);
+                } else if (trade.side == hf::SIDE::SELL) {
+                    //LOG(0, "RV: Contract {C[i1]} Ask book adjustment due to trade. {i2}@{d1}", getContract(internalId), trade.q, ToDollars(trade.pr))
+                    onMarketDataUpdate(contract, internalId, false, 0, 0, true, trade.pr, trade.q);
                 }
             }
         }
@@ -1648,7 +1740,7 @@ public:
             }
             case 21: {
                 contract._canTradeStatus = false;
-                LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), (uint32_t)(event.extStatus), contract._usedInPricing)
+                LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), contract._usedInPricing)
                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing=%2%") % contract._definition._name % contract._usedInPricing));
                 break;
             }
@@ -1718,22 +1810,24 @@ public:
         }
     }
 
-    void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event) {
-        const uint32_t internalId = _viperConfig.getInternalId(event.sid);
+    void handleFakDone(uint32_t side, uint32_t internalId, om::strategy_order_id_t::value_type oid) {
         LOG(0, "RV {C[i1]}. Received FAK done.", internalId)
-        if (internalId != INVALID_INTERNAL_ID) {
-            RvContract& contract = _contracts[internalId];
-            const uint32_t side = ToViperSide(event._side);
-            Market& book = contract.externalMarket(side);
-            book.handleFakDone(event._oid.value());
-        }
+        RvContract& contract = _contracts[internalId];
+        Market& book = contract.externalMarket(side);
+        book.handleFakDone(oid);
     }
 
-    void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId) {
+    void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId, hf::batch_id_t batchBid) {
         const md::top_t::level_t& bid = event.buy.top.l[0];
         const md::top_t::level_t& ask = event.sell.top.l[0];
 
         RvContract& contract = _contracts[internalId];
+
+        if (BOOST_UNLIKELY(contract._lastMDbid >= batchBid)) {
+            logging::GetLogger().logWarning(boost::str(boost::format("RV %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batchBid % contract._lastMDbid));
+            return;
+        }
+
         const Market& rvBid = contract.externalMarket<BID>();
         const Market& rvAsk = contract.externalMarket<ASK>();
 
@@ -1753,28 +1847,21 @@ public:
             Market& ask = contract.externalMarket<ASK>();
             ask.update(askPrice, askSize);
         }
-        {
-            if (bidChanged | askChanged) {
-                _updatedContracts.insert(internalId);
-                if (contract._usedInPricing) {
-                    const bool missingBook = (contract.externalMarket<BID>().getPrice() == hf::NULL_PRICE) | (contract.externalMarket<ASK>().getPrice() == hf::NULL_PRICE);
-                    if (BOOST_UNLIKELY(missingBook)) {
-                        LOG(0, "RV {C[i1]}. Lost book for contract.", getContract(contract._internalId))
-                        disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
-                    }
-                }
-
-                if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
-                    LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContract(contract._internalId))
-                    disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
+        if (bidChanged | askChanged) {
+            _updatedContracts.emplace(internalId);
+            if (contract._usedInPricing) {
+                const bool missingBook = (contract.externalMarket<BID>().getPrice() == hf::NULL_PRICE) | (contract.externalMarket<ASK>().getPrice() == hf::NULL_PRICE);
+                if (BOOST_UNLIKELY(missingBook)) {
+                    LOG(0, "RV {C[i1]}. Lost book for contract.", getContract(contract._internalId))
+                    disableRelativeValue(boost::str(boost::format("Do not have market data for pricing. Contract=%1%") % contract._definition._name));
                 }
             }
-        }
-    }
 
-    void onMarketDataUpdate(uint32_t internalId, bool bidChanged, hf::price_t bidPrice, hf::qty_t bidSize, bool askChanged, hf::price_t askPrice, hf::qty_t askSize) {
-        RvContract& contract = _contracts[internalId];
-        onMarketDataUpdate(contract, internalId, bidChanged, bidPrice, bidSize, askChanged, askPrice, askSize);
+            if (BOOST_UNLIKELY(!isWithinMaxTicksWide(contract))) {
+                LOG(0, "RV {C[i1]}. MaxTicksWide breached. Disable RV.", getContract(contract._internalId))
+                disableRelativeValue(boost::str(boost::format("MaxTicksWide breached. Disable RV. Contract=%1%") % contract._definition._name));
+            }
+        }
     }
 
     bool canActOnMarketData() const {
@@ -1783,6 +1870,7 @@ public:
 
     void recalculateAfterExternalMarketDataChange() {
         if (canActOnMarketData()) {
+            SCOPED_PERF_POINT(PerfId::RV_CalcAfterMDChange);
             bool needToRecalculate = false;
             for (uint32_t id : _updatedContracts) {
                 RvContract& contract = _contracts[id];
@@ -1927,6 +2015,7 @@ public:
         ViperStrategyBaseImpl<RelativeValue>::init(frequency, internalHeartbeatPeriod, pnlLimitsChecker);
         initializeModel();
         _latencyTracking.unset();
+        _updatedContracts.reserve(_viperConfig._allContracts.size());
     }
 
     void initializeModel() {
@@ -2052,6 +2141,7 @@ public:
         _factorHedgedIndexes.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsInVector.init(_numberOfVectors);
+        _shortTermFairsMoveInVector.init(_numberOfVectors);
         _possibleHedgeRatios.initialize(_numberOfVectors, 3);
         _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
         _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
@@ -2059,6 +2149,7 @@ public:
         _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
         _shortTermFairsForContracts.initDefault(_numberOfAllContracts);
         _shortTermFairsCache.init(_numberOfAllContracts);
+        _shortTermFairsMoveForContract.init(_numberOfAllContracts);
         _rhoneMaxClipSize.init(_numberOfAllContracts);
         _lastOrderRequests.resize(_numberOfAllContracts);
     }
@@ -2098,7 +2189,7 @@ public:
                 _contractWidths.setValue(contract->_internalId, ToRhonePrice(rvConfig._width));
                 _contractQuoteExternal.setValue(contract->_internalId, rvConfig._quoteExternal);
                 _pctStfMoves.setValue(contract->_internalId, rvConfig._pctStfMove);
-                _maxTicksThroughMarket.setValue(contract->_internalId, rvConfig._maxTicksThroughMarket);
+                _maxTicksThroughMarket.setValue(contract->_internalId, rvConfig._maxTicksThroughMarket * contract->_definition._tickSize);
                 _staticQuote.setValue(contract->_internalId, rvConfig._staticQuote);
                 _staticQuoteSize.setValue(contract->_internalId, rvConfig._quoteSize);
                 contract->_traded = true;
@@ -2641,27 +2732,39 @@ public:
             }
         }
 
+        // logShortTermFairsForVectors();
+        logShortTermFairsForContracts();
+        _hasDataForCharts = true;
+    }
+
+    void sendSTFUpdates(bool reset = false) {
         if (!_shortTermFairUpdate.empty()) {
-            if (isEnabled()) {
+            if (isEnabled() || reset) {
                 uint32_t dataSize = _shortTermFairUpdate.size() * sizeof(STFUpdate::STF);
                 getStrategy(StrategyId::ArbieSpreader)->sendMessage<STFUpdate>(
                         ViperMessageType::STFUpdate,
-                        [this](STFUpdate& msg) {
+                        [this, reset](STFUpdate& msg) {
                             msg._numSTF = _shortTermFairUpdate.size();
                             STFUpdate::STF* data = msg._data;
                             for (auto& kvp : _shortTermFairUpdate) {
                                 data->_contractId = kvp.first;
-                                data->_fair = kvp.second->_fair;
+                                if (reset) {
+                                    data->_fair = hf::NULL_PRICE;
+                                    kvp.second->_fair = 0;
+                                    kvp.second->_firstUpdateSent = false;
+                                } else {
+                                    data->_fair = kvp.second->_fair;
+                                    if (BOOST_UNLIKELY(!kvp.second->_firstUpdateSent)) {
+                                        kvp.second->_firstUpdateSent = true;
+                                        logging::GetLogger().logInfo(boost::str(boost::format("RV. Send %1% stf. stf=%2%") % _contracts[kvp.first]._definition._name % ToDollars(kvp.second->_fair)));
+                                    }
+                                }
                                 ++data;
                             }
                         }, dataSize);
+                _shortTermFairUpdate.clear();
             }
-            _shortTermFairUpdate.clear();
         }
-
-        // logShortTermFairsForVectors();
-        logShortTermFairsForContracts();
-        _hasDataForCharts = true;
     }
 
     void logShortTermFairsForVectors() {
@@ -2681,8 +2784,8 @@ public:
     }
 
     struct ValidateMaxTicksThroughMarketResult {
-        hf::price_t quotes[Market::Type::__NumberOfMarkets__];
-        bool isValid;
+        hf::price_t quoteWithoutCap = hf::NULL_PRICE;
+        bool isValid = true;
     };
 
     //Returns hf::null_price if passes
@@ -2691,81 +2794,34 @@ public:
         static_assert((side == BID) || (side == ASK), "Bad side");
 
         ValidateMaxTicksThroughMarketResult result;
-        result.isValid = true;
 
         hf::price_t leanFair = _shortTermFairsForContracts.getRef(leanIndex)._fair;
         hf::price_t fair = _shortTermFairsForContracts.getRef(instrumentIndex)._fair;
         hf::price_t width = _contractWidths.getValue(instrumentIndex) + _extraContractWidths.getValue(instrumentIndex);
-        double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
+        double hedgeRatio = _hedgeRatios.getValue(instrumentIndex, leanIndex);
 
         auto& leanMarkets = _contracts[leanIndex];
-        auto& quoteMarkets = _contracts[instrumentIndex];
 
-        auto checkedMin = [](hf::price_t target, hf::price_t candidate) {
-            static_assert(hf::NULL_PRICE == INT64_MIN, "Can't use naked std::min since null will always win");
-            if(candidate == hf::NULL_PRICE) { return target; }
-            return (target == hf::NULL_PRICE ? candidate : std::min(target, candidate));
-        };
-
-        auto checkedMax = [](hf::price_t target, hf::price_t candidate) {
-            static_assert(hf::NULL_PRICE == INT64_MIN, "We are assuming Max doesn't care about null case");
-            return std::max(target, candidate);
-        };
-
-        if(side == BID) {
-            hf::price_t bestOffer = hf::NULL_PRICE;
-            for(uint32_t i = 0; i < Market::__NumberOfMarkets__; ++i) {
-                hf::price_t candidateMarket = quoteMarkets._markets[GetOtherSide<side>()][i].getPrice();
-                bestOffer = checkedMin(bestOffer, candidateMarket);
-            }
-            if(bestOffer == hf::NULL_PRICE) {
-                result.isValid = true;
-                return result;
-            }
-
-            //One of these formulas should have produced the calculatedPrice
-            BOOST_ASSERT((calculatedPrice == calculateBid<true>(leanMarkets._internalMarkets[side]._markets[0], contract, leanIndex, leanFair, fair, width, hedgeRatio, false))
-                    || (calculatedPrice == calculateBid<true>(leanMarkets._internalMarkets[side]._markets[1], contract, leanIndex, leanFair, fair, width, hedgeRatio, false))
-                    || (calculatedPrice == calculateBid<true>(leanMarkets._externalMarket[side], contract, leanIndex, leanFair, fair, width, hedgeRatio, true)));
-
-            for(uint32_t i = 0; i < Market::__NumberOfMarkets__; ++i) {
-                result.quotes[i] = calculateBid<false>(leanMarkets._markets[side][i], contract, leanIndex, leanFair, fair, width, hedgeRatio, i);
-                calculatedPrice = checkedMax(calculatedPrice, result.quotes[i]);
-            }
-
-            //TODO: store the multiplier value
-            if((calculatedPrice - bestOffer) >= contract._definition._tickSize * _maxTicksThroughMarket.getValue(instrumentIndex)) {
-                   result.isValid = false;
-            }
+        hf::price_t otherSideBest = contract.bestMarket<GetOtherSide<side>()>().getPrice();
+        if(otherSideBest == hf::NULL_PRICE) {
+            return result;
         }
-        else {
-            hf::price_t bestBid = hf::NULL_PRICE;
-            hf::price_t candidateBestBid = quoteMarkets.internalMarket<GetOtherSide<side>()>().getPrice();
-            bestBid = checkedMax(bestBid, candidateBestBid);
 
-            bestBid = std::max(bestBid, quoteMarkets.externalMarket<GetOtherSide<side>()>().getPrice());
-            if(bestBid == hf::NULL_PRICE) {
-                result.isValid = true;
-                return result;
-            }
+        auto& bestMarket = leanMarkets.template bestMarket<side>();
 
-            //One of these formulas should have produced the calculatedPrice
-            BOOST_ASSERT((calculatedPrice == calculateAsk<true>(leanMarkets.intenralMarket<side>(), contract, leanIndex, leanFair, fair, width, hedgeRatio, false))
-                    || (calculatedPrice == calculateAsk<true>(leanMarkets.externalMarket<side>(), contract, leanIndex, leanFair, fair, width, hedgeRatio, true)));
+        //One of these formulas should have produced the calculatedPrice
+        BOOST_ASSERT((calculatedPrice == calculateQuote<side, true>(leanMarkets.intenralMarket<side>(), contract, leanIndex, leanFair, fair, width, hedgeRatio, false))
+                || (calculatedPrice == calculateQuote<side, true>(leanMarkets.externalMarket<side>(), contract, leanIndex, leanFair, fair, width, hedgeRatio, true)));
 
-            for(uint32_t i = 0; i < Market::__NumberOfMarkets__; ++i) {
-                result.quotes[i] = calculateAsk<false>(leanMarkets._markets[side][i], contract, leanIndex, leanFair, fair, width, hedgeRatio, i);
-                calculatedPrice = checkedMin(calculatedPrice, result.quotes[i]);
-            }
-
-            if((bestBid - calculatedPrice) >= contract._definition._tickSize * _maxTicksThroughMarket.getValue(instrumentIndex)) {
-                result.isValid = false;
-            }
+        result.quoteWithoutCap = calculateQuote<side, false>(bestMarket, contract, leanIndex, leanFair, fair, width, hedgeRatio, bestMarket.getId() == MarketIds::MARKET_ID_EXTERNAL);
+        if(calculateTicksThroughMarket<side>(result.quoteWithoutCap, otherSideBest) >= _maxTicksThroughMarket.getValue(instrumentIndex)) {
+            result.isValid = false;
         }
         return result;
     }
 
     bool calculateQuotes() {
+        SCOPED_PERF_POINT(PerfId::RV_CalculateQuote);
         // LOG(0, "CalculateQuotes {i1}", 0);
         const uint64_t startTimeStamp = clockUtil::GetCycles();
         // logCurrentExternalMarkets();
@@ -2790,10 +2846,10 @@ public:
                         RvContract& leanContract = _contracts[leanIndex];
 
                         auto& leanBids = leanContract.bestMarket<BID>();
-                        calculateBidQuote(leanBids, contract, leanIndex, leanFair, fair, width, maxQuoteSize, leanBids.getId() == MarketIds::MARKET_ID_EXTERNAL);
+                        calculateQuote<BID>(leanBids, contract, leanIndex, leanFair, fair, width, maxQuoteSize, leanBids.getId() == MarketIds::MARKET_ID_EXTERNAL);
 
                         auto& leanOffers = leanContract.bestMarket<ASK>();
-                        calculateAskQuote(leanOffers, contract, leanIndex, leanFair, fair, width, maxQuoteSize, leanOffers.getId() == MarketIds::MARKET_ID_EXTERNAL);
+                        calculateQuote<ASK>(leanOffers, contract, leanIndex, leanFair, fair, width, maxQuoteSize, leanOffers.getId() == MarketIds::MARKET_ID_EXTERNAL);
                     }
                 }
 
@@ -2813,10 +2869,10 @@ public:
                         [&](const std::string& errorMsg) { sendErrorMessage(errorMsg, ErrorType::Critical); });
 
                 if(BOOST_UNLIKELY(!noErrorsOnCreateQuote)) {
-                    std::string error = "MaxQuotesThroughMarketCheckFailed.  Contract=";
+                    std::string error = "MaxTicksThroughMarketCheckFailed.  Contract=";
                     disableRelativeValue(error + contract._definition._name);
-                    LOG(0, "MaxQuotesThroughMarketCheckFailed, Disable External Quoting. OffendingContract={C[i1]}", getContract(contract._internalId))
-                    sendErrorMessage("Disabling QuoteExternal. Reason=RV MaxQuotesThroughMarketCheckFailed", ErrorType::Critical);
+                    LOG(0, "MaxTicksThroughMarketCheckFailed. Disable External Quoting. OffendingContract={C[i1]}", getContract(contract._internalId))
+                    sendErrorMessage("Disabling QuoteExternal. Reason=RV MaxTicksThroughMarketCheckFailed", ErrorType::Critical);
                     disableQuoteExternal();
                     break;
                 }
@@ -2833,6 +2889,10 @@ public:
             LOG(0, "RV Start of internal fills transaction {i1}", _fillsTransactionNumber);
             _withinInternalFillsOfCycle = true;
             sendGenericMessageToExecutor(ViperMessageType::EndOfQuotes, _fillsTransactionNumber++);
+        }
+
+        if (noErrorsOnCreateQuote) {
+            sendSTFUpdates();
         }
         return noErrorsOnCreateQuote;
     }
@@ -2888,48 +2948,25 @@ public:
         }
     }
 
-    void calculateBidQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize, bool isExternal) {
+    template<uint32_t Side>
+    void calculateQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize, bool isExternal) {
         const double hedgeRatio = _hedgeRatios.getValue(contract._internalId, leanIndex);
-        hf::price_t bidPrice = calculateBid(leanMarket, contract, leanIndex, leanFair, fair, width, hedgeRatio, isExternal);
-        if(bidPrice != hf::NULL_PRICE) {
-            const double size = calculateSize(contract, leanIndex, ASK, hedgeRatio, leanMarket.getAdjustedSize(), maxQuoteSize);
-            contract._quotes[BID]._leans.add(leanMarket, leanIndex, leanMarket.getId(), bidPrice, size, isExternal);
+        hf::price_t price = calculateQuote<Side, true>(leanMarket, contract, leanIndex, leanFair, fair, width, hedgeRatio, isExternal);
+        if(price != hf::NULL_PRICE) {
+            const double size = calculateSize(contract, leanIndex, Side, hedgeRatio, leanMarket.getAdjustedSize(), maxQuoteSize);
+            contract._quotes[Side]._leans.add(leanMarket, leanIndex, leanMarket.getId(), price, size, isExternal);
         }
     }
 
-    template<bool ShouldCapNegativeCostToPctWidth = true>
-    hf::price_t calculateBid(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double hedgeRatio, bool isExternal) {
+    template<uint32_t Side, bool ShouldCapNegativeCostToPctWidth>
+    hf::price_t calculateQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double hedgeRatio, bool isExternal) {
         if ((leanMarket.getPrice() != hf::NULL_PRICE && !IsZero(hedgeRatio))    // on hedge path: must have price
             || (IsZero(hedgeRatio) && isExternal)) {                            // on no hedge path: must external
             RvContract& leanContract = _contracts[leanIndex];
-            const hf::price_t bidHedgingCost = leanFair - leanMarket.getPrice();
+            const hf::price_t bidHedgingCost = calculateHedgeCost<Side>(leanMarket, leanFair);
             const hf::price_t hedgingCost = calculateHedgingCost<ShouldCapNegativeCostToPctWidth>(width, bidHedgingCost, hedgeRatio, contract, leanContract);
             const hf::price_t multipliedCommission = static_cast<hf::price_t>(_commissions.getValue(contract._definition._internalId, leanIndex) / contract._pricingMultiplier);
-            const hf::price_t bidPrice = fair - width - hedgingCost - multipliedCommission;
-            return bidPrice;
-        }
-        return hf::NULL_PRICE;
-    }
-
-    void calculateAskQuote(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double maxQuoteSize, bool isExternal) {
-        const double hedgeRatio = _hedgeRatios.getValue(contract._definition._internalId, leanIndex);
-        hf::price_t askPrice = calculateAsk(leanMarket, contract, leanIndex, leanFair, fair, width, hedgeRatio, isExternal);
-        if(askPrice != hf::NULL_PRICE) {
-            const double size = calculateSize(contract, leanIndex, BID, hedgeRatio, leanMarket.getAdjustedSize(), maxQuoteSize);
-            contract._quotes[ASK]._leans.add(leanMarket, leanIndex, leanMarket.getId(), askPrice, size, isExternal);
-        }
-    }
-
-    template<bool ShouldCapNegativeCostToPctWidth = true>
-    hf::price_t calculateAsk(Market& leanMarket, RvContract& contract, uint32_t leanIndex, hf::price_t leanFair, hf::price_t fair, hf::price_t width, double hedgeRatio, bool isExternal) {
-        if ((leanMarket.getPrice() != hf::NULL_PRICE && !IsZero(hedgeRatio))    // on hedge path: must have price
-            || (IsZero(hedgeRatio) && isExternal)) {                            // on no hedge path: must external
-            RvContract& leanContract = _contracts[leanIndex];
-            const hf::price_t askHedgingCost = leanMarket.getPrice() - leanFair;
-            const hf::price_t hedgingCost = calculateHedgingCost<ShouldCapNegativeCostToPctWidth>(width, askHedgingCost, hedgeRatio, contract, leanContract);
-            const hf::price_t multipliedCommission = static_cast<hf::price_t>(_commissions.getValue(contract._definition._internalId, leanIndex) / contract._pricingMultiplier);
-            const hf::price_t askPrice = fair + width + hedgingCost + multipliedCommission;
-            return askPrice;
+            return calculateQuotePrice<Side>(fair, width, hedgingCost, multipliedCommission);
         }
         return hf::NULL_PRICE;
     }
@@ -2958,7 +2995,7 @@ public:
             }
             // LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Side={i3} Market={d1} Max={d2} PossibleSize={d3} Size={d4} HedgeRatio={d5}", getContract(contract._internalId), getContract(leanIndex), side, marketSize, maxQuoteSize, possibleSize, size, hedgeRatio)
         } else {
-            // LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Sid={i3} Market={d1} Max={d2} Size={d3} HedgeRatio is not positive. Ratio={d4}", getContract(contract._internalId), getContract(leanIndex), side, marketSize, maxQuoteSize, size, hedgeRatio)
+            // LOG(0, "Calculated lean size. Contract={C[i1]} Lean={C[i2]} Side={i3} Market={d1} Max={d2} Size={d3} HedgeRatio is not positive. Ratio={d4}", getContract(contract._internalId), getContract(leanIndex), side, marketSize, maxQuoteSize, size, hedgeRatio)
             size = maxQuoteSize;
         }
         return size;
@@ -3047,17 +3084,20 @@ public:
     Vector<uint32_t> _staticQuoteSize;
     SimpleMatrix<hf::price_t> _commissions; // row, col - all contracts, all contracts
     Vector<double> _commissionsInput;
-    Vector<double> _maxTicksThroughMarket;
+    Vector<hf::price_t> _maxTicksThroughMarket;
     Vector<hf::price_t> _maxTicksWide;
 
     struct ShortTermFairs {
         hf::price_t _fair = 0;
         bool _subscribed = false;
+        bool _firstUpdateSent = false;
     };
     Vector<ShortTermFairs> _shortTermFairsForContracts;
     Vector<hf::price_t> _shortTermFairsCache;
     std::unordered_map<uint32_t, ShortTermFairs*> _shortTermFairUpdate;
     Vector<double> _shortTermFairsInVector;
+    Vector<double> _shortTermFairsMoveInVector;
+    Vector<double> _shortTermFairsMoveForContract;
     Vector<double> _longTermFairsInVector;
     bool _hasDataForCharts = false;
 
@@ -3098,7 +3138,6 @@ private:
     bool _calculateDueToFront = false;
     bool _hadInternalMarketData = false;
     bool _hadExternalMarketData = false;
-
     uint32_t _numberOfFills = 0;
 
     om::client_id_t _id;

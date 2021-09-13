@@ -255,6 +255,7 @@ class InternalMatchingEngine {
     std::unordered_map<uint32_t, InternalMarketSub> _internalMarketSubscriptions;
     bool _notifyInternalMarketChange = false;
     uint32_t _selfMatchCounter = 0;
+    uint32_t _asHedgeQuoteSelfMatchCounter = 0;
 
 public:
 
@@ -895,10 +896,23 @@ public:
             if (strategy == order->_strategy) {
                 WLOG(0, "IME {C[i1]}. {i2} Self match. Skip order {i3}@{d1} ID={i4}", getContractName(),
                      strategyName(strategy), order->_size, ToDollars(order->_price), order->_id)
-                _executor->sendErrorMessage(
-                        boost::str(boost::format("Skip self match order. Strategy=%1% Contract=%2% OrderId=%3% %4%@%5%") %
-                                   toString(strategy) % _name % order->_id % order->_size % ToDollars(order->_price)),
-                        ErrorType::Critical);
+                if (strategy == StrategyId::ArbieSpreader) {
+                    if (++_asHedgeQuoteSelfMatchCounter >= MAX_SELF_MATCH_THRESHOLD) {
+                        _asHedgeQuoteSelfMatchCounter = 0;
+                        _executor->sendErrorMessage(
+                                boost::str(
+                                        boost::format("Disable %1%. Self match reached 50 times") % toString(strategy)),
+                                ErrorType::Critical);
+                        _executor->getStrategy(strategy)->disable();
+                    }
+                } else {
+                    _executor->sendErrorMessage(
+                            boost::str(boost::format(
+                                    "Skip self match order. Strategy=%1% Contract=%2% OrderId=%3% %4%@%5%") %
+                                       toString(strategy) % _name % order->_id % order->_size %
+                                       ToDollars(order->_price)),
+                            ErrorType::Critical);
+                }
 
                 if (++orderIt == orderMap.end()) {
                     break;
@@ -909,7 +923,7 @@ public:
 
             const hf::qty_t fillSize = std::min(order->_size, size);
 
-            LOG(0, "IME {C[i1]}. Matched with {i2}@{d1} ID={i3} fillSize={fillSize}",
+            LOG(0, "IME {C[i1]}. Matched with {i2}@{d1} ID={i3} fillSize={i4}",
                 getContractName(), order->_size, ToDollars(order->_price), order->_id, fillSize)
 
             _internalFills.push_back({order, order->_price, fillSize});
@@ -958,42 +972,70 @@ public:
     bool matchPayUpOrder(PayUpMap& payUpMap, OtherMap& otherMap, uint32_t payUpSide) {
         for (auto payUpIt = payUpMap.begin(); payUpIt != payUpMap.end(); ++payUpIt) {
             Order* payUpOrder = payUpIt->second;
-            if (payUpOrder->_inPayUp) {
-                for (auto otherIt = otherMap.begin(); otherIt != otherMap.end();) {
-                    Order* otherOrder = otherIt->second;
-                    if (otherOrder->_strategy != payUpOrder->_strategy) {
-                        const bool isMatch = IsBetterOrEqual(payUpOrder->_price, otherOrder->_price, payUpSide);
-                        if (!isMatch) {
-                            break;
-                        }
-
-                        const hf::qty_t fillSize = std::min(payUpOrder->_size, otherOrder->_size);
-                        LOG(0, "IME {C[i1]}. Side={i2} Matched MM PayUp hedge order with order ID={i3} {i4}@{d1} Fill={i3}",
-                            getContractName(), payUpSide, otherOrder->_id, otherOrder->_size,
-                            ToDollars(otherOrder->_price), fillSize)
-                        payUpOrder->_size -= fillSize;
-                        otherOrder->_size -= fillSize;
-                        assert(_pendingHedge[payUpSide] == payUpOrder);
-                        _internalFills.push_back({payUpOrder, otherOrder->_price, fillSize});
-                        _internalFills.push_back({otherOrder, otherOrder->_price, fillSize});
-                        if (otherOrder->_size == 0) {
-                            otherIt = otherMap.erase(otherIt);
-                        } else {
-                            ++otherIt;
-                        }
-                        doExternalReductionAfterInternalFill(otherOrder, fillSize);
-
-                        if (payUpOrder->_size == 0) {
-                            break;
-                        }
-                    } else {
-                        ++otherIt;
-                    }
-                }
-                LOG(0, "IME {C[i1]}. Side={i2} remove PayUp order from internal order map", getContractName(), payUpSide)
-                payUpMap.erase(payUpIt);
-                return true;
+            if (!payUpOrder->_inPayUp) {
+                continue;
             }
+            bool matchExternal = false;
+            hf::price_t otherPrice = hf::NULL_PRICE;
+            hf::qty_t otherSize = 0;
+            auto otherIt = otherMap.begin();
+            while (otherIt != otherMap.end()) {
+                Order* otherOrder = otherIt->second;
+                if (otherOrder->_strategy != payUpOrder->_strategy) {
+                    if (otherPrice == hf::NULL_PRICE) {
+                        otherPrice = otherOrder->_price;
+                        otherSize = otherOrder->_size;
+                    }
+                    const bool isMatch = IsBetterOrEqual(payUpOrder->_price, otherPrice, payUpSide);
+                    if (!isMatch) {
+                        break;
+                    }
+
+                    const hf::qty_t fillSize = std::min(payUpOrder->_size, otherSize);
+                    LOG(0, "IME {C[i1]}. Side={i2} Matched MM PayUp hedge order with order ID={i3} {i4}@{d1} isExternal={i5} FillSize={i6}", getContractName(),
+                        payUpSide, otherOrder->_id, otherSize, ToDollars(otherPrice), (uint32_t)matchExternal,
+                        fillSize)
+
+                    payUpOrder->_size -= fillSize;
+                    otherSize -= fillSize;
+                    assert(_pendingHedge[payUpSide] == payUpOrder);
+                    _internalFills.push_back({payUpOrder, otherOrder->_price, fillSize});
+                    _internalFills.push_back({otherOrder, otherOrder->_price, fillSize});
+                    doExternalReductionAfterInternalFill(otherOrder, fillSize);
+
+                    if (!matchExternal) {
+                        otherOrder->_size -= fillSize;
+                        if (otherOrder->_size == 0) {
+                            assert(otherSize == 0);
+                            if (otherOrder->_externalPrice != hf::NULL_PRICE && otherOrder->_externalSize) {
+                                matchExternal = true;
+                                otherPrice = otherOrder->_externalPrice;
+                                otherSize = otherOrder->_externalSize;
+                            }
+                        }
+                    }
+
+                    if (otherSize == 0) {
+                        otherIt = otherMap.erase(otherIt);
+                        matchExternal = false;
+                        otherPrice = hf::NULL_PRICE;
+                    }
+
+                    if (payUpOrder->_size == 0) {
+                        break;
+                    }
+                } else {
+                    // skip matching order from same strategy
+                    ++otherIt;
+                }
+            }
+
+            if (matchExternal) {
+                otherIt = otherMap.erase(otherIt);
+            }
+            LOG(0, "IME {C[i1]}. Side={i2} remove PayUp order from internal order map", getContractName(), payUpSide)
+            payUpMap.erase(payUpIt);
+            return true;
         }
         return false;
     }
@@ -1071,12 +1113,15 @@ public:
             if ((aggressingStrategy == StrategyId::ArbieSpreader) && hasASOrder) {
                 if (bidOrder->_strategy == StrategyId::ArbieSpreader) {
                     asMatchedSize[BID] += matchedSize;
-                } else {
+                }
+
+                if (askOrder->_strategy == StrategyId::ArbieSpreader) {
                     asMatchedSize[ASK] += matchedSize;
                 }
             }
         };
-
+        bool matchBidExternal = false;
+        bool matchAskExternal = false;
         while (bidTop >= askTop) {
             bool setlMatch = bidOrder->_strategy == askOrder->_strategy;
             if (BOOST_UNLIKELY(setlMatch)) {
@@ -1096,73 +1141,73 @@ public:
                 }
             }
             const hf::price_t fillPrice = bidOrder->_strategy == aggressingStrategy ? askTop : bidTop;
+            const hf::qty_t fillSize = std::min<hf::qty_t>(askSize, bidSize);
             hasASOrder = (bidOrder->_strategy == StrategyId::ArbieSpreader) || (askOrder->_strategy == StrategyId::ArbieSpreader);
-            LOG(0, "IME {C[i1]}. Internal Cross. Matching. Bid: {i2}@{d1} ID={i3} Ask={i4}@{d2} ID={i5}",
-                getContractName(), bidSize, ToDollars(bidTop), bidOrder->_id, askSize, ToDollars(askTop), askOrder->_id)
-            if (bidSize == askSize) {
-                LOG(0, "IME {C[i1]}. Match. Equal size. Size={i2}", getContractName(), bidSize)
-                bidOrder->_size = 0;
-                askOrder->_size = 0;
-                countASMatchedSize(bidSize);
-                _internalFills.push_back({bidOrder, fillPrice, bidSize});
-                _internalFills.push_back({askOrder, fillPrice, bidSize});
-                bidOrdersIt = _bids.erase(bidOrdersIt);
-                askOrdersIt = _asks.erase(askOrdersIt);
-                doExternalReductionAfterInternalFill(bidOrder, bidSize);
-                doExternalReductionAfterInternalFill(askOrder, bidSize);
-                const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
-                const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
-                if ((!hasAskOrder) | (!hasBidOrder)) {
-                    LOG(0, "IME {C[i1]}. No more orders. Exiting matching.", getContractName())
-                    break;
-                }
-                bidSize = bidOrder->_size;
-                askSize = askOrder->_size;
-                LOG(0, "IME {C[i1]}. Got new orders. Bid: ID={i2} {i3}@{d1} Ask: ID={i4} {i5}@{d2}", getContractName(),
-                    bidOrder->_id, bidOrder->_size, ToDollars(bidOrder->_price), askOrder->_id, askOrder->_size,
-                    ToDollars(askOrder->_price))
-            }
-            else if (bidSize > askSize) {
-                LOG(0, "IME {C[i1]}. Match. Bid size > Ask size. MatchSize={i2}", getContractName(), askSize)
-                const hf::qty_t fillSize = askSize;
-                _internalFills.push_back({bidOrder, fillPrice, fillSize});
-                _internalFills.push_back({askOrder, fillPrice, fillSize});
-                askOrdersIt = _asks.erase(askOrdersIt);
-                doExternalReductionAfterInternalFill(askOrder, fillSize);
-                doExternalReductionAfterInternalFill(bidOrder, fillSize);
+            LOG(0, "IME {C[i1]}. Internal Cross. Matching. Bid: {i2}@{d1} Id={i3} isExternal={i4} Ask={i5}@{d2} Id={i6} isExternal={i7} fillSize={i8}", getContractName(),
+                bidSize, ToDollars(bidTop), bidOrder->_id, (uint32_t)matchBidExternal, askSize, ToDollars(askTop),
+                askOrder->_id, (uint32_t)matchAskExternal, fillSize)
+
+            bidSize -= fillSize;
+            askSize -= fillSize;
+            countASMatchedSize(fillSize);
+            _internalFills.push_back({bidOrder, fillPrice, fillSize});
+            _internalFills.push_back({askOrder, fillPrice, fillSize});
+            doExternalReductionAfterInternalFill(bidOrder, fillSize);
+            doExternalReductionAfterInternalFill(askOrder, fillSize);
+
+            if (!matchBidExternal) {
                 bidOrder->_size -= fillSize;
-                askOrder->_size = 0;
-                countASMatchedSize(fillSize);
-                const bool hasAskOrder = getNextOrder(askOrder, askOrdersIt, _asks, askTop);
-                if (!hasAskOrder) {
-                    LOG(0, "IME {C[i1]}. No more ask orders. Exiting matching.", getContractName())
-                    break;
+                if (bidOrder->_size == 0) {
+                    assert(bidSize == 0);
+                    if (bidOrder->_externalPrice != hf::NULL_PRICE && bidOrder->_externalSize) {
+                        matchBidExternal = true;
+                        bidTop = bidOrder->_externalPrice;
+                        bidSize = bidOrder->_externalSize;
+                    }
                 }
-                askSize = askOrder->_size;
-                bidSize -= fillSize;
-                LOG(0, "IME {C[i1]}. Got new ask order. ID={i2} {i3}@{d1}", getContractName(), askOrder->_id,
-                    askOrder->_size, ToDollars(askOrder->_price))
-            } else {
-                LOG(0, "IME {C[i1]}. Match. Bid size < Ask size. MatchSize={i2}", getContractName(), bidSize)
-                const hf::qty_t fillSize = bidSize;
-                _internalFills.push_back({bidOrder, fillPrice, fillSize});
-                _internalFills.push_back({askOrder, fillPrice, fillSize});
-                bidOrdersIt = _bids.erase(bidOrdersIt);
-                doExternalReductionAfterInternalFill(bidOrder, fillSize);
-                doExternalReductionAfterInternalFill(askOrder, fillSize);
-                askOrder->_size -= fillSize;
-                bidOrder->_size = 0;
-                countASMatchedSize(fillSize);
-                const bool hasBidOrder = getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop);
-                if (!hasBidOrder) {
-                    LOG(0, "IME {C[i1]}. No more bid orders. Exiting matching.", getContractName())
-                    break;
-                }
-                bidSize = bidOrder->_size;
-                askSize -= fillSize;
-                LOG(0, "IME {C[i1]}. Got new bid order. ID={i2} {i3}@{d1}", getContractName(), bidOrder->_id,
-                    bidOrder->_size, ToDollars(bidOrder->_price))
             }
+
+            if (!matchAskExternal) {
+                askOrder->_size -= fillSize;
+                if (askOrder->_size == 0) {
+                    assert(askSize == 0);
+                    if (askOrder->_externalPrice != hf::NULL_PRICE && askOrder->_externalSize) {
+                        matchAskExternal = true;
+                        askTop = askOrder->_externalPrice;
+                        askSize = askOrder->_externalSize;
+                    }
+                }
+            }
+
+            if (bidSize == 0) {
+                bidOrdersIt = _bids.erase(bidOrdersIt);
+                matchBidExternal = false;
+                if (!getNextOrder(bidOrder, bidOrdersIt, _bids, bidTop)) {
+                    LOG(0, "IME {C[i1]}. No more Bid orders. Exiting matching.", getContractName())
+                    break;
+                }
+                LOG(0, "IME {C[i1]}. Got new Bid order: Id={i2} {i3}@{d1}", getContractName(), bidOrder->_id,
+                    bidOrder->_size, ToDollars(bidOrder->_price))
+                bidSize = bidOrder->_size;
+            }
+
+            if (askSize == 0) {
+                askOrdersIt = _asks.erase(askOrdersIt);
+                matchAskExternal = false;
+                if (!getNextOrder(askOrder, askOrdersIt, _asks, askTop)) {
+                    LOG(0, "IME {C[i1]}. No more Ask orders. Exiting matching.", getContractName())
+                    break;
+                }
+                LOG(0, "IME {C[i1]}. Got new Ask order: Id={i2} {i3}@{d1}", getContractName(), askOrder->_id,
+                    askOrder->_size, ToDollars(askOrder->_price))
+                askSize = askOrder->_size;
+            }
+        }
+        if (matchBidExternal) {
+            bidOrdersIt = _bids.erase(bidOrdersIt);
+        }
+        if (matchAskExternal) {
+            askOrdersIt = _asks.erase(askOrdersIt);
         }
 
         if (asSelfMatch) {
@@ -1177,14 +1222,9 @@ public:
             }
         }
 
-        if (asMatchedSize[BID]) {
-            _executor->getStrategy(StrategyId::ArbieSpreader)->sendGenericMessage(ViperMessageType::ASQuoteAdjustmentACK,
-                                                                                  _internalId, BID, asMatchedSize[BID]);
-        }
-
-        if (asMatchedSize[ASK]) {
-            _executor->getStrategy(StrategyId::ArbieSpreader)->sendGenericMessage(ViperMessageType::ASQuoteAdjustmentACK,
-                                                                                  _internalId, ASK, asMatchedSize[ASK]);
+        if (aggressingStrategy == StrategyId::ArbieSpreader) {
+            _executor->getStrategy(StrategyId::ArbieSpreader)->template sendGenericMessage(ViperMessageType::ASInternalMatchingDone,
+                    _internalId, asMatchedSize[BID], asMatchedSize[ASK]);
         }
         return true;
     }
@@ -1292,25 +1332,25 @@ public:
         const hf::qty_t internalReduction = std::min(order->_size, fillSize);
         order->_size -= internalReduction;
         _notifyInternalMarketChange = true;
-        if (order->_size == 0) {
+        if (order->_size <= 0) {
             removeOrderFromMap(order, map);
         }
     }
 
-    void allocateExternalFills(const om::OMExecutionEvent &event, const om::OMBatch& batch, const om::order_t &order, uint32_t side) {
-        LOG(0, "IME {C[i1]}. Allocate external fill. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(event.filledPrice), event.filledQty)
+    void allocateExternalFills(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, hf::batch_id_t bid, const om::order_t &order, uint32_t side) {
+        LOG(0, "IME {C[i1]}. Allocate external fill. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(filledPrice), filledQty)
         // allocate fills from MM hedge first
-        hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(event.filledPrice, event.filledQty, side, event.exchangeOrderId.value(), order.oid.value(), batch.bid);
+        hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(filledPrice, filledQty, side, order.exchangeOrderId.value(), order.oid.value(), bid);
         if (unmatchedFills > 0) {
             // allocate unmatched fills from MM Quote or RV which ever is the best
             if (side == BID) {
-                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _bidLevels, _bids, event, batch);
+                allocateExternalQuoteFill(filledPrice, unmatchedFills, order, _bidLevels, _bids, bid);
                 const hf::qty_t restingSize = _om[BID].getRestingSize();
-                startFillBanner<BID>(event.filledPrice, restingSize);
+                startFillBanner<BID>(filledPrice, restingSize);
             } else {
-                allocateExternalQuoteFill(event.filledPrice, unmatchedFills, order, _askLevels, _asks, event, batch);
+                allocateExternalQuoteFill(filledPrice, unmatchedFills, order, _askLevels, _asks, bid);
                 const hf::qty_t restingSize = _om[ASK].getRestingSize();
-                startFillBanner<ASK>(event.filledPrice, restingSize);
+                startFillBanner<ASK>(filledPrice, restingSize);
             }
         }
         if (_executor->onEndOfFills(_internalId, side, false, _lastMMOrderExecution + 1)) {
@@ -1331,7 +1371,7 @@ public:
     }
 
     template <typename LevelsT, typename MapT>
-    void allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map, const om::OMExecutionEvent &event, const om::OMBatch& batch) {
+    void allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map, hf::batch_id_t bid) {
         LOG(0, "IME {C[i1]}. External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(filledPrice), filledQty)
         hf::qty_t filledSize = filledQty;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
@@ -1343,7 +1383,7 @@ public:
                 auto fillSource = o->_type == Order::Type::Quoting ? FillSource::Quote : FillSource::Hedge;
                 if (o->_externalSize == filledSize) {
                     LOG(0, "IME {C[i1]}. Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
-                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource, event.exchangeOrderId.value(), order.oid.value(), batch.bid);
+                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource, order.exchangeOrderId.value(), order.oid.value(), bid);
                     orderIt = orders.erase(orderIt);
                     o->priceLevel = nullptr;
                     LOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
@@ -1356,7 +1396,7 @@ public:
                 } else if (o->_externalSize < filledSize) {
                     const hf::qty_t oneFill = o->_externalSize;
                     LOG(0, "IME {C[i1]}. Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
-                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, oneFill, o->_side, fillSource, event.exchangeOrderId.value(), order.oid.value(), batch.bid);
+                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, oneFill, o->_side, fillSource, order.exchangeOrderId.value(), order.oid.value(), bid);
                     orderIt = orders.erase(orderIt);
                     o->priceLevel = nullptr;
                     LOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
@@ -1369,7 +1409,7 @@ public:
                     }
                 } else {
                     LOG(0, "IME {C[i1]}. Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), o->_externalSize)
-                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource, event.exchangeOrderId.value(), order.oid.value(), batch.bid);
+                    _executor->onExternalFillExt(_internalId, o->_strategy, filledPrice, filledSize, o->_side, fillSource, order.exchangeOrderId.value(), order.oid.value(), bid);
                     o->_externalSize -= filledSize;
                     doInternalReductionAfterExternalFill(o, filledSize, map);
                     return;
@@ -1444,10 +1484,10 @@ public:
         }
     }
 
-    void onOrderExecution(const om::OMExecutionEvent &event, const om::OMBatch& batch, const om::order_t &order) {
+    void onOrderExecution(hf::price_t filledPrice, hf::qty_t filledQty, hf::qty_t totalExecutedQty, hf::batch_id_t bid, const om::order_t &order, bool fromMDFeed) {
         uint32_t side = ToViperSide(order.side);
-        _om[side].onOrderExecution(event, order);
-        allocateExternalFills(event, batch, order, side);
+        _om[side].onOrderExecution(filledPrice, filledQty, totalExecutedQty, order, fromMDFeed);
+        allocateExternalFills(filledPrice, filledQty, totalExecutedQty, bid, order, side);
         sendInternalMarketData();
     }
 
@@ -1880,10 +1920,6 @@ public:
 
         if (execute) {
             const bool matchOk = matchOrders(strategy);
-            if (strategy == StrategyId::ArbieSpreader) {
-                _executor->getStrategy(strategy)->template sendGenericMessage(ViperMessageType::ASInternalMatchingDone,
-                                                                              _internalId);
-            }
             if (BOOST_LIKELY(matchOk)) {
 //                const uint64_t timestamp2 = clockUtil::GetCycles();
 //                DLOG(0, "processOrderRequests Matching Latency {i1}", (timestamp2 - timestamp1));
@@ -1916,12 +1952,9 @@ public:
             return false;
         }
 
-        if (id > orderId(StrategyId::MarketMaker, Order::Type::Quoting)) {
-            ++requestQueue._processedCursor;
-            auto& request = requestQueue._queue[requestQueue._processedCursor];
-            execute |= processOrderRequest<Side>(request, requestQueue._processedCursor);
-        } else {
-            uint32_t drainSize = lastRequest - (requestQueue._processedCursor + 1) + 1;
+        if (!id || ((id & 1) & (id != orderId(StrategyId::ArbieSpreader, Order::Type::Quoting)))) {
+            // MM Hedge or MM/RV Quote, skip to the last request
+            uint32_t drainSize = lastRequest - requestQueue._processedCursor;
 
             // process the last request to avoid order flickering
             auto& request = requestQueue._queue[lastRequest];
@@ -1930,8 +1963,14 @@ public:
 
             if (BOOST_UNLIKELY(drainSize && (logging::loggingLevel() > logging::LOG_LEVEL::INFO))) {
                 LOG(0, "IME {C[i1]}. Order request. ID={i2} Side={i3} Skip {i4}", getContractName(), toUInt(id), Side,
-                     (drainSize - 1));
+                    (drainSize - 1));
             }
+        } else {
+            // RV/AS Hedge or AS Quote
+            // Not skip AS quote to the last because the Aggressive Quote adjustment
+            ++requestQueue._processedCursor;
+            auto& request = requestQueue._queue[requestQueue._processedCursor];
+            execute |= processOrderRequest<Side>(request, requestQueue._processedCursor);
         }
         return true;
     }
@@ -2083,11 +2122,11 @@ public:
     }
 
     template<uint32_t Side>
-    void onMDUpdate(md::top_t book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
+    void onMDUpdate(md::top_t& book, int8_t priceChangeIndex, int8_t qtyChangeIndex, bool log) {
         if (priceChangeIndex == 0 && _outsideMaxOffTopLevel[Side]) {
             synchronizeQuote<Side>(clockUtil::GetCycles());
         }
-        _om[Side].template onMDUpdate<Side>(book, priceChangeIndex, qtyChangeIndex);
+        _om[Side].template onMDUpdate<Side>(book, priceChangeIndex, qtyChangeIndex, log);
     }
 
 #ifdef IS_DEV

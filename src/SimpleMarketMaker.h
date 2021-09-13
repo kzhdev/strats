@@ -219,6 +219,7 @@ public:
         _hedgeOffset = config._hedgeOffset;
         _hedgeOffsetPrice = _hedgeOffset * _tickSize;
         _maxTicksWide = config._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config._maxTicksWide * _tickSize;
+        _TwoTimesMaxTicksWide = config._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : _maxTicksWide * 2;
         _internallyInitiatedPosition = config._internalPosition;
         _externallyInitiatedPosition = config._externalPosition;
         _worsenPayupConditionAmount = config._worsenPayupCondPercent * _tickSize;
@@ -226,6 +227,7 @@ public:
 
         auto netPos = _internallyInitiatedPosition + _externallyInitiatedPosition;
         if (netPos) {
+            LOG(0, "MM {C[i1]}. Loaded Positions. InternalPosition={i2} ExternalPosition={i3}", getContractName(), _internallyInitiatedPosition, _externallyInitiatedPosition)
             _marketMaker->sendFillToFront(contract._internalId, (netPos > 0 ? BID : ASK),
                                           _marketMaker->_viperConfig._mmLastFillPrices[contract._marketMakeIndex],
                                           std::abs(netPos), FillType::Phantom, FillSource::ViperStart,
@@ -423,8 +425,8 @@ public:
         const auto& bidBook = topBook<BID>();
         const auto& askBook = topBook<ASK>();
 
-        LOG(0, "MM {C[i1]}. Recalculate. Bid: {i2}({i3})@{d1} Ask={i4}({i5})@{d2} SequenceNumber={i6} priceChangeIndex={i7}/{i8} qtyChangeIndex={i9}/{i10}", getContractName(),
-            bidBook.q, bidBook.o, ToDollars(bidBook.pr), askBook.q, askBook.o, ToDollars(askBook.pr), _lastMdSeqNum,
+        LOG(0, "MM {C[i1]}. Recalculate. Bid: {i2}({i3})@{d1} Ask={i4}({i5})@{d2} lastMDbid={i6} priceChangeIndex={i7}/{i8} qtyChangeIndex={i9}/{i10}", getContractName(),
+            bidBook.q, bidBook.o, ToDollars(bidBook.pr), askBook.q, askBook.o, ToDollars(askBook.pr), _lastMDbid,
             toUInt(_mdPriceChangeIndex[BID]), toUInt(_mdPriceChangeIndex[ASK]), toUInt(_mdQtyChangeIndex[BID]), toUInt(_mdQtyChangeIndex[ASK]))
 
         if (BOOST_UNLIKELY(!hasMarketData(bidBook, askBook))) {
@@ -448,9 +450,20 @@ public:
         }
 
         bool maxTickWideAlreadyBreached = _maxTicksWideBreached;
+        if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _TwoTimesMaxTicksWide)) {
+            _maxTicksWideBreached = true;
+            LOG(0, "MM {C[i1]}. 2x MaxTicksWidth breached, disable contract; disable external quoting; disable GTC.", getContractName())
+            disable(true, false, true);
+            disableExternalQuoting(true);
+            _marketMaker->sendErrorMessage(boost::str(boost::format(
+                    "MM - 2x MaxTicksWidth breached, disable contract, disable external quoting, disable GTC. Contract=%1%")
+                    % _contract._name), ErrorType::Critical);
+            return;
+        }
+
         if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _maxTicksWide)) {
             if (!_maxTicksWideBreached) {
-                LOG(0, "MM {C[i1]}. MaxTicksWidth breached, disable external quoting, disable GTC.", getContractName())
+                LOG(0, "MM {C[i1]}. MaxTicksWidth breached, disable external quoting; disable GTC.", getContractName())
                 std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
                 disableExternalQuotingAndUseGTC(msg);
                 _maxTicksWideBreached = true;
@@ -864,17 +877,16 @@ public:
 
     template<uint32_t Side, uint32_t source>
     void modifyQuoteOrder(Quote& quote, bool persist) {
-        auto internalSize = quote._internalSize + quote._externalSize;
         _lastOrderRequests._quote[Side] = _orderRequestManager.sendQuoteRequest(_contract._internalId,
                                                                                 QUOTE_ORDER_ID,
                                                                                 Side, quote._internalPrice,
-                                                                                internalSize,
+                                                                                quote._internalSize,
                                                                                 quote._externalPrice,
                                                                                 quote._externalSize, persist, false,
                                                                                 _orderExecutionToken);
-        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6} source={i7} execToken={i8}",
-             getContractName(), Side, internalSize, ToDollars(quote._internalPrice), quote._externalSize, ToDollars(quote._externalPrice),
-             persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
+        LOG(0, "MM {C[i1]}. Update Quote. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2} persist={i5} reqId={i6} source={i7} execToken={i8}", getContractName(),
+            Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
+            ToDollars(quote._externalPrice), persist, _lastOrderRequests._quote[Side], source, _orderExecutionToken)
         quote._lastInternalPriceSent = quote._internalPrice;
         quote._lastExternalSizeSent = quote._externalSize;
     }
@@ -981,7 +993,7 @@ public:
     void onFill(const FillMessage& fill) {
         if (fill._source != FillSource::Quote && fill._source != FillSource::Hedge) {
             if (fill._strategy != StrategyId::MarketMaker) {
-                LOG(0, "MM {C[i1]}. Handling fill returned from strategy {i2}. Side={i3} Price={d1} Size={i4}",
+                LOG(0, "MM {C[i1]}. Handling fill transferred from strategy {i2}. Side={i3} Price={d1} Size={i4}",
                     getContractName(), strategyName(fill._strategy), fill._side, ToDollars(fill._price), fill._qty)
                 forceTakeOverFill(fill._side, fill._price, fill._qty, fill._source, true);
                 onEndOfFills(_orderExecutionToken);
@@ -1226,6 +1238,15 @@ public:
                 disable();
                 return false;
             }
+
+            if (BOOST_UNLIKELY((topBook<ASK>().pr - topBook<BID>().pr) > _TwoTimesMaxTicksWide)) {
+                _maxTicksWideBreached = true;
+                disable();
+                LOG(0, "MM {C[i1]}. Not enabling. 2x MaxTicksWidth breached", getContractName())
+                _marketMaker->sendErrorMessage(boost::str(boost::format("Not enabling MM %1% - 2x MaxTicksWidth breached")
+                    % _contract._name), ErrorType::Critical);
+                return false;
+            }
             return true;
         }
         return false;
@@ -1463,9 +1484,11 @@ public:
                 LOG(0, "MM {C[i1]}. MaxTicksWide changed. Value={i2}", getContractName(), value)
                 if (value  < 0) {
                     _maxTicksWide = std::numeric_limits<int64_t>::max();
+                    _TwoTimesMaxTicksWide = _maxTicksWide;
                     LOG(0, "MM {C[i1]}. Ignore MaxTicksWide checking.", getContractName())
                 } else {
                     _maxTicksWide = value * _tickSize;
+                    _TwoTimesMaxTicksWide = _maxTicksWide * 2;
                 }
                 break;
             }
@@ -1684,6 +1707,7 @@ public:
     hf::price_t _tickSize;
     hf::price_t _hedgeOffsetPrice;
     hf::price_t _maxTicksWide;
+    hf::price_t _TwoTimesMaxTicksWide;
     double _hedgeOffset;
     hf::qty_t _internallyInitiatedPosition = 0;
     hf::qty_t _externallyInitiatedPosition = 0;
@@ -1694,9 +1718,9 @@ public:
     hf::price_t _width = 0;
     uint32_t _selfMatchCount = 0;
     hf::price_t _worsenPayupConditionAmount = 0;
-    uint_fast64_t _lastMdSeqNum = 0;
     uint32_t _orderExecutionToken = 0;
     uint32_t _queueImportance = 0;
+    hf::batch_id_t _lastMDbid = 0;
     md::top_t _books[2];
     int8_t _mdPriceChangeIndex[2] = {-1, -1};
     int8_t _mdQtyChangeIndex[2] = {-1, -1};

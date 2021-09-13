@@ -4,6 +4,8 @@
 #include <md/queue/MDQueue.h>
 #include <util/log.h>
 #include <atomic>
+#include <unordered_set>
+#include "PerfMonitor.h"
 
 namespace Python {
 
@@ -25,21 +27,20 @@ class MarketDataConsumer : MarketDataConsumerBase {
 
     std::vector<QueueState> _queueState;
 
-    //Temporary to try to debug "Match Orders Failed"
-    hf::batch_id_t _lastMMbid = 0;
-
     T& underlying() { return static_cast<T&>(*this); }
 
 protected:
     std::vector<md::queue::MDQueue*>& _marketDataQueues = mdQueue();
+    std::unordered_set<uint32_t> _mdUpdated;
 
 public:
-    void initMarkDataQueueState() {
+    void initMarkDataQueueState(size_t numContracts) {
         _queueState.resize(_marketDataQueues.size());
         size_t i = 0;
         for (auto q : _marketDataQueues) {
             _queueState[i++]._peekIndex = q->peekW();
         }
+        _mdUpdated.reserve(numContracts);
     }
 
     void drainAllMarketData() {
@@ -70,64 +71,47 @@ public:
         DLOG(0, "{i1} received MD batch. bid={i2} extSeqNum={i3} venue={i4}", resourceName(underlying().id()), batch.bid,
              batch.extSequenceNumber, toUInt(batch.venue))
 
-        //Attempting to debug duplicate batches
-        if (BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMMbid) &&
-                           (underlying().id() == ResourceId::Execution))) {
-            uint64_t eventMask = 0;
-            const auto* data = batch.data;
-            for (auto i = batch.count; i; --i) {
-                const auto& mde = reinterpret_cast<const md::MDEvent&>(*data);
-                data += mde.size;
-                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
-            }
-            LOG(0, "EXE DUPLICATE MD BATCH.  bid={i1} count={i2} hwTS={i3} srcTS={i4} srcSentTS={i5} stratTS={i6} venue={i7} extSeqNum={i8} eventMask={i9}",
-                batch.bid, batch.count, batch.time.hwTS, batch.time.srcTS, batch.time.srcSentTS, batch.time.stratTS,
-                static_cast<int>(batch.venue), batch.extSequenceNumber, eventMask);
-        }
-        _lastMMbid = batch.bid;
-
         const auto *data = batch.data;
         for (auto i = batch.count; i; --i) {
             const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
             data += mde.size;
-            switch (mde.type) {
-                case md::MDEvent::TYPE::UPDATE: {
-                    const auto &event = static_cast<const md::MDUpdateEvent &> (mde);
-                    onMDUpdate(event);
-                    break;
+            auto internalId = underlying().sidToInternalId(mde.sid);
+            if (internalId != INVALID_INTERNAL_ID) {
+                switch (mde.type) {
+                    case md::MDEvent::TYPE::UPDATE: {
+                        const auto& event = static_cast<const md::MDUpdateEvent&> (mde);
+#ifdef ENABLE_PERF
+                        ConditionalScopedPerfPoint perf(PerfId::AS_OnMDUpdate, [this](){return underlying().strategyId() == StrategyId::ArbieSpreader; });
+#endif
+                        underlying().onMDUpdate(event, internalId, batch.bid);
+                        _mdUpdated.emplace(internalId);
+                        break;
+                    }
+                    case md::MDEvent::TYPE::TRADE: {
+                        const auto& event = static_cast<const md::MDTradeEvent&> (mde);
+                        underlying().onMDTrade(batch, event, internalId);
+                        _mdUpdated.emplace(internalId);
+                        break;
+                    }
+                    case md::MDEvent::TYPE::STATUS: {
+                        const auto& event = static_cast<const md::MDStatusEvent&> (mde);
+                        underlying().onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId);
+                        _mdUpdated.emplace(internalId);
+                        break;
+                    }
+                    default:
+                        underlying().handleUncommonMDEvent(mde, batch, internalId);
+                        break;
                 }
-                case md::MDEvent::TYPE::TRADE: {
-                    const auto &event = static_cast<const md::MDTradeEvent &> (mde);
-                    underlying().onMDTrade(batch.venue, event);
-                    break;
-                }
-                case md::MDEvent::TYPE::STATUS: {
-                    const auto &event = static_cast<const md::MDStatusEvent &> (mde);
-                    onMDStatus(batch.venue, batch.extSequenceNumber, event);
-                    break;
-                }
-                default:
-                    underlying().handleUncommonMDEvent(mde, batch);
-                    break;
             }
+#ifdef IS_DEV
+            else {
+                logging::GetLogger().logWarning(boost::str(boost::format("Received md update for unrecognized SID='%1%' Type=%2%") % mde.sid % toUInt(mde.type)));
+            }
+#endif
         }
-        underlying().onEndMDBatch();
-    }
-
-    void onMDUpdate(const md::MDUpdateEvent& event) {
-        const uint32_t internalId = underlying().sidToInternalId(event.sid);
-        if (internalId != INVALID_INTERNAL_ID) {
-            underlying().onMDUpdate(event, internalId);
-        } else {
-            logging::GetLogger().logError(boost::str(boost::format("Received book update for unrecognized SID='%1%'") % event.sid));
-        }
-    }
-
-    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent &event) {
-        const uint32_t internalId = underlying().sidToInternalId(event.sid);
-        if (internalId != INVALID_INTERNAL_ID) {
-            underlying().onMDStatus(venue, extSeqNum, event, internalId);
-        }
+        underlying().onEndMDBatch(batch.bid);
+        _mdUpdated.clear();
     }
 };
 

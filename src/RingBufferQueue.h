@@ -26,6 +26,12 @@ class RingBufferQueue final {
 public:
     RingBufferQueue() = default;
 
+    RingBufferQueue(uint32_t size)
+        : _data(new T[size + (1'000'000 / sizeof(T))])
+        , _size(size)
+        , _mask(size - 1) {
+    }
+
     ~RingBufferQueue() {
         if(_data) {
             delete[] _data;
@@ -36,7 +42,7 @@ public:
     void init(uint32_t size) {
         assert(size && !(size & (size-1))); // size must be power of 2
         assert(_data == nullptr);
-        _data = new T[size + (1'000'000 / sizeof(T))]; //Need buffer at the end for overflow on write
+        _data = new T[size + (1'000'000 / sizeof(T))]; //Need some buffer at the end for overflow on write
         _size = size;
         _mask = size - 1;
     }

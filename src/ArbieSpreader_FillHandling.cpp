@@ -16,7 +16,7 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
 
     if (contract._usedInQuoting) {
         contract._forceUpdate[side] = true;
-        _updatedContracts.emplace(&contract);
+        pushUpdatedContract(&contract);
 
         auto& bidMarket = contract._markets[BID][Market::External];
         auto& askMarket = contract._markets[ASK][Market::External];
@@ -42,9 +42,9 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
             });
         };
         if (side == BID) {
-            hedgeSent |= updateHedge<BID>(contract, size, sendFillToFront);
+            hedgeSent |= updateHedge<BID>(contract, size, sendFillToFront, false);
         } else {
-            hedgeSent |= updateHedge<ASK>(contract, size, sendFillToFront);
+            hedgeSent |= updateHedge<ASK>(contract, size, sendFillToFront, false);
         }
 
         if (!hedgeSent) {
@@ -78,7 +78,7 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
         bool hedgeSent = false;
         if (isEnabled()) {
             contract._forceUpdate[fill._side] = true;
-            _updatedContracts.emplace(&contract);
+            pushUpdatedContract(&contract);
 
             LOG(0, "AS {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3} Source={i4}", contract.name(),
                 fill._side, ToDollars(fill._price), fill._qty, toUInt(fill._source))
@@ -93,9 +93,9 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
             };
 
             if (fill._side == BID) {
-                hedgeSent |= updateHedge<BID>(contract, fill._qty, sendFillToFront);
+                hedgeSent |= updateHedge<BID>(contract, fill._qty, sendFillToFront, fill._type == FillType::Internal);
             } else {
-                hedgeSent |= updateHedge<ASK>(contract, fill._qty, sendFillToFront);
+                hedgeSent |= updateHedge<ASK>(contract, fill._qty, sendFillToFront, fill._type == FillType::Internal);
             }
 
             if (!hedgeSent) {

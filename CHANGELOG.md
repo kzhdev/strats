@@ -1,7 +1,111 @@
+#Version 1.54.1.0
+- Fix outlier statistics
+- Fix ENABLE_LATENCY_TRACK build
+- Fix Fills from FillArbs applied to wrong level
+- Optimize ArbieSpreader path calculation by applying market data delta
+- Fix candidate > target issue when an order modified multiple times, and the order filled in the middle of modify chain
+  and caused an unsolicited order cancel
+
+#Version 1.53.1.0
+- Fix candidate > target when modify order canceled due to exected qty greater than modified qty.
+
+#Version 1.54.0.10
+- Fix Candidate > target when order filled while modify in-flight
+- AbieSpreader hedge w/o updatePath if the hedging market still present
+- Make AbieSpreader hedgeId unique across all contracts
+- Notify strategy FAKDone when Executor received FAK fill/cancel in case FAKDone event not come or come late in MD feed
+- Added outliers statistics in perf monitor
+- Made perf monitor timestamp more accurate
+- Disable AbieSpreader if it self matched 50 times in IME
+- Enable fillArb
+- [rhonepublic] updated to 4.1.5
+- [rhonepublic] fix simulator TradeSummary message
+
+#Version 1.53.0.31
+- Add logging to debug EXE hang
+
+#Version 1.54.0.9
+- Reduce MD feed logging
+- Do not send AS quote update if the price and size did not change only the hedge path changed.
+- Fix AS ASK aggressive quote not unadjusted if AS quotes crossed
+- [rhonepublic] Fixed missing FAK done event. When multiple FAK fills in same OM batch, only the first order issued FAK done event.
+- Reduce AS unnecessary re-calculation. Re-calculate when best market price changed or should quote less or can quote more
+- Fix AS aggressive quote unadjusted too early after internal matching
+
+#Version 1.54.0.8
+- Merged 1.53.0.29
+- Added conditional perf point
+- Fix ArbieSpreader STFOffset reduction didn't handle outright contract
+
+#Version 1.53.0.29
+- Changed IME to match internal and external orders
+
+#Version 1.54.0.7
+- Fix AS ExtCommission update not convert double to hf::price_t
+- Added percentage perf type
+- Added diagnostic logging for AS MaxTicksThroughMarket breach
+- Fix RV not sending STFs to AS after re-enable
+
+#Version 1.54.0.6
+- Fix MM Position Update issue
+- Added more perf points
+- Reduce FillMessage size
+
+#Version 1.54.0.5
+- Fixed an infinite loop in ViperLogger
+- Added Perf points in RV
+
+#Version 1.54.0.4
+- Added more Perf points
+
+#Version 1.54.0.3
+- Implemented a PerfMonitor
+- Implemented RV STF Move in AS switch Paths; Adjust the move to the fill price of the ASToRV quote fill.
+
+#Version 1.54.0.2
+- Fix actualEdge display issue
+- Added more logging details
+- Added Economic Number handling in AS
+- Added Shift change handling in AS
+- Skip RV quote request to the last in IME to avoid self match.
+
+#Version 1.53.0.28
+- Fix 2x maxTickWide check not ignore -1.
+- Add asDuration column in economic numbers
+
+#Version 1.53.0.27
+- Disable MM contract when 2x maxTicksWide breached.
+
+#Version 1.54.0.1
+- Batching Fill Sound every 1 second
+- Not sending Fill sound for fills transferred from AS to RV
+- Fixed potential crash caused by an invalid internal instrument id
+- Fixed log message
+- Check RV position limit after all AS to RV fills received
+- Reset AS STFs when RV disabled
+- Implemented AS MaxTicksThroughMarket check
+- Added CheckQuote handing in AS  
+- Added BidCross, AskCross columns in AS grid
+- Added ASEdgeMultiplier global config
+- [optimization] Optimized RV MaxTicksThroughMarket check by reducing unnecessary calculation
+
 #Version 1.54.0.0
 - Implemented ArbieSpreader strategy
 - When disabling useGTC, put quote orders back if any strategies are enabled and quoting externally
 - [bugfix] Fix crash caused by adding a new throttler when looping through _throttlers in checkTimers.
+
+#Version 1.53.0.26
+- Apply potential over fill only when the order is modifying down at the same level. 
+
+#Version 1.53.0.25
+- [rhonepublic] Implement ICE FAK removal 
+- When FAK missed, remove the level on the opposite side of Viper's internal book to prevent RV from sending hedge to the same price again
+
+#Version 1.53.0.24
+- Remove Taj and Zhi from trader dropdown
+
+#Version 1.53.0.23
+- Properly handling orderCancelReject after the order got SMP unsolicited cancel while order cancel request in-flight.
 
 #Version 1.53.0.22
 - Fix candidate>target issue caused by an out-of-order cancel reject due to order fill.

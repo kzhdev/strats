@@ -46,6 +46,7 @@ static const uint32_t POTENTIAL_OVERFILL_QTY = 8; //Theoretically can combine wi
 static const uint32_t STACKER_ORDER_FLAGS = 9;
 static const uint32_t IS_HEDGE = 10;
 static const uint32_t HEDGE_ID = 11;
+static const uint32_t TIMESTAMP = 12;
 
 //Bits set with STACKER_ORDER_FLAGS
 static const uint8_t SOF_DECREMENT_FAILED = 0;
@@ -135,9 +136,11 @@ enum class MarketMakerParametersColumns {
 enum class ArbieSpreaderParameterColumns {
     QuoteExternal,
     Edge,
+    ActualEdge,
     QuoteSize,
     STF,
     HedgeOffset,
+    MaxTicksThroughMarket,
     BidLeanPath,
     AskLeanPath,
     BidLeanPrice,
@@ -150,6 +153,8 @@ enum class ArbieSpreaderParameterColumns {
     BidExternalSize,
     AskInternalSize,
     AskExternalSize,
+    BidCross,
+    AskCross,
 };
 enum class ArbieSpreaderPathsColumns { Commission, Enabled, STFOffset};
 enum class PositionsColumns {RV, AS, MMInternal, MMExternal, Total};
@@ -160,14 +165,14 @@ enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ASOpen, ASClose
 enum class GlobalConfigsColumns {Value, Asia, Europe, US, Release};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
 enum class TraderSwitchColumns {Trader, Shift};
-enum class Traders {Steven, Mark, Taj, Zhi};
+enum class Traders {Steven, Mark};
 enum class Shifts {Asia, Europe, US, SafeMode, __current_marker__};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
 enum class StatusDebugColumns { Contract, StatusEvent };
 enum class LoggingLevelColumns {LoggingLevel};
 enum class NegativeScalpCheckerColumns { Period, ClipCount, Pnl };
-enum class EconomicNumberColumns {Time, MMDuration, RVDuration, Color, Description};
+enum class EconomicNumberColumns {Time, MMDuration, RVDuration, ASDuration, Color, Description};
 
 enum class WindowIds {
     VectorParameters = 1,
@@ -433,6 +438,19 @@ inline hf::price_t applyPriceOffset<Python::BID>(hf::price_t price, hf::price_t 
 template<>
 inline hf::price_t applyPriceOffset<Python::ASK>(hf::price_t price, hf::price_t offset) { return price - offset; }
 
+template<uint32_t Side>
+inline hf::price_t calculateTicksThroughMarket(hf::price_t calculatedPrice, hf::price_t otherSideBest) noexcept;
+
+template<>
+inline hf::price_t calculateTicksThroughMarket<BID>(hf::price_t calculatedPrice, hf::price_t otherSideBest) noexcept {
+    return calculatedPrice - otherSideBest;
+}
+
+template<>
+inline hf::price_t calculateTicksThroughMarket<ASK>(hf::price_t calculatedPrice, hf::price_t otherSideBest) noexcept {
+    return otherSideBest - calculatedPrice;
+}
+
 enum ice_rejects : uint8_t {
     TOO_LATE_TO_CANCEL = 0,
     UNKNOWN_ORDER = 1,
@@ -630,8 +648,9 @@ struct Market {
              getUnAdjustedSize(), getAdjustedSize())
     }
 
-    void update(hf::price_t price, hf::qty_t size, std::unordered_set<Market*>& effected_markets) {
+    bool update(hf::price_t price, hf::qty_t size, std::unordered_set<Market*>& affected_markets) {
         assert(_id == MarketIds::MARKET_ID_EXTERNAL);
+        bool changed = (_price != price) | (_size != size);
         if (_price != price) {
             LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Prices different.", _strategy, _contractId, _id, _side)
             if (_fakSizeAdjustment[_id]) {
@@ -639,7 +658,7 @@ struct Market {
                 _fakSizeAdjustments[_id].clear();
                 LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4}. Flushing FAK adjustments.", _strategy, _contractId, _id, _side)
             }
-            undoAsQuoteAdjustment(effected_markets);
+            undoAsQuoteAdjustment(affected_markets);
             _fakPreAdjustment = 0;
         }
         _price = price;
@@ -647,6 +666,7 @@ struct Market {
         DLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} MD updated. FAKAdj={i5} asQuoteAdj={i6} FAKPreAdj={i7} Price={d1} Size={i8} AdjustedSize={i9}", _strategy,
              _contractId, _id, _side, _fakSizeAdjustment[_id], _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price),
              getUnAdjustedSize(), getAdjustedSize())
+         return changed;
     }
 
     void updateInternalMarket(hf::price_t price, hf::qty_t size) {
@@ -658,13 +678,13 @@ struct Market {
     }
 
     bool handleInternalHedgeDone(uint32_t marketId, uint32_t hedgeId) {
-        assert(marketId != MarketIds::MARKET_ID_EXTERNAL);
+        assert(marketId < MarketIds::MARKET_ID_EXTERNAL);
         for (auto it = _fakSizeAdjustments[marketId].begin(); it != _fakSizeAdjustments[marketId].end(); ++it) {
             SizeAdjustment& adj = *it;
             if (adj._hedgeId == hedgeId) {
                 _fakSizeAdjustment[marketId] -= adj._adjustment;
                 LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} internal hedge adjustment Done. HedgeId={i5} Adj={i6} FAKAdj={i7} asQuoteQdj={i8} FAKPreAdj={i9} Price={d1} Size={i10} AdjustedSize={i11}", _strategy,
-                    _contractId, _id, _side, adj._hedgeId, adj._adjustment, _fakSizeAdjustment[marketId],
+                    _contractId, marketId, _side, adj._hedgeId, adj._adjustment, _fakSizeAdjustment[marketId],
                     _asQuoteAdjustment, _fakPreAdjustment, ToDollars(_price), getUnAdjustedSize(),
                     getAdjustedSize(marketId))
                 _fakSizeAdjustments[marketId].erase(it);
@@ -676,6 +696,12 @@ struct Market {
 
     bool handleFakDone(om::order_id_t id) {
         assert(_id == MarketIds::MARKET_ID_EXTERNAL);
+        if (_fakDoneReceived.test(id)) {
+            return false;
+        }
+
+        _fakDoneReceived.set(id);
+
         for (auto it = _fakSizeAdjustments[_id].begin(); it != _fakSizeAdjustments[_id].end(); ++it) {
             SizeAdjustment& adj = *it;
             if (adj._orderId == id) {
@@ -727,8 +753,6 @@ struct Market {
 
     void addFAKPreAdjustment(Market* market) {
         _fakPreAdjustedMarkets.push_back(market);
-        TLOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} add FAK market {C[i5]} Id={i6} Side={i7} _fakPreAdjustedMarkets.size={i8}", _strategy,
-             _contractId, _id, _side, market->_contractId, market->_id, market->_id, _fakPreAdjustedMarkets.size())
         market->addFAKPreAdjustment(_asQuoteAdjustment);
     }
 
@@ -763,39 +787,23 @@ struct Market {
             ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
     }
 
-    bool undoAsQuoteAdjustment(std::unordered_set<Market*>& effected_markets) noexcept {
-        return undoAsQuoteAdjustment(_asQuoteAdjustment, effected_markets);
+    bool undoAsQuoteAdjustment(std::unordered_set<Market*>& affected_markets) noexcept {
+        return undoAsQuoteAdjustment(_asQuoteAdjustment, affected_markets);
     }
 
-    bool undoAsQuoteAdjustment(hf::qty_t adj, std::unordered_set<Market*>& effected_markets) noexcept {
+    bool undoAsQuoteAdjustment(hf::qty_t adj, std::unordered_set<Market*>& affected_markets) noexcept {
         if (_asQuoteAdjustment) {
-            _asQuoteAdjustment -= adj;
+            _asQuoteAdjustment = std::max<hf::qty_t>(0, _asQuoteAdjustment - adj);
             LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4}. Undo AS Quote Adjustment. adj={i5} asQuoteAdjustment={i6} Price={d1} Size={i7} AdjustedSize={i8}", _strategy,
                 _contractId, _id, _side, adj, _asQuoteAdjustment, ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
             for (auto* market : _fakPreAdjustedMarkets) {
                 market->undoFAKPreAdjustment(adj);
-                effected_markets.emplace(market);
+                affected_markets.emplace(market);
             }
             assert(_asQuoteAdjustment >= 0);
             if (_asQuoteAdjustment <=0) {
                 _fakPreAdjustedMarkets.clear();
             }
-            return true;
-        }
-        return false;
-    }
-
-    bool ackAsQuoteAdjustment(hf::qty_t acked, std::unordered_set<Market*>& effected_markets) noexcept {
-        if (_asQuoteAdjustment) {
-            for (auto* market : _fakPreAdjustedMarkets) {
-                market->undoFAKPreAdjustment(acked);
-                effected_markets.emplace(market);
-            }
-            _asQuoteAdjustment = std::max<hf::qty_t>(0, _asQuoteAdjustment - acked);
-
-            LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Acked AS Quote adjustment. acked={i5} asQuoteAdjustment={i6} FAKPreAdj={i7} FAKAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _strategy,
-                _contractId, _id, _side, acked, _asQuoteAdjustment, _fakPreAdjustment, _fakSizeAdjustment[_id],
-                ToDollars(_price), getUnAdjustedSize(), getAdjustedSize())
             return true;
         }
         return false;
@@ -810,11 +818,11 @@ struct Market {
     }
 
     hf::qty_t getAdjustedSize() const noexcept {
-        return getAdjustedSize(_id);
+        return _id == MarketIds::__end__ ? 0 : getAdjustedSize(_id);
     }
 
     hf::qty_t getAdjustedSizeExcludeFAKPreAdj() const noexcept {
-        return std::max<hf::qty_t>(_size - _fakSizeAdjustment[_id] - _asQuoteAdjustment, 0);
+        return _id == MarketIds::__end__ ? 0 : std::max<hf::qty_t>(_size - _fakSizeAdjustment[_id] - _asQuoteAdjustment, 0);
     }
 
     hf::qty_t getAdjustedSize(uint32_t marketId) const noexcept {
@@ -863,6 +871,7 @@ private:
     hf::qty_t _fakPreAdjustment = 0;
     std::vector<SizeAdjustment> _fakSizeAdjustments[MarketIds::__end__];
     std::vector<Market*> _fakPreAdjustedMarkets;
+    std::bitset<om::ORDER_NUM> _fakDoneReceived;
 };
 
 template<uint32_t Side>
@@ -963,6 +972,7 @@ enum class FillSource : uint8_t {
     ViperOff,
     ViperStart,
     Manual,
+
     AsDisable,
     AsHedgeReject,
     ASUnableToHedge,
@@ -1288,10 +1298,6 @@ inline std::string GetTraderName(Traders trader) {
             return "Mark";
         case Traders::Steven:
             return "Steven";
-        case Traders::Taj:
-            return "Taj";
-        case Traders::Zhi:
-            return "Zhi";
         default:
             throw std::runtime_error("unknown trader");
     }
@@ -1421,11 +1427,14 @@ enum class ViperMessageType : uint8_t {
     QuoteExternallyOn,
     CanEnableUseGTC,
     RVLatencyTracking,
+    InternalBookUpdate,
     ASInternalMatchingDone,
-    ASQuoteAdjustmentACK,
     SubscribeSTFUpdate,
     STFUpdate,
     TransferPositionToRV,
+    VectorParameterUpdate,
+
+    FAKDone,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1473,13 +1482,19 @@ struct RVLatencyTrackingMessage {
     uint32_t _hedgeId;
 };
 
+#pragma pack(1)
 struct FillMessage {
     uint64_t _timestamp;
     hf::price_t _price;
-    hf::price_t _rvStf;
-    hf::qty_t _qty;
-    uint32_t _internalAllocation;
-    uint32_t _externalAllocation;
+    union {
+        hf::price_t _rvStf;
+        struct {
+            uint32_t _internalAllocation;
+            uint32_t _externalAllocation;
+        };
+    };
+    LatencyTrackingFields _latencyTracking;
+    int32_t _qty;
     uint32_t _contractId;
     uint32_t _side;
     StrategyId _strategy;
@@ -1487,8 +1502,8 @@ struct FillMessage {
     FillSource _source;
     bool _forceOverFill;
     bool _checkLimit;
-    LatencyTrackingFields _latencyTracking;
 };
+#pragma pack()
 
 struct ASFillsToRV {
     uint32_t _numFills;
@@ -1646,6 +1661,22 @@ struct STFUpdate {
     } _data[0];
 };
 #pragma pack()
+
+struct InternalBookUpdate {
+    uint32_t _contractId;
+    uint32_t _side;
+    hf::batch_id_t _lastMDbid;
+    md::top_t _book;
+};
+
+struct VectorParameterUpdate {
+    uint32_t _numUpdate;
+    struct Update {
+        VectorParametersColumns _type;
+        uint32_t _vectorIndex;
+        double _value;
+    } _data[0];
+};
 
 class ViperPool : public hf::pool::DataPool {
 public:

@@ -151,6 +151,7 @@ struct ArbieSpreaderConfig {
     hf::qty_t _quoteSize;
     double _edge;
     double _hedgeOffset;
+    double _maxTicksThroughMarket;
     bool _quoteExternal;
     std::vector<ArbieSpreaderPath> _paths;
 };
@@ -194,10 +195,12 @@ struct EconomicNumber {
     uint64_t _beginTime;
     uint64_t _mmEndTime = std::numeric_limits<uint64_t>::max();
     uint64_t _rvEndTime = std::numeric_limits<uint64_t>::max();
+    uint64_t _asEndTime = std::numeric_limits<uint64_t>::max();
     time_t _datetime = std::numeric_limits<uint64_t>::max();
     uint32_t _id;
     uint32_t _mmDuration;
     uint32_t _rvDuration;
+    uint32_t _asDuration;
     enum Color {
         DarkRed,
         Red,
@@ -212,6 +215,10 @@ struct EconomicNumber {
     std::vector<ViperStrategyBase*> _strategyDisabled;
     std::vector<ViperStrategyBase*> _strategyQuoteExtDisabled;
     Shifts _currentShift;
+
+    uint64_t nextCheckPoint() const noexcept {
+        return std::min<uint64_t>(std::min<uint64_t>(std::min<uint64_t>(_asEndTime, _rvEndTime), _mmEndTime), _beginTime);
+    }
 };
 
 inline const char* to_string(EconomicNumber::Color color) {
@@ -238,6 +245,7 @@ const std::string MSG_HEDGES_INTERVAL_MICS = "msgHedgesIntervalMics";
 const std::string MSG_REDUCE_QUOTE_MICS = "msgReduceQuoteMics";
 const std::string SELF_MATCH_BANNER_MICS = "selfMatchBannerMics";
 const std::string RV_WIDTH_MULTIPLIER = "RVWidthMultiplier";
+const std::string AS_EDGE_MULTIPLIER = "ASEdgeMultiplier";
 const std::string AUTO_SHUTDOWN_TIME = "autoShutdownTime";
 const std::string AUTO_RV_DISABLE_TIME = "autoRVDisableTime";
 const std::string AUTO_MM_DISABLE_TIME = "autoMMDisableTime";
@@ -903,6 +911,7 @@ struct ViperConfig {
             config._quoteSize = boost::lexical_cast<hf::qty_t>(values[i++]);
             config._edge = boost::lexical_cast<double>(values[i++]);
             config._hedgeOffset = boost::lexical_cast<double>(values[i++]);
+            config._maxTicksThroughMarket = boost::lexical_cast<double>(values[i++]);
             configs.emplace_back(std::move(config));
         };
         return parseBody(input, setter);
@@ -1261,7 +1270,6 @@ struct ViperConfig {
             return false;
         }
 
-        //Expected header: RVContract,position
         auto unexpectedColError = [this, &it](int colNum) {
             logging::GetLogger().logError(std::string("Unexpected column in economic number file.  expected=") + _economicNumberHeader[colNum] + " discovered=" + *it);
         };
@@ -1299,9 +1307,11 @@ struct ViperConfig {
             economicNumber._datetimeString = values[i++];
             economicNumber._mmDuration = boost::lexical_cast<uint32_t>(values[i++]);
             economicNumber._rvDuration = boost::lexical_cast<uint32_t>(values[i++]);
+            economicNumber._asDuration = boost::lexical_cast<uint32_t>(values[i++]);
             economicNumber._beginTime = std::numeric_limits<uint64_t>::max();
             economicNumber._mmEndTime = std::numeric_limits<uint64_t>::max();
             economicNumber._rvEndTime = std::numeric_limits<uint64_t>::max();
+            economicNumber._asEndTime = std::numeric_limits<uint64_t>::max();
             economicNumber._datetime = datetime;
             economicNumber._id = id++;
             economicNumber._tradeName = values[i++];
@@ -1810,7 +1820,7 @@ struct ViperConfig {
             });
             if (iter != _arbieSpreaderConfigs.end()) {
                 auto& config = *iter;
-                ArbieSpreaderParameterColumns columnType = static_cast<ArbieSpreaderParameterColumns>(gridCell.col());
+                auto columnType = static_cast<ArbieSpreaderParameterColumns>(gridCell.col());
 
                 switch (columnType) {
                     case ArbieSpreaderParameterColumns::QuoteExternal:
@@ -1822,10 +1832,12 @@ struct ViperConfig {
                     case ArbieSpreaderParameterColumns::QuoteSize:
                         config._quoteSize = boost::lexical_cast<hf::qty_t>(gridCell.value());
                         break;
-                    case ArbieSpreaderParameterColumns::HedgeOffset: {
-                        config._hedgeOffset = boost::lexical_cast<double>((gridCell.value()));
+                    case ArbieSpreaderParameterColumns::HedgeOffset:
+                        config._hedgeOffset = boost::lexical_cast<double>(gridCell.value());
                         break;
-                    }
+                    case ArbieSpreaderParameterColumns::MaxTicksThroughMarket:
+                        config._maxTicksThroughMarket = boost::lexical_cast<double>(gridCell.value());
+                        break;
                     default:
                         break;
                 }
@@ -2283,9 +2295,10 @@ struct ViperConfig {
         for (auto& config : _arbieSpreaderConfigs) {
             output << config._contract;
             output << "," << getWriteBoolValue(config._quoteExternal);
-            output << "," << std::to_string(config._quoteSize);
-            output << "," << std::to_string(config._edge);
-            output << "," << std::to_string(config._hedgeOffset);
+            output << "," << config._quoteSize;
+            output << "," << config._edge;
+            output << "," << config._hedgeOffset;
+            output << "," << config._maxTicksThroughMarket;
             fillInMissingCommas(output, _arbieSpreaderConfigHeader.size());
         }
         writeEmptyLine(output);
@@ -2360,7 +2373,7 @@ struct ViperConfig {
     static constexpr const char* _positionHeader[] = {"Contract", "position"};
 
     std::vector<ArbieSpreaderConfig> _arbieSpreaderConfigs;
-    std::vector<std::string> _arbieSpreaderConfigHeader = {"quoteExternal", "quoteSize", "edge", "hedgeOffset"};
+    std::vector<std::string> _arbieSpreaderConfigHeader = {"quoteExternal", "quoteSize", "edge", "hedgeOffset", "maxTicksThroughMarket"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader = {
@@ -2413,13 +2426,34 @@ struct ViperConfig {
     std::vector<std::string> _negativeScalpCheckerConfigsHeader = {"periodMillis", "clips", "dollars" };
 
     static constexpr const char* ValidGlobalParameters[] = {
-            "quoteBannerMics", "fillBannerMics", "negScalpClips", "negScalpDollars", "negScalpPeriodMillis", "fillRateClips", "fillRateSumTotalQty", "fillRatePeriodMillis", "percentMsgHedges",
-            "percentMsgReduceQuote", "msgHedgesIntervalMics", "msgReduceQuoteMics", "hedgeBannerMics", "MMWorsenPayUpCond%", "selfMatchBannerMics", "RVWidthMultiplier",
-            "orderRateClips", "orderRateSumTotalQty", "orderRatePeriodMillis", "autoShutdownTime", "autoRVDisableTime",
-            "autoMMDisableTime", "autoASDisableTime"};
+            "quoteBannerMics",
+            "fillBannerMics",
+            "negScalpClips",
+            "negScalpDollars",
+            "negScalpPeriodMillis",
+            "fillRateClips",
+            "fillRateSumTotalQty",
+            "fillRatePeriodMillis",
+            "percentMsgHedges",
+            "percentMsgReduceQuote",
+            "msgHedgesIntervalMics",
+            "msgReduceQuoteMics",
+            "hedgeBannerMics",
+            "MMWorsenPayUpCond%",
+            "selfMatchBannerMics",
+            "RVWidthMultiplier",
+            "ASEdgeMultiplier",
+            "orderRateClips",
+            "orderRateSumTotalQty",
+            "orderRatePeriodMillis",
+            "autoShutdownTime",
+            "autoRVDisableTime",
+            "autoMMDisableTime",
+            "autoASDisableTime"
+    };
 
 
-    std::vector<std::string> _economicNumberHeader = {"datetime", "mmDuration", "rvDuration", "trade", "color", "description"};
+    std::vector<std::string> _economicNumberHeader = {"datetime", "mmDuration", "rvDuration", "asDuration", "trade", "color", "description"};
     std::unordered_map<uint32_t, EconomicNumber> _mapIdEconomicNumber;
 
     std::vector<ConfigContract> _allContracts;

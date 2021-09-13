@@ -56,7 +56,7 @@ void ViperLogger::writeViperLog() {
     om::debug_t* di;
     auto queue = _logQueue.lock();
     while(queue && (di = queue->read())) {
-        auto ts = hf::util::TimeUtils::clock_gettime();
+        auto ts = rhone::util::getTimeStamp().time_since_epoch().count();
 
         uint32_t nInts = di->ch[0];
         uint32_t nDoubles = di->ch[1];

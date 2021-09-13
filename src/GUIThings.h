@@ -1,7 +1,6 @@
 #ifndef VIPER_GUI_THINGS_H
 #define VIPER_GUI_THINGS_H
 
-#include <hf/util/TimeUtils.h>
 #include <util/VenueUtils.h>
 #include "messages/python.pb.h"
 #include "ViperConfig.h"
@@ -118,7 +117,7 @@ public:
         auto cells = message.mutable_cells();
         for (uint32_t contractIndex = 0; contractIndex < relativeValue->_numberOfAllContracts; ++contractIndex) {
             RvContract& contract = relativeValue->_contracts[contractIndex];
-                setCell(cells, contract._internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(relativeValue->_maxTicksThroughMarket.getValue(contractIndex)));
+                setCell(cells, contract._internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(relativeValue->_maxTicksThroughMarket.getValue(contractIndex) / contract._definition._tickSize));
         }
     }
 
@@ -144,7 +143,7 @@ public:
     Position& getPosition(uint32_t index, std::map<uint32_t, Position>& positions) {
         auto it = positions.find(index);
         if (it == positions.end()) {
-            return positions.insert({index, Position()}).first->second;
+            return positions.emplace(index, Position()).first->second;
         }
         return it->second;
     }
@@ -509,7 +508,7 @@ public:
                 point->set_chartid(vectorIndex);
                 point->set_dataseriesid(toUInt(DataSeries::LTF));
                 point->set_value(ltf);
-                point->set_time(hf::util::TimeUtils::clock_gettime());
+                point->set_time(rhone::util::getTimeStamp().time_since_epoch().count());
             }
             {
                 const double mkt = relativeValue->_currentVectorMarketPrices->getValue(vectorIndex);
@@ -517,7 +516,7 @@ public:
                 point->set_chartid(vectorIndex);
                 point->set_dataseriesid(toUInt(DataSeries::VectorPrice));
                 point->set_value(mkt);
-                point->set_time(hf::util::TimeUtils::clock_gettime());
+                point->set_time(rhone::util::getTimeStamp().time_since_epoch().count());
             }
             {
                 double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
@@ -525,7 +524,7 @@ public:
                 point->set_chartid(vectorIndex);
                 point->set_dataseriesid(toUInt(DataSeries::STF));
                 point->set_value(stf);
-                point->set_time(hf::util::TimeUtils::clock_gettime());
+                point->set_time(rhone::util::getTimeStamp().time_since_epoch().count());
             }
         }
     }
@@ -833,8 +832,6 @@ public:
         auto members = definition->mutable_members();
         addEnumMember(members, "Steven", toUInt(Traders::Steven));
         addEnumMember(members, "Mark", toUInt(Traders::Mark));
-        addEnumMember(members, "Taj", toUInt(Traders::Taj));
-        addEnumMember(members, "Zhi", toUInt(Traders::Zhi));
     }
 
     void addShiftsEnum(proto::EnumDefinition* definition) {
@@ -2023,6 +2020,7 @@ public:
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Time, "Time (HH::MM::SS)", false, proto::DataType::string_type);
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::MMDuration, "MM duration (sec)", false, proto::DataType::string_type);
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::RVDuration, "RV duration (sec)", false, proto::DataType::string_type);
+        addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::ASDuration, "AS duration (sec)", false, proto::DataType::string_type);
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Color, "color", false, proto::DataType::enum_type, "economic_number_color");
         addColumnHeaderCell(WindowIds::EconomicNumbers, columnHeader, EconomicNumberColumns::Description, "description", false, proto::DataType::string_type);
 
@@ -2035,6 +2033,7 @@ public:
             setCell(cells, en->_id, EconomicNumberColumns::Time, en->_datetimeString.substr(11));
             setCell(cells, en->_id, EconomicNumberColumns::MMDuration, std::to_string(en->_mmDuration));
             setCell(cells, en->_id, EconomicNumberColumns::RVDuration, std::to_string(en->_rvDuration));
+            setCell(cells, en->_id, EconomicNumberColumns::ASDuration, std::to_string(en->_asDuration));
             setCell(cells, en->_id, EconomicNumberColumns::Color, std::to_string(toUInt(en->_color)));
             setCell(cells, en->_id, EconomicNumberColumns::Description, en->_description);
         }
@@ -2046,6 +2045,7 @@ public:
             setCell(cells, i, EconomicNumberColumns::Time, "");
             setCell(cells, i, EconomicNumberColumns::MMDuration, "");
             setCell(cells, i, EconomicNumberColumns::RVDuration, "");
+            setCell(cells, i, EconomicNumberColumns::ASDuration, "");
             setCell(cells, i, EconomicNumberColumns::Color, "");
             setCell(cells, i, EconomicNumberColumns::Description, "");
         }

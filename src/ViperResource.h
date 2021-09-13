@@ -131,7 +131,7 @@ public:
         return _viperConfig._allContracts[id]._name;
     }
 
-    ViperStrategyBase* getStrategy(StrategyId id) noexcept {
+    ViperStrategyBase* getStrategy(StrategyId id) const noexcept {
         return _strategies[toUInt(id)];
     }
 
@@ -155,6 +155,13 @@ public:
         return _viperConfig.getInternalId(sid);
     }
 
+    template<typename IteratorFunc>
+    void foreachStrategy(IteratorFunc&& iteratorFunc) {
+        for (auto* strategy : _strategies) {
+            iteratorFunc(strategy);
+        }
+    }
+
 protected:
     void _onCreate(const libconfig::Setting& config) {
         _msgQueue.init(hf::ConfigManager::getULong(config, "queue_size", DEFAULT_QUEUE_SIZE));
@@ -168,7 +175,6 @@ protected:
                       MessagePopulateFunc&& msgPopulateFunc,
                       uint32_t msgDataSize = 0) const {
         uint32_t sz = CacheLineBuf::calculateReserveSize(sizeof(ViperMessage) + sizeof(MsgT) + msgDataSize);
-        static_assert(sizeof(MsgT) <= 58 || std::is_same<MsgT, FillMessage>::value, "Message too big");
 #ifdef IS_DEV
         if ((sizeof(MsgT) + msgDataSize) > 58) {
             LOG(0, "!!!! Can we reduce message size? msgType={i1} msgSize={i2} msgDataSize={i3}", toUInt(type), sizeof(MsgT), msgDataSize)

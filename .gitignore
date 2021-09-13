@@ -8,6 +8,7 @@ cmake-build-*
 /templates
 /seqnum
 /shm
+/instance_counts
 *.log
 port_gid_*_orders.bin
 store
