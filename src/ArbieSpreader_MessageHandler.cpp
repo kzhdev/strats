@@ -220,7 +220,7 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
         if (stfOffset == hf::NULL_PRICE) {
             for (auto path : _paths) {
                 path->_priceSize.reset();
-                path->_dirty = true;
+                path->_resort = true;
             }
         }
         else if (_stfOffset == hf::NULL_PRICE) {
@@ -232,7 +232,7 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
             for (auto path : _paths) {
                 if (path->_priceSize.valid()) {
                     path->_priceSize._price += diff;
-                    path->_dirty = true;
+                    path->_resort = true;
                 }
             }
         }
