@@ -250,9 +250,9 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                             path->_config->_enabled = value;
                             if (!value) {
                                 path->_priceSize.reset();
-                                path->_dirty = true;
+                                path->_resort = true;
                                 path->_otherSidePath->_priceSize.reset();
-                                path->_otherSidePath->_dirty = true;
+                                path->_otherSidePath->_resort = true;
                             } else {
                                 path->_recalc = true;
                                 path->_otherSidePath->_recalc = true;

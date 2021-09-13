@@ -259,7 +259,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
                         path->_recalc = true;
                     } else if (path->_priceSize.valid()) {
                         path->_priceSize.reset();
-                        path->_dirty = true;
+                        path->_resort = true;
                     }
                 }
             }
