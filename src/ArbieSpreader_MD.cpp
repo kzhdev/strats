@@ -12,7 +12,7 @@ void ArbieSpreader::onMDUpdate(const md::MDUpdateEvent &event, uint32_t internal
     }
 
     if (contract._lastMDbid >= batchId) {
-        logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._def._name % batchId % contract._lastMDbid));
+        logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Skip stale MD. Update. bid=%2% lastMDbid=%3%") % contract._def._name % batchId % contract._lastMDbid));
         return;
     }
 
@@ -32,7 +32,7 @@ void ArbieSpreader::onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent &
     }
 
     if (contract._lastMDbid >= batch.bid) {
-        logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._def._name % batch.bid % contract._lastMDbid));
+        logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Skip stale MD. Trade. bid=%2% lastMDbid=%3%") % contract._def._name % batch.bid % contract._lastMDbid));
         return;
     }
 
