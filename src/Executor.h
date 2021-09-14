@@ -3054,7 +3054,7 @@ public:
             addRoutingStateToNewLimitOrder(*order, internalId, connection);
             ++state._ime._messages._inserts;
             if (!isHedge) {
-                addMessageToThrottler(now, connection);
+                addMessageToThrottler(now, connection, state._contract._venue);
             }
             state._rhoneRouter.setNextRoute(state._contract._venue, now, _b3hb._oneMillisecondInTicks);
         }
@@ -3141,7 +3141,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::ChangeUseGTC, id, enabled);
     }
 
-    void addMessageToThrottler(uint64_t now, strat::om_queue_info_t* connection) {
+    void addMessageToThrottler(uint64_t now, strat::om_queue_info_t* connection, hf::VENUE venue) {
         auto port_gid = strat::port_gid(*connection);
         auto it = _throttlers.find(port_gid.value());
         if (it == _throttlers.end()) {
@@ -3154,7 +3154,8 @@ public:
             uint32_t inDangerZonePeriodInMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(MSG_REDUCE_QUOTE_MICS));
             uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(inDangerZonePeriodInMics, _frequency);
 
-            it->second.initialize(_frequency, port_gid, 1, _transactionCapacity[toUInt(strat::venue(*connection))], percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
+            it->second.initialize(_frequency, venue, port_gid, 1, _transactionCapacity[toUInt(strat::venue(*connection))],
+                                  percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
         }
         addMessageToThrottler(now, it->second);
     }
@@ -3277,7 +3278,7 @@ public:
     void setThrottlingBanner(Throttler& throttler, THROTTLING_MODE mode) {
         for (auto& state : _contractStates) {
             if (state._contract._toMarketMake) {
-                if (mode == throttler.getMode()) {
+                if (state._contract._venue == throttler.getVenue() && mode == throttler.getMode()) {
                     state._ime.setThrottlingBanner(mode);
                 }
             }

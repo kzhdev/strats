@@ -1,3 +1,6 @@
+#Version 1.54.1.1
+- Fix throttler banner doesn't consider venue which could enable contracts with wrong venue
+
 #Version 1.54.1.0
 - Fix outlier statistics
 - Fix ENABLE_LATENCY_TRACK build

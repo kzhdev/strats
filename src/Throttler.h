@@ -53,13 +53,16 @@ struct MessageTracker {
 
 class Throttler {
 public:
-    void initialize(double frequency, const om::port_gid_t& port_gid, uint32_t messagePeriod, uint32_t messageCount, double dangerPercentage, double hedgePercentage, uint64_t dangerZonePeriod, uint64_t atCapacityPeriod) {
+    void initialize(double frequency, hf::VENUE venue, const om::port_gid_t& port_gid, uint32_t messagePeriod,
+                    uint32_t messageCount, double dangerPercentage, double hedgePercentage, uint64_t dangerZonePeriod,
+                    uint64_t atCapacityPeriod) {
         _messageCount = messageCount;
         _hedgePercentage = hedgePercentage;
         _dangerZonePercentage = dangerPercentage;
         _dangerZonePeriod = dangerZonePeriod;
         _atCapacityPeriod = atCapacityPeriod;
         _port_gid = port_gid;
+        _venue = venue;
 
         uint32_t dangerThreshold;
         uint32_t atCapacityThreshold;
@@ -68,7 +71,8 @@ public:
             logging::GetLogger().logErrorAndThrow("Reserved for hedges and danger zone are more than full capacity");
         }
 
-        LOG(0, "Throttler. Initialized. port_gid={i1} DangerThreshold={i2} AtCapacityThreshold={i3}", _port_gid.value(), dangerThreshold, atCapacityThreshold)
+        LOG(0, "Throttler. Initialized. VENUE={i1} port_gid={i2} DangerThreshold={i3} AtCapacityThreshold={i4}", toUInt(_venue),
+            _port_gid.value(), dangerThreshold, atCapacityThreshold)
 
         uint64_t periodInCycles = GetCyclesFromSeconds(messagePeriod, frequency);
         _dangerZoneTracker.initialize(periodInCycles, dangerThreshold);
@@ -94,19 +98,19 @@ public:
     void setInDangerZone(uint64_t now) noexcept {
         _banEnd = now + _dangerZonePeriod;
         _mode = THROTTLING_MODE_DANGER_ZONE;
-        LOG(0, "Throttler Setting mode: DANGER_ZONE {i1}", 0)
+        LOG(0, "Throttler Setting mode: DANGER_ZONE venue={i1} port_gid={i2}", toUInt(_venue), _port_gid.value())
     }
 
     void setAtCapacity(uint64_t now) noexcept {
         _banEnd = now + _atCapacityPeriod;
         _mode = THROTTLING_MODE_AT_CAPACITY;
-        LOG(0, "Throttler Setting mode: AT_CAPACITY {i1}", 0)
+        LOG(0, "Throttler Setting mode: AT_CAPACITY venue={i1} port_gid={i2}", toUInt(_venue), _port_gid.value())
     }
 
     void setInSafeZone() {
         _mode = THROTTLING_MODE_NONE;
         _banEnd = 0;
-        LOG(0, "Throttler Setting mode: NONE {i1}", 0)
+        LOG(0, "Throttler Setting mode: NONE venue={i1} port_gid={i2}", toUInt(_venue), _port_gid.value())
     }
 
     bool wasInDangerZone() {
@@ -152,6 +156,10 @@ public:
         return _port_gid;
     }
 
+    hf::VENUE getVenue() const noexcept {
+        return _venue;
+    }
+
 private:
     MessageTracker _dangerZoneTracker;
     MessageTracker _fullCapacityTracker;
@@ -162,6 +170,7 @@ private:
     double _dangerZonePercentage;
     double _hedgePercentage;
     om::port_gid_t _port_gid;
+    hf::VENUE _venue;
     THROTTLING_MODE _mode = THROTTLING_MODE_NONE;
 };
 
