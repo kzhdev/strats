@@ -192,6 +192,7 @@ public:
         LOG(0, "Strategy {i1} thread started.", strategyName())
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
+            CONDITIONAL_SCOPED_PERF_POINT(AS_Run, [this]() -> bool { return strategyId() == StrategyId::ArbieSpreader; });
             checkSystemState();
             drainInternalMessages();
             this->drainAllMarketData();
@@ -258,6 +259,7 @@ private:
     T const& underlying() const noexcept { return static_cast<T const&>(*this); }
 
     void checkSystemState() {
+        CONDITIONAL_SCOPED_PERF_POINT(AS_CheckSysState, [this]() -> bool { return strategyId() == StrategyId::ArbieSpreader; });
         SystemState state = _state.load(std::memory_order_relaxed);
         if (state != _oldState) {
             if (onSystemStateChange(state)) {
@@ -343,18 +345,25 @@ private:
     }
 
     void drainInternalMessages() {
+#ifdef ENABLE_PERF
+        CONDITIONAL_SCOPED_PERF_POINT(AS_DrainInternalMessage, [this]() -> bool {return strategyId() == StrategyId::ArbieSpreader;});
         uint32_t drainSize = 0;
+#endif
         while(_msgQueue.end() != _msgCursor) {
             auto& msg = reinterpret_cast<ViperMessage&>(_msgQueue[_msgCursor].data[0]);
             assert(msg._size);
             _msgCursor += msg._size;
             underlying().handleViperMessage(msg);
+#ifdef ENABLE_PERF
             ++drainSize;
+#endif
         }
 
+#ifdef ENABLE_PERF
         if (drainSize) {
-            DLOG(0, "{i1} msgQueue drain size. {i2}", strategyName(), drainSize)
+            ADD_PERF_VALUE(AS_DrainInternalMessageCount, drainSize);
         }
+#endif
     }
 
     void checkAutoDisable(uint64_t now) {

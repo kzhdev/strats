@@ -44,27 +44,33 @@ public:
     }
 
     void drainAllMarketData() {
+#ifdef ENABLE_PERF
+        CONDITIONAL_SCOPED_PERF_POINT(AS_DrainMD, [this]() -> bool { return underlying().strategyId() == StrategyId::ArbieSpreader; });
+        uint32_t drainSize = 0;
+#endif
         for (uint32_t i = 0; i < _marketDataQueues.size(); ++i) {
             auto queue = _marketDataQueues[i];
             auto& state = _queueState[i];
             uint_fast64_t index = queue->peekW();
 
-            uint32_t drainSize = 0;
             for (uint_fast64_t j = state._peekIndex; j != index; queue->decrement(j)) {
                 auto idx = queue->peek(j);
                 if (BOOST_LIKELY(!idx)) continue;
 
                 auto& batch = queue->getPoolP()->getBatch(idx);
                 onMDBatch(batch);
-
+#ifdef ENABLE_PERF
                 ++drainSize;
+#endif
             }
 
-            if (BOOST_UNLIKELY((drainSize > 0) && (logging::loggingLevel() > logging::LOG_LEVEL::INFO))) {
-                LOG(0, "{i1} MD Drain {i2} batch from mdQueue {i3}", resourceName(underlying().id()), drainSize, i)
-            }
             state._peekIndex = index;
         }
+#ifdef ENABLE_PERF
+        if (drainSize) {
+            ADD_PERF_VALUE(AS_DrainBatchCount, drainSize);
+        }
+#endif
     }
 
     void onMDBatch(const md::MDBatch &batch) {

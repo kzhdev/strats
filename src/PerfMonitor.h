@@ -24,6 +24,11 @@ enum PerfId : uint8_t {
     AS_BestPathUnChangedAfterRecalc,
     AS_Run,
     AS_OnMDUpdate,
+    AS_DrainMD,
+    AS_DrainBatchCount,
+    AS_DrainInternalMessage,
+    AS_DrainInternalMessageCount,
+    AS_CheckSysState,
 
     RV_RunCycle,
     RV_HedgeProcess,
@@ -60,6 +65,11 @@ inline const char* to_string(PerfId id) noexcept {
             "AS_BestPathUnChangedAfterRecalc",
             "AS_Run",
             "AS_OnMDUpdate",
+            "AS_DrainMD",
+            "AS_DrainBatchCount",
+            "AS_DrainInternalMessage",
+            "AS_DrainInternalMessageCount",
+            "AS_CheckSysState",
 
             "RV_RunCycle",
             "RV_HedgeProcess",
@@ -307,7 +317,7 @@ struct ConditionalScopedPerfPoint {
 #define ADD_PERF_POINT_END(id) PerfMonitor::get()->addPerfPointEnd(id)
 #define ADD_PERF_VALUE(id, value) PerfMonitor::get()->addPerfPoint(id, PerfType::Value, value)
 #define ADD_PERF_PERCENTAGE(id, numerator, denominator) PerfMonitor::get()->addPerfPoint(id, PerfType::Percentage, numerator, denominator)
-#define CONDITIONAL_SCOPED_PERF_POINT(id) ConditionalScopedPerfPoint perf(id)
+#define CONDITIONAL_SCOPED_PERF_POINT(id, condition) ConditionalScopedPerfPoint perf(id, condition)
 
 #else   // ENABLE_PERF
 
@@ -317,7 +327,8 @@ public:
 };
 
 #define SCOPED_PERF_POINT(...) do {} while(0)
-#define ADD_PERF_POINT(...) do {} while(0)
+#define ADD_PERF_POINT_BEGIN(...) do {} while(0)
+#define ADD_PERF_POINT_END(...) do {} while(0)
 #define ADD_PERF_VALUE(...) do {} while(0)
 #define ADD_PERF_PERCENTAGE(...) do {} while(0)
 #define CONDITIONAL_SCOPED_PERF_POINT(...) do {} while(0)
