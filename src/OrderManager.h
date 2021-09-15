@@ -1035,21 +1035,26 @@ public:
                 setAcceptedModifyQuantity(order, event.acceptedQty);
                 adjustAfterAck(const_cast<om::order_t &>(order), requiresRequote);
             }
-            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
+                _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
         void onOrderReplaced(const om::OMOrderModifiedEvent& event, const om::order_t& order, Level* priorLevel, bool requiresRequote) {
             LOG(0, "OM {C[i1]}. Order Replaced. Side={i2} OID={i3} Price={d1} Size={i4}", getContractName(), _om->_side, order.oid.value(), _dollar, event.acceptedQty)
-            LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
+            LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
+                _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
             om::order_t& mutableOrder = const_cast<om::order_t &>(order);
             BOOST_ASSERT_MSG(mutableOrder.leavesQty == event.acceptedQty - order.exectedQty,  "leavesqty managed by Strategy.hpp in Rhone4");
 
             SetQuantity(order, 0, IS_HEDGE);    // hedge action complete, reset it
 
             if (priorLevel != this) {
-                LOG(0, "OM {C[i1]}. Prior Level (Before Price={d1}). Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", priorLevel->getContractName(), priorLevel->_dollar, priorLevel->_target[0], priorLevel->_target[1], priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout)
                 const hf::qty_t diff = getLeavesQuantityOnCurrentLevelOnOrderReplaced(order);
                 const hf::qty_t previousLevelDiff = getLeavesQuantityOnPriorLevelOnOrderReplaced(order);
+                LOG(0, "OM {C[i1]}. Prior Level (Before Price={d1}). Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8} diff={i9} previousLevelDiff={i10}", priorLevel->getContractName(),
+                    priorLevel->_dollar, priorLevel->_target[0], priorLevel->_target[1], priorLevel->_acknowledged,
+                    priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout,
+                    diff, previousLevelDiff)
                 priorLevel->_flightout -= previousLevelDiff;
                 priorLevel->moveQuantity(-previousLevelDiff);
                 moveQuantity(diff);
@@ -1064,6 +1069,9 @@ public:
             if (priorLevel != this) {
                 priorLevel->synchronizeOrders();
                 priorLevel->notifyIfLevelFree();
+                LOG(0, "OM {C[i1]}. Prior Level (After Price={d1}). Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", priorLevel->getContractName(),
+                    priorLevel->_dollar, priorLevel->_target[0], priorLevel->_target[1], priorLevel->_acknowledged,
+                    priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout)
             }
 
             bool potentialOverfill = GetQuantity(order, POTENTIAL_OVERFILL_QTY);
@@ -1081,9 +1089,6 @@ public:
                 getTargetLevel(order)->synchronizeOrders();
             }
 
-            if (priorLevel != this) {
-                LOG(0, "OM {C[i1]}. Prior Level (After Price={d1}). Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", priorLevel->getContractName(), priorLevel->_dollar, priorLevel->_target[0], priorLevel->_target[1], priorLevel->_acknowledged, priorLevel->_flight, priorLevel->_traded, priorLevel->_potentialOverfill, priorLevel->_flightout)
-            }
             LOG(0, "OM {C[i1]}. After. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(), _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
         }
 
