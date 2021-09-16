@@ -418,13 +418,17 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
         return false;
     }
 
-    bool canQuoteExternal = canQuoteExternally() && canExchangeQuoteExternally(contract._def._venue) && contract._quoteExternally;
-    auto& lastRequest = _lastOrderRequests[contract._def._internalId];
-    bool quoteUpdated = updateQuote<BID>(contract, force, canQuoteExternal, lastRequest);
-    quoteUpdated |= updateQuote<ASK>(contract, force, canQuoteExternal, lastRequest);
+    bool quoteUpdated = false;
+    {
+        SCOPED_PERF_POINT(PerfId::AS_UpdateQuotes);
+        bool canQuoteExternal = canQuoteExternally() && canExchangeQuoteExternally(contract._def._venue) && contract._quoteExternally;
+        auto& lastRequest = _lastOrderRequests[contract._def._internalId];
+        quoteUpdated = updateQuote<BID>(contract, force, canQuoteExternal, lastRequest);
+        quoteUpdated |= updateQuote<ASK>(contract, force, canQuoteExternal, lastRequest);
 
-    if (quoteUpdated) {
-        _orderRequestMgr.notifyOrderRequest(contract._def._internalId, StrategyId::ArbieSpreader, lastRequest);
+        if (quoteUpdated) {
+            _orderRequestMgr.notifyOrderRequest(contract._def._internalId, StrategyId::ArbieSpreader, lastRequest);
+        }
     }
     return quoteUpdated;
 }

@@ -29,6 +29,7 @@ enum PerfId : uint8_t {
     AS_DrainInternalMessage,
     AS_DrainInternalMessageCount,
     AS_CheckSysState,
+    AS_CreateQuote,
 
     RV_RunCycle,
     RV_HedgeProcess,
@@ -70,6 +71,7 @@ inline const char* to_string(PerfId id) noexcept {
             "AS_DrainInternalMessage",
             "AS_DrainInternalMessageCount",
             "AS_CheckSysState",
+            "AS_CreateQuote",
 
             "RV_RunCycle",
             "RV_HedgeProcess",
