@@ -3035,17 +3035,8 @@ public:
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         auto connection = state._rhoneRouter.getRouteForNextNewOrder(state._contract._venue);
-#ifdef ENABLE_LATENCY_TRACK
-        mb();
-        auto timestsamp = hf::util::TimeUtils::clock_gettime();
-        mb();
-#endif
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), orderType,
-                                                         ToRhoneSide(side), price, size,
-                                                         om::STP_ACTION::CANCEL_PASSIVE);
-#ifdef ENABLE_LATENCY_TRACK
-        order->debug.i[TIMESTAMP] = timestsamp;
-#endif
+                                                         ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_PASSIVE);
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_UNLIKELY(order == nullptr)) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
@@ -3193,15 +3184,8 @@ public:
 
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
-#ifdef ENABLE_LATENCY_TRACK
-        mb();
-        auto timestsamp = hf::util::TimeUtils::clock_gettime();
-        mb();
-#endif
         om::order_t* order = this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, state._contract._orderIncrementQty, 0, om::STP_ACTION::CANCEL_PASSIVE);
-#ifdef ENABLE_LATENCY_TRACK
-        order->debug.i[TIMESTAMP] = timestsamp;
-#endif
+
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
         } else {
@@ -3255,11 +3239,6 @@ public:
         }
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
-#ifdef ENABLE_LATENCY_TRACK
-        mb();
-        const_cast<om::order_t*>(order)->debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
-        mb();
-#endif
         const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE, om::RISK_TYPE::ENTERING);
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_LIKELY(done)) {

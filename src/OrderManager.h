@@ -458,11 +458,27 @@ public:
         }
 
         hf::qty_t getLeavesQuantityOnPriorLevelOnOrderReplaced(const om::order_t& order) const {
-            return getRestingQty(order) - order.executedQty;
+            auto result = getRestingQty(order) - order.executedQty;
+            auto iter = _earlyFills.find(order.oid.value());
+            if (iter != _earlyFills.end()) {
+                // TODO: check fill level price?
+                for (auto& kvp : iter->second) {
+                    result += kvp.second;
+                }
+            }
+            return result;
         }
 
         hf::qty_t getLeavesQuantityOnCurrentLevelOnOrderReplaced(const om::order_t& order) const {
-            return getInFlightQty(order) - order.executedQty;
+            auto result = getInFlightQty(order) - order.executedQty;
+            auto iter = _earlyFills.find(order.oid.value());
+            if (iter != _earlyFills.end()) {
+                // TODO: check fill level price?
+                for (auto& kvp : iter->second) {
+                    result += kvp.second;
+                }
+            }
+            return result;
         }
 
         bool isModifying(const om::order_t& order) const {
@@ -1063,6 +1079,13 @@ public:
                 moveQuantity(diff);
             }
 
+            auto iter = _earlyFills.find(order.oid.value());
+            if (iter != _earlyFills.end()) {
+                iter->second.erase(_price);
+                if (iter->second.empty()) {
+                    _earlyFills.erase(iter);
+                }
+            }
             setAcceptedModifyQuantity(order, event.acceptedQty);
             mutableOrder.action_flags.is_modifying = isStillModifyingAfterModifyAck(order);
 
@@ -1099,6 +1122,20 @@ public:
                 _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, order.leavesQty, _potentialOverfill, _flightout)
 
             _traded += filledQty;
+
+            if (fromMDFeed) {
+                auto iter = _earlyFills.find(order.oid.value());
+                if (iter == _earlyFills.end()) {
+                    _earlyFills[order.oid.value()].emplace(_price, filledQty);
+                } else {
+                    auto it = iter->second.find(_price);
+                    if (it == iter->second.end()) {
+                        iter->second.emplace(_price, filledQty);
+                    } else {
+                        it->second += filledQty;
+                    }
+                }
+            }
 
             //Note !order.is_active is most likely because of a full fill
             //Note : we don't want to send any new orders here since _target could change
@@ -1265,9 +1302,14 @@ public:
                 Level* currentLevel = getTargetLevel(order);
                 Level* priorLevel = this;
                 const hf::qty_t& current_qty = GetQuantity(order, QUANTITY_TO_MODIFY);
-                const hf::qty_t& prior_qty = GetQuantity(order, PRIOR_QUANTITY);
+                hf::qty_t prior_qty = GetQuantity(order, PRIOR_QUANTITY);
                 bool isLastLevel = true;
                 bool isPriorLevelRestingLevel = (this == _om->getRestingLevel(order));
+
+                if (!isPriorLevelRestingLevel) {
+                    // Resting level probably skipped due to FillArb, prior_qty can't be the PRIOR_QUANTITY
+                    prior_qty = current_qty;
+                }
 
                 if(fullFill) {
                     foreachNodeOnFullFill(current_qty, currentLevel, prior_qty, priorLevel, isPriorLevelRestingLevel, isLastLevel);
@@ -1672,6 +1714,11 @@ public:
                     break;
                 }
             }
+
+            auto iter = _earlyFills.find(order.oid.value());
+            if (iter != _earlyFills.end()) {
+                _earlyFills.erase(iter);
+            }
         }
 
         bool hasOrder(const om::order_t &order) {
@@ -1711,6 +1758,7 @@ public:
 
         std::vector<om::order_t*> _orders;
         std::vector<om::order_t*> _blockingOrders;
+        std::unordered_map<om::strategy_order_id_t::value_type , std::unordered_map<hf::price_t, hf::qty_t>> _earlyFills;
         OrderManager* _om;
 
         Level* before = nullptr;
@@ -2450,6 +2498,8 @@ public:
                             level = entry->_level;
                             break;
                         }
+                        LOG(0, "OM {C[i1]}. Skip level {d1}. Order not filled on this level. filledPrice={d2}. fromMDFeed=1", getContractName(),
+                            entry->_level->_dollar, ToDollars(filledPrice))
                     }
                     break;
                 case hf::VENUE::ICE:

@@ -1,3 +1,6 @@
+#Version 1.54.2.0
+- Fix FillArb causes Leftover Quantity error
+
 #Version 1.54.1.1
 - Fix throttler banner doesn't consider venue which could enable contracts with wrong venue
 

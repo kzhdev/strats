@@ -46,7 +46,6 @@ static const uint32_t POTENTIAL_OVERFILL_QTY = 8; //Theoretically can combine wi
 static const uint32_t STACKER_ORDER_FLAGS = 9;
 static const uint32_t IS_HEDGE = 10;
 static const uint32_t HEDGE_ID = 11;
-static const uint32_t TIMESTAMP = 12;
 
 //Bits set with STACKER_ORDER_FLAGS
 static const uint8_t SOF_DECREMENT_FAILED = 0;
