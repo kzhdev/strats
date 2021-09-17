@@ -192,7 +192,6 @@ public:
         LOG(0, "Strategy {i1} thread started.", strategyName())
 
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
-            CONDITIONAL_SCOPED_PERF_POINT(AS_Run, [this]() -> bool { return strategyId() == StrategyId::ArbieSpreader; });
             checkSystemState();
             drainInternalMessages();
             this->drainAllMarketData();
