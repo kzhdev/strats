@@ -420,7 +420,7 @@ bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
 
     bool quoteUpdated = false;
     {
-        SCOPED_PERF_POINT(PerfId::AS_UpdateQuotes);
+        SCOPED_PERF_POINT(PerfId::AS_CreateQuote);
         bool canQuoteExternal = canQuoteExternally() && canExchangeQuoteExternally(contract._def._venue) && contract._quoteExternally;
         auto& lastRequest = _lastOrderRequests[contract._def._internalId];
         quoteUpdated = updateQuote<BID>(contract, force, canQuoteExternal, lastRequest);
