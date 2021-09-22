@@ -1878,8 +1878,15 @@ public:
         DLOG(0, "EXE received MD batch. bid={i1} extSeqNum={i2} venue={i3}", batch.bid, batch.extSequenceNumber,
              toUInt(batch.venue))
 #endif
+        if (BOOST_UNLIKELY(batch.size <= sizeof(md::MDBatch))) {
+            logging::GetLogger().logWarning(boost::str(boost::format(
+                    "EXE received CORRUPTED MD BATCH. bid=%1% count=%2% hwTS=%3% srcTS=%4% srcSentTS=%5% stratTS=%6% venue=%7% extSeqNum=%8%") %
+                    batch.bid % batch.count % batch.time.hwTS % batch.time.srcTS % batch.time.srcSentTS % batch.time.stratTS %
+                    static_cast<int>(batch.venue) % batch.extSequenceNumber));
+            return;
+        }
 
-        if (BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMDbid[toUInt(batch.venue)]))) {
+        if (BOOST_UNLIKELY((batch.venue == hf::VENUE::CME) && (batch.bid <= _lastMDbid[toUInt(batch.venue)]))) {
             uint64_t eventMask = 0;
             const auto* data = batch.data;
             for (auto i = batch.count; i; --i) {
@@ -1892,7 +1899,10 @@ public:
                 batch.bid % batch.count % batch.time.hwTS % batch.time.srcTS % batch.time.srcSentTS % batch.time.stratTS %
                 static_cast<int>(batch.venue) % batch.extSequenceNumber % eventMask));
         }
-        _lastMDbid[toUInt(batch.venue)] = batch.bid;
+
+        if (BOOST_LIKELY(batch.venue < hf::VENUE::LAST)) {
+            _lastMDbid[toUInt(batch.venue)] = batch.bid;
+        }
     }
 
     void onPostMDBatch(const md::MDBatch &batch) override {
