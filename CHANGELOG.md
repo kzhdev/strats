@@ -13,7 +13,8 @@
   and caused an unsolicited order cancel
 
 #Version 1.53.1.0
-- Fix candidate > target when modify order canceled due to exected qty greater than modified qty.
+- Fix candidate > target when modify order canceled due to exec qty greater than modified qty.
+- Fix EXE unresponsive
 
 #Version 1.54.0.10
 - Fix Candidate > target when order filled while modify in-flight
