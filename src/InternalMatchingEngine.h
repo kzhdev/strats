@@ -930,7 +930,7 @@ public:
             order->_size -= fillSize;
             size -= fillSize;
             filled_qty += fillSize;
-            cost += order->_price * filled_qty;
+            cost += order->_price * fillSize;
             _notifyInternalMarketChange = true;
             doExternalReductionAfterInternalFill(order, fillSize);
             if (order->_size == 0) {
