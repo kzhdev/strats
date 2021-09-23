@@ -1,5 +1,6 @@
 #Version 1.54.2.1
 - Merge 1.53.1.0 changes
+- Fix IME internal matching fill price calculation
 
 #Version 1.54.2.0
 - Fix FillArb causes Leftover Quantity error
