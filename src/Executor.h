@@ -1954,6 +1954,11 @@ public:
             return;
         }
 
+        if (batch.bid <= state._lastMDbid) {
+            logging::GetLogger().logWarning(boost::str(boost::format("EXE %1%. Skip stale MD. Update. bid=%2% lastMDbid=%3%") % state._contract._name % batch.bid % state._lastMDbid));
+            return;
+        }
+
         _mdUpdated.emplace(internalId);
 
         auto& bestBid = event.buy.top.l[0];
