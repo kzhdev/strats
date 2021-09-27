@@ -19,7 +19,7 @@ public:
 
     void initialize(PnlCalculator* calculator, ViperConfig& config) {
         setPnlLimits("Total", _totalLimits, config);
-        for(uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+        for(uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
             setPnlLimits(toString((StrategyId)i), _strategyLimits[i], config);
         }
         _pnlCalculator = calculator;
@@ -120,7 +120,7 @@ public:
     void changeLimitsOnShiftChanged(ViperConfig& viperConfig, uint32_t shift) {
         LOG(0, "PNL Checker. Change limit to shift {i1}", shift)
         const auto& pnlConfig = viperConfig._pnlConfigs;
-        for (auto i = 0u; i < toUInt(StrategyId::Execution); ++i) {
+        for (auto i = 0u; i < toUInt(StrategyId::MAX); ++i) {
             auto& limitConfig = pnlConfig[i];
             _strategyLimits[i]._pnlLimit = ToRhonePrice(limitConfig._shiftLimit[shift]);
             LOG(0, "PNL Checker. Change strategy {i1} pnlLimit to {d1}", i, ToDollars(_strategyLimits[i]._pnlLimit))
@@ -135,17 +135,17 @@ public:
 
     void logState() {
         LOG(0, "PNL. Pnl: Total={d1}", ToDollars(_pnlCalculator->_pnlTotal.getTotal()))
-        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
             LOG(0, "PNL. Pnl: {i1}={d1}", strategyName((StrategyId)i), ToDollars(_pnlCalculator->_pnl[i].getTotal()))
         }
         LOG(0, "PNL. Drawdown: Total={d1}", ToDollars(_pnlCalculator->_pnlTotal._drawdown))
-        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
             LOG(0, "PNL. Drawdown: {i1}={d1}", strategyName((StrategyId)i), ToDollars(_pnlCalculator->_pnl[i]._drawdown))
         }
         LOG(0, "PNL. Limits: Total. Pnl={d1} D={d2}", //RV. Pnl={d3} D={d4} MM. Pnl={d5} D={d6}",
             ToDollars(_totalLimits._pnlLimit), ToDollars(_totalLimits._drawDownLimit))
 
-        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
             LOG(0, "PNL. Limits: {i1}. Pnl={d1} D={d2}", strategyName((StrategyId)i),
                 ToDollars(_strategyLimits[i]._pnlLimit),
                 ToDollars(_strategyLimits[i]._drawDownLimit))
@@ -203,7 +203,7 @@ private:
     }
 
     PnlCheckData _totalLimits;
-    PnlCheckData _strategyLimits[toUInt(StrategyId::Execution)];
+    PnlCheckData _strategyLimits[toUInt(StrategyId::MAX)];
     PnlCalculator* _pnlCalculator;
 };
 

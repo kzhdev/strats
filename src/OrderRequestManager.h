@@ -23,7 +23,7 @@ using OrderRequestQueue = std::array<OrderRequestQueueBySide, MAX_ORDER_ID>;
 
 class OrderRequestManager final {
     std::vector<OrderRequestQueue> _orderRequestQueues;
-    std::vector<std::array<RingBuffer<ReadyOrderRequests>, toUInt(StrategyId::Execution)>> _readyRequestsBuffer;
+    std::vector<std::array<RingBuffer<ReadyOrderRequests>, toUInt(StrategyId::MAX)>> _readyRequestsBuffer;
     std::vector<std::atomic<ReadyOrderRequests*>*> _readyRequests;
     RingBufferQueue<>* _notificationQueue;
 
@@ -48,8 +48,8 @@ public:
                     queue._queueBySide[ASK]._queue.init(queueSize);
                 }
 
-                _readyRequests[contract._internalId] = new std::atomic<ReadyOrderRequests*>[toUInt(StrategyId::Execution)];
-                for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+                _readyRequests[contract._internalId] = new std::atomic<ReadyOrderRequests*>[toUInt(StrategyId::MAX)];
+                for (uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
                     _readyRequestsBuffer[contract._internalId][i].init(queueSize);
                     _readyRequests[contract._internalId][i] = nullptr;
                 }

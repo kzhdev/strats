@@ -289,7 +289,7 @@ struct ViperConfig {
         _mmLastFillPriceFileName = mmLastFillPriceFillName;
         _asPathFileName = asPathFilename;
 
-        for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
             if(!tryGetInitialPos(i)) {
                 return false;
             }
@@ -366,7 +366,7 @@ struct ViperConfig {
             return false;
         }
 
-        for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
             good = loadAndCullInitialPositions(i);
             if(!good) {
                 return false;
@@ -1972,7 +1972,7 @@ struct ViperConfig {
             return PNLRows::Total;
         }
 
-        for (uint32_t i = toUInt(StrategyId::MarketMaker); i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = toUInt(StrategyId::MarketMaker); i < toUInt(StrategyId::MAX); ++i) {
             if (strcmp(toString((StrategyId)i), strategy.c_str()) == 0) {
                 return static_cast<PNLRows>(i);
             }
@@ -2061,7 +2061,7 @@ struct ViperConfig {
             writeNegativeScalpCheckerConfigs(output);
         });
 
-        for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
             writeToFile(_posFileName[i], [this, i](std::ofstream& output) {
                 writePos(i,output);
             });
@@ -2368,7 +2368,7 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<int32_t> _positions[toUInt(StrategyId::Execution)];
+    std::vector<int32_t> _positions[toUInt(StrategyId::MAX)];
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "staticQuote", "quoteSize" };
     static constexpr const char* _positionHeader[] = {"Contract", "position"};
 
@@ -2464,7 +2464,7 @@ struct ViperConfig {
     UpdateSelector<ViperConfig> _updateSelector;
 
     std::string _fileName; //model
-    std::string _posFileName[toUInt(StrategyId::Execution)]; //none-MM position
+    std::string _posFileName[toUInt(StrategyId::MAX)]; //none-MM position
     std::string _economicNumbersFileName;
     std::string _mmLastFillPriceFileName;
     std::string _asPathFileName;
@@ -2475,7 +2475,7 @@ struct ViperConfig {
     bool _allowStatusGrid = false;
 
     //Slow-path data structures
-    std::unordered_map<std::string, int> _unallocatedPositionsFromFile[toUInt(StrategyId::Execution)];
+    std::unordered_map<std::string, int> _unallocatedPositionsFromFile[toUInt(StrategyId::MAX)];
 
     Traders _currentTrader = Traders::Steven;
     Shifts _currentShift = Shifts::US;

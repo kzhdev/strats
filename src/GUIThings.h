@@ -375,7 +375,6 @@ public:
                 setCell(cells, contractIndex, PnlDetailColumns::ASTotal, std::to_string(pnl.getTotal()));
                 break;
             }
-            case StrategyId::Execution:
             case StrategyId::MAX:
                 break;
         }
@@ -1428,15 +1427,15 @@ public:
         uint32_t headerOffset = 0;
 
         // Strategy Enable
-        for (; headerOffset < toUInt(StrategyId::Execution); ++headerOffset) {
+        for (; headerOffset < toUInt(StrategyId::MAX); ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, strategyFullName((StrategyId)headerOffset));
             setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
         }
 
         // Strategy Quote External
-        for (; headerOffset < toUInt(StrategyId::Execution) * 2; ++headerOffset) {
+        for (; headerOffset < toUInt(StrategyId::MAX) * 2; ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset,
-                             boost::str(boost::format("%1% QuoteExternal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::Execution)))));
+                             boost::str(boost::format("%1% QuoteExternal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::MAX)))));
             setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
         }
 

@@ -277,7 +277,7 @@ public:
 
         if (remainingSize > 0) {
             bool overFillSendToOtherStrategy = false;
-            for (uint32_t i = toUInt(StrategyId::RelativeValue); i < toUInt(StrategyId::Execution); ++i) {
+            for (uint32_t i = toUInt(StrategyId::RelativeValue); i < toUInt(StrategyId::MAX); ++i) {
                 if (_marketMaker->_strategies[i]->strategyId() != StrategyId::ArbieSpreader &&
                     _marketMaker->_strategies[i]->isEnabled()) {
                     LOG(0, "MM {C[i1]}. Send untaken overfill to Strategy {i2} Side={i3} Price={d1} Size={i4}",

@@ -533,7 +533,7 @@ public:
             message._contractId = internalId;
             message._side = order->_side;
             message._qty = size;
-            message._strategy = StrategyId::Execution;  // not used
+            message._strategy = StrategyId::MAX;  // not used
             message._type = FillType::NegativeScalpCheck;
             message._price = price;
             message._source = FillSource::Quote;    // not used
@@ -970,7 +970,7 @@ public:
                 if(attemptToCancelRemainder) {
                     int remainder = _slow._iopTracking.cancelGTCs(internalId);
                     bool anyStrategyEnabled = false;
-                    for(int i = 0; i < static_cast<int>(StrategyId::Execution); ++i) {
+                    for(auto i = 0u; i < toUInt(StrategyId::MAX); ++i) {
                         if(getStrategy(static_cast<StrategyId>(i))->isEnabled()) {
                             anyStrategyEnabled = true;
                             break;
@@ -1030,7 +1030,7 @@ public:
                     }
                 }
                 else if (config._key == PERCENT_MSG_HEDGES) {
-                    double percent = boost::lexical_cast<double>(cell.value());
+                    auto percent = boost::lexical_cast<double>(cell.value());
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
                         for (auto& kvp : _throttlers) {
@@ -1039,7 +1039,7 @@ public:
                     }
                 }
                 else if (config._key == PERCENT_MSG_REDUCE_QUOTE) {
-                    double percent = boost::lexical_cast<double>(cell.value());
+                    auto percent = boost::lexical_cast<double>(cell.value());
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
                         for (auto& kvp : _throttlers) {
@@ -1057,7 +1057,7 @@ public:
                     }
                 }
                 else if(config._key == ORDER_RATE_CLIPS) {
-                    uint32_t clips = boost::lexical_cast<uint32_t>(cell.value());
+                    auto clips = boost::lexical_cast<uint32_t>(cell.value());
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
                         _newOrderModifyOrderRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
@@ -1065,7 +1065,7 @@ public:
                     }
                 }
                 else if(config._key == ORDER_RATE_SUM_TOTAL) {
-                    hf::qty_t sumTotal = boost::lexical_cast<hf::qty_t>(cell.value());
+                    auto sumTotal = boost::lexical_cast<hf::qty_t>(cell.value());
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
                         _newOrderModifyOrderRateChecker.changeSumTotal(sumTotal, clockUtil::GetCycles());
@@ -1073,7 +1073,7 @@ public:
                     }
                 }
                 else if(config._key == ORDER_RATE_PERIOD) {
-                    uint32_t period = boost::lexical_cast<uint32_t>(cell.value());
+                    auto period = boost::lexical_cast<uint32_t>(cell.value());
                     uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
@@ -1128,11 +1128,11 @@ public:
         }
         else if (update._update.gridid() == toUInt(WindowIds::ContractParametersRv)) {
             for (const proto::GridCell& cell : update._update.cells()) {
-                ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(cell.col());
+                auto columnType = static_cast<ContractParameterRVColumns>(cell.col());
                 if (columnType == ContractParameterRVColumns::HedgeTolerance) {
                     const uint32_t internalId = cell.row();
                     ContractState& state = _contractStates[internalId];
-                    double value = boost::lexical_cast<double>(cell.value());
+                    auto value = boost::lexical_cast<double>(cell.value());
                     state._ime.updateHedgeTolerance(ToRhonePrice(value));
                 }
             }
@@ -1747,7 +1747,7 @@ public:
             if (_oldQuoteExt[i] != quoteExt[i]) {
                 sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
                                           (quoteExt.test(i) ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled),
-                                          i + toUInt(StrategyId::Execution) * 2);
+                                          i + toUInt(StrategyId::MAX) * 2);
             }
         }
     }
@@ -2874,7 +2874,7 @@ public:
                 message._contractId = ime._internalId;
                 message._side = ToViperSide(order.side);
                 message._qty = filledQty;
-                message._strategy = StrategyId::Execution;  // not used
+                message._strategy = StrategyId::MAX;  // not used
                 message._type = FillType::NegativeScalpCheck;
                 message._price = filledPrice;
                 message._source = FillSource::Quote;    // not used
@@ -3030,7 +3030,7 @@ public:
 
     bool canSystemSendOrders() const noexcept {
         static_assert(toUInt(StrategyId::MarketMaker) == 0 && toUInt(StrategyId::RelativeValue) == 1 &&
-                      toUInt(StrategyId::ArbieSpreader) == 2 && toUInt(StrategyId::Execution) == 3,
+                      toUInt(StrategyId::ArbieSpreader) == 2 && toUInt(StrategyId::MAX) == 3,
                       "Hard coding strategies in check, need to modify if new strategies");
         return _strategies[toUInt(StrategyId::MarketMaker)]->isEnabled() |
                _strategies[toUInt(StrategyId::RelativeValue)]->isEnabled() |

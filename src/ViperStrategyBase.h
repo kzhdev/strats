@@ -276,7 +276,7 @@ private:
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
                                       (quoteExt == SystemState::Enabled ? proto::SystemState::SystemStateEnabled
                                                                         : proto::SystemState::SystemStateDisabled),
-                                      toUInt(strategyId()) + toUInt(StrategyId::Execution));
+                                      toUInt(strategyId()) + toUInt(StrategyId::MAX));
             _oldQuoteExt = quoteExt;
         }
 

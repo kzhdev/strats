@@ -28,7 +28,7 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
         if (viperResources.empty()) {
             logging::GetLogger().logErrorAndThrow("No Viper resource found");
         }
-        _strategies.resize(toUInt(StrategyId::Execution));
+        _strategies.resize(toUInt(StrategyId::MAX));
 
         for (auto resource : viperResources) {
             auto viperResource = dynamic_cast<ViperResource*>(resource);
@@ -49,7 +49,7 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
             }
         }
 
-        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
             if (BOOST_UNLIKELY(_strategies[i] == nullptr)) {
                 logging::GetLogger().logWarning(boost::str(boost::format("Strategy %1% not exist") % strategyFullName((StrategyId)i)));
             }
