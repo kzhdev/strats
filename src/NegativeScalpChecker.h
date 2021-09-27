@@ -109,6 +109,7 @@ public:
     };
 
     void addEntry(hf::price_t pnl, uint64_t now, StrategyId strategy) {
+        assert(strategy != StrategyId::MAX);
         Entry &entry = _entries[_head];
         entry._time = now;
         entry._pnl = pnl;

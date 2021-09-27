@@ -487,8 +487,8 @@ enum class ResourceId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Exec
 enum class DataSeries {VectorPrice, LTF, STF};
 
 inline constexpr const char* toString(StrategyId id) {
-    constexpr const char* strategies[] = { "MM", "RV", "AS" };
-    static_assert((sizeof(strategies) / sizeof(char*)) == toUInt(StrategyId::MAX), "Not match with StrategyId");
+    constexpr const char* strategies[] = { "MM", "RV", "AS",  "MAX"};
+    static_assert((sizeof(strategies) / sizeof(char*)) == toUInt(StrategyId::MAX) + 1, "Not match with StrategyId");
     return strategies[toUInt(id)];
 }
 

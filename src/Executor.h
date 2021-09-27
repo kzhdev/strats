@@ -533,7 +533,7 @@ public:
             message._contractId = internalId;
             message._side = order->_side;
             message._qty = size;
-            message._strategy = StrategyId::MAX;  // not used
+            message._strategy = StrategyId::MarketMaker;  // not used
             message._type = FillType::NegativeScalpCheck;
             message._price = price;
             message._source = FillSource::Quote;    // not used
@@ -2874,7 +2874,7 @@ public:
                 message._contractId = ime._internalId;
                 message._side = ToViperSide(order.side);
                 message._qty = filledQty;
-                message._strategy = StrategyId::MAX;  // not used
+                message._strategy = StrategyId::MarketMaker;  // not used
                 message._type = FillType::NegativeScalpCheck;
                 message._price = filledPrice;
                 message._source = FillSource::Quote;    // not used
