@@ -133,6 +133,7 @@ enum class MarketMakerParametersColumns {
     QuoteGap,
 };
 enum class ArbieSpreaderParameterColumns {
+    Enabled,
     QuoteExternal,
     Edge,
     ActualEdge,

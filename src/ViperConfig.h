@@ -152,6 +152,7 @@ struct ArbieSpreaderConfig {
     double _edge;
     double _hedgeOffset;
     double _maxTicksThroughMarket;
+    bool _enabled;
     bool _quoteExternal;
     std::vector<ArbieSpreaderPath> _paths;
 };
@@ -907,6 +908,7 @@ struct ViperConfig {
             ArbieSpreaderConfig config;
             uint32_t i = 0;
             config._contract = values[i++];
+            config._enabled = values[i++] == "TRUE";
             config._quoteExternal = values[i++] == "TRUE";
             config._quoteSize = boost::lexical_cast<hf::qty_t>(values[i++]);
             config._edge = boost::lexical_cast<double>(values[i++]);
@@ -1823,6 +1825,9 @@ struct ViperConfig {
                 auto columnType = static_cast<ArbieSpreaderParameterColumns>(gridCell.col());
 
                 switch (columnType) {
+                    case ArbieSpreaderParameterColumns::Enabled:
+                        config._enabled = boost::lexical_cast<bool>(gridCell.value());
+                        break;
                     case ArbieSpreaderParameterColumns::QuoteExternal:
                         config._quoteExternal = boost::lexical_cast<bool>(gridCell.value());
                         break;
@@ -2294,6 +2299,7 @@ struct ViperConfig {
         writeHeader(output, AS_CONFIGS, _arbieSpreaderConfigHeader);
         for (auto& config : _arbieSpreaderConfigs) {
             output << config._contract;
+            output << "," << getWriteBoolValue(config._enabled);
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
             output << "," << config._edge;
@@ -2373,7 +2379,7 @@ struct ViperConfig {
     static constexpr const char* _positionHeader[] = {"Contract", "position"};
 
     std::vector<ArbieSpreaderConfig> _arbieSpreaderConfigs;
-    std::vector<std::string> _arbieSpreaderConfigHeader = {"quoteExternal", "quoteSize", "edge", "hedgeOffset", "maxTicksThroughMarket"};
+    std::vector<std::string> _arbieSpreaderConfigHeader = {"enabled", "quoteExternal", "quoteSize", "edge", "hedgeOffset", "maxTicksThroughMarket"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader = {

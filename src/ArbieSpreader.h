@@ -712,7 +712,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
     if (_recalc | force) {
         _recalc = false;
 
-        if (!_config->_enabled) {
+        if (!_config->_enabled | !_contract->_enabled) {
             if (_priceSize.valid()) {
                 // just changed from Enabled to Disabled
                 _priceSize.reset();

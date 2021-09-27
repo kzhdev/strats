@@ -1,3 +1,8 @@
+#Version 1.54.3.0
+- Fix overfill allocation. If MM is not enabled or quote externally, the overfill will be sent to the strategy with
+  the best external price.
+- Added Enabled column in AS config
+
 #Version 1.54.2.1
 - Merge 1.53.1.0 changes
 - Fix IME internal matching fill price calculation

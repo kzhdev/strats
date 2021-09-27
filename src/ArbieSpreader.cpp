@@ -52,6 +52,7 @@ void ArbieSpreader::initializeContracts() {
         if (iter != asConfig.end()) {
             contract._usedInQuoting = true;
             auto& config = *iter;
+            contract._enabled = config._enabled;
             contract._quoteExternally = config._quoteExternal;
             _edgeMultiplier = boost::lexical_cast<double>(_viperConfig.getGlobal(AS_EDGE_MULTIPLIER));
             contract._edge = ToRhonePrice(config._edge * _edgeMultiplier);
