@@ -198,7 +198,7 @@ public:
             }
         }
         auto datetime = hf::util::TimeUtils::strftime("%Y%m%d%H%M", hf::util::TimeUtils::clock_gettime());
-        system(("move perf_log.log perf_log." + datetime).c_str());
+        system(("mv perf_log.log perf_log." + datetime).c_str());
     }
 
     void addPerfPointBegin(PerfId id) {
