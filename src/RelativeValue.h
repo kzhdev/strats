@@ -1898,6 +1898,7 @@ public:
             sendErrorMessage("Disabling Relative Value. Reason=" + reason, ErrorType::Critical);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
                                       proto::SystemState::SystemStateDisabled, toUInt(StrategyId::RelativeValue));
+            _skipClubCount = 0;
         }
     }
 
@@ -2497,9 +2498,10 @@ public:
                         needToHedge = oldNeedToHedge;
                         LOG(0, "RV {C[i1]}. Hedging. Skipping club member b/c of potential self match or 2 ticks worse. QuotePrice={d1} HedgePrice={d2} Lean={C[i2]}",
                             getContract(contract._internalId), ToDollars(leanQuotePrice), ToDollars(hedgePrice), getContract(leanContract._internalId))
-                        std::string message = boost::str(boost::format("Hedge. Club skip. C=%1% H=%2% Pc=%3% Ph=%4%")
-                                                         % contract._definition._name % leanContract._definition._name % ToDollars(leanQuotePrice) % ToDollars(hedgePrice));
-                        sendErrorMessage(message, ErrorType::Normal);
+                        if (++_skipClubCount >= 50) {
+                            disableRelativeValue("Skip club reached 50 times");
+                            break;
+                        }
                         continue;
                     }
                     const uint32_t hedgeId = getHedgeId();
@@ -3139,6 +3141,7 @@ private:
     bool _hadInternalMarketData = false;
     bool _hadExternalMarketData = false;
     uint32_t _numberOfFills = 0;
+    uint32_t _skipClubCount = 0;
 
     om::client_id_t _id;
 
