@@ -2,6 +2,7 @@
 - Fix overfill allocation. If MM is not enabled or quote externally, the overfill will be sent to the strategy with
   the best external price.
 - Added Enabled column in AS config
+- Suppress RV hedge skip club GUI messages. Disable RV when skip club reached 50 times.
 
 #Version 1.54.2.1
 - Merge 1.53.1.0 changes
