@@ -45,7 +45,10 @@ public:
 
     void drainAllMarketData() {
 #ifdef ENABLE_PERF
-        CONDITIONAL_SCOPED_PERF_POINT(AS_DrainMD, [this]() -> bool { return underlying().strategyId() == StrategyId::ArbieSpreader; });
+        uint64_t begin = 0;
+        if (underlying().strategyId() == StrategyId::ArbieSpreader) {
+            begin = clockUtil::getCpuTicksStart();
+        }
         uint32_t drainSize = 0;
 #endif
         for (uint32_t i = 0; i < _marketDataQueues.size(); ++i) {
@@ -67,7 +70,10 @@ public:
             state._peekIndex = index;
         }
 #ifdef ENABLE_PERF
-        if (drainSize) {
+        if (drainSize & begin) {
+            auto end = clockUtil::getCpuTicksEnd();
+            PerfMonitor::get()->addPerfPoint(PerfId::AS_DrainMD, PerfType::Begin, begin);
+            PerfMonitor::get()->addPerfPoint(PerfId::AS_DrainMD, PerfType::End, end);
             ADD_PERF_VALUE(AS_DrainBatchCount, drainSize);
         }
 #endif

@@ -345,7 +345,10 @@ private:
 
     void drainInternalMessages() {
 #ifdef ENABLE_PERF
-        CONDITIONAL_SCOPED_PERF_POINT(AS_DrainInternalMessage, [this]() -> bool {return strategyId() == StrategyId::ArbieSpreader;});
+        uint64_t begin = 0;
+        if (underlying().strategyId() == StrategyId::ArbieSpreader) {
+            begin = clockUtil::getCpuTicksStart();
+        }
         uint32_t drainSize = 0;
 #endif
         while(_msgQueue.end() != _msgCursor) {
@@ -359,7 +362,10 @@ private:
         }
 
 #ifdef ENABLE_PERF
-        if (drainSize) {
+        if (drainSize & begin) {
+            auto end = clockUtil::getCpuTicksEnd();
+            PerfMonitor::get()->addPerfPoint(PerfId::AS_DrainInternalMessage, PerfType::Begin, begin);
+            PerfMonitor::get()->addPerfPoint(PerfId::AS_DrainInternalMessage, PerfType::End, end);
             ADD_PERF_VALUE(AS_DrainInternalMessageCount, drainSize);
         }
 #endif
