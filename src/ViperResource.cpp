@@ -59,7 +59,7 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
         if (!viperLogQueueList || viperLogQueueList->empty()) {
             logging::GetLogger().logErrorAndThrow("ViperLoggerQueue not found");
         }
-        auto viperLogQueue = reinterpret_cast<hf::queue::ViperLoggerQueueResource*>(*viperLogQueueList->begin());
+        auto viperLogQueue = reinterpret_cast<Python::ViperLoggerQueueResource*>(*viperLogQueueList->begin());
         viperLogQueue->clear();
         logging::setViperLogger(viperLogQueue);
     }

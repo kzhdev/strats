@@ -96,7 +96,7 @@ struct PerfPoint {
 
 class PerfMonitor : public virtual rhone::util::Service {
     uint64_t _cursor = 0;
-    hf::queue::LockFreeQueue<PerfPoint> _perfQueue;
+    LockFreeQueue<PerfPoint> _perfQueue;
     static PerfMonitor* _instance;
     uint64_t _nextLogTime = 0;
     uint64_t _logInterval = 0;
@@ -326,7 +326,7 @@ struct ConditionalScopedPerfPoint {
 
 #else   // ENABLE_PERF
 
-class PerfMonitor : public virtual hf::Service {
+class PerfMonitor : public virtual rhone::util::Service {
 public:
     void onRun() {}
 };

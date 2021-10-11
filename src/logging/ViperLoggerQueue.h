@@ -4,11 +4,10 @@
 #include "../LockFreeQueue.h"
 #include <om/orders/strategy_order.h>
 
-namespace hf {
-namespace queue {
+namespace Python {
 
 class ViperLoggerQueueResource final : public rhone::util::Resource {
-    hf::queue::LockFreeQueue<om::debug_t> _logQueue;
+    LockFreeQueue<om::debug_t> _logQueue;
     uint_fast64_t  _logQueueCursor = 0;
 
 public:
@@ -34,4 +33,4 @@ public:
     }
 };
 
-}}
+}

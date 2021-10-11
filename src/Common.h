@@ -5,8 +5,8 @@
 #include <md/md.h>
 #include <functional>
 #include <limits>
-#include <hf/pool/DataPool.h>
-#include <hf/queue/U64Queue.h>
+#include <util/DataPool.h>
+#include <util/U64Queue.h>
 #include <om/om.h>
 #include <queue>
 #include <boost/assert.hpp>

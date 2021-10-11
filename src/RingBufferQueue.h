@@ -3,9 +3,9 @@
 #include <atomic>
 #include <cassert>
 
-#define CACHE_LINE_SZ 64
-
 namespace Python {
+
+static constexpr auto CACHE_LINE_SZ = 64;
 
 struct CacheLineBuf {
     __attribute__((aligned(CACHE_LINE_SZ))) uint64_t data[8];

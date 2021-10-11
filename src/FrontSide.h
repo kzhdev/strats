@@ -1080,7 +1080,7 @@ public:
 
     void handleRVLatencyTrackingMessage(const RVLatencyTrackingMessage& message) {
         if(BOOST_LIKELY(_kdbLogger)) {
-            auto [d, ext] = _kdbLogger->addDIExtEvent(TimeUtils::clock_gettime());
+            auto [d, ext] = _kdbLogger->addDIExtEvent(rhone::util::getTimeStamp().time_since_epoch().count());
             d.ch[0] = static_cast<char>(PersistantDICharType::RVLatencyTracking);
             d.i[0] = message._fields._extid;
             d.i[1] = message._fields._oid;

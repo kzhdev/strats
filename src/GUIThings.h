@@ -384,7 +384,7 @@ public:
         message.set_gridid(toUInt(WindowIds::Errors));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        setCell(cells, _errorMessageNumber, ErrorsColumns::Time, std::to_string(TimeUtils::clock_gettime()));
+        setCell(cells, _errorMessageNumber, ErrorsColumns::Time, std::to_string(rhone::util::getTimeStamp().time_since_epoch().count()));
         setCell(cells, _errorMessageNumber, ErrorsColumns::Message, std::string(m._message, m._size));
         setCell(cells, _errorMessageNumber, ErrorsColumns::Type, std::to_string(toUInt(m._type)));
         ++_errorMessageNumber;
@@ -396,7 +396,7 @@ public:
         auto cells = message.mutable_cells();
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
-            setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(TimeUtils::clock_gettime()));
+            setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(rhone::util::getTimeStamp().time_since_epoch().count()));
             setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(toUInt(trader)));
             setCell(cells, _auditMessageNumber, AuditColumns::Grid, std::to_string(toUInt(gridId)));
             setCell(cells, _auditMessageNumber, AuditColumns::Row, getRowLabel(gridId, gridCell.row()));
@@ -411,7 +411,7 @@ public:
         message.set_gridid(toUInt(WindowIds::Audit));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(TimeUtils::clock_gettime()));
+        setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(rhone::util::getTimeStamp().time_since_epoch().count()));
         setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(toUInt(trader)));
         setCell(cells, _auditMessageNumber, AuditColumns::Grid, std::to_string(toUInt(WindowIds::ManualFillsEntry)));
         std::string value = createManualFillString(contractId, size, strategy);
@@ -433,7 +433,7 @@ public:
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
         auto color = static_cast<uint32_t>(fill._side == BID ? Color::TRANSPARENT_BID_BLUE : Color::TRANSPARENT_OFFER_RED);
-        hf::nanos_t time = TimeUtils::clock_gettime();
+        hf::nanos_t time = rhone::util::getTimeStamp().time_since_epoch().count();
         setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber), color);
         setCell(cells, _fillNumber, FillsColumns::Time, std::to_string(time), color);
         setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId), color);

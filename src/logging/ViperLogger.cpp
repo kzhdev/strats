@@ -46,7 +46,7 @@ bool ViperLogger::doLogin(ConnectionInfo& ci, int fd, std::string path, const st
                 return false;
             }
             info.initialize();
-            _logQueue = std::dynamic_pointer_cast<hf::queue::ViperLoggerQueueResource>(info.ptr);
+            _logQueue = std::dynamic_pointer_cast<Python::ViperLoggerQueueResource>(info.ptr);
         }
     }
     return loginOk;
