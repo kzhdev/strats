@@ -2073,9 +2073,11 @@ struct ViperConfig {
         });
 
         for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
-            writeToFile(_posFileName[i], [this, i](std::ofstream& output) {
-                writePos(i,output);
-            });
+            if (!_posFileName[i].empty()) {
+                writeToFile(_posFileName[i], [this, i](std::ofstream& output) {
+                    writePos(i,output);
+                });
+            }
         }
 
         if (!_asPathFileName.empty()) {

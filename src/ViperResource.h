@@ -21,8 +21,7 @@ public:
 protected:
     static constexpr uint32_t DEFAULT_QUEUE_SIZE = 8388608;
     static double _frequency;
-    static RingBufferQueue<>* _frontQueue;
-    static RingBufferQueue<>* _executorQueue;
+    static std::vector<ViperResource*> _resources;
     static std::vector<ViperStrategyBase*> _strategies;
 
     mutable RingBufferQueue<> _msgQueue;
@@ -31,7 +30,6 @@ protected:
     hf::queue::DebugQueue* _kdbLogger = nullptr;
     SharedSystemState::QuoteExtBitset _oldExchangeQuoteExt;
     SystemState _oldQuoteExt = SystemState::Disabled;
-
 
 public:
     ViperResource() = default;
@@ -49,47 +47,59 @@ public:
 
     RingBufferQueue<>* queue() noexcept { return &_msgQueue; }
 
+    ViperResource* getResource(ResourceId id) const noexcept {
+        return _resources[toUInt(id)];
+    }
+
     void sendErrorMessage(const std::string& s, ErrorType type) const {
-#ifndef BACKTEST
         static constexpr uint32_t MSG_SZ = CacheLineBuf::calculateReserveSize(sizeof(ViperMessage) + sizeof(ErrorMessage));
-        auto cursor = _frontQueue->reserve(MSG_SZ);
-        auto& outMessage = reinterpret_cast<ViperMessage&>((*_frontQueue)[cursor].data[0]);
+        auto cursor = _msgQueue.reserve(MSG_SZ);
+        auto& outMessage = reinterpret_cast<ViperMessage&>(_msgQueue[cursor].data[0]);
         outMessage._size = MSG_SZ;
         outMessage._type = ViperMessageType::ErrorMessage;
+        outMessage._source = id();
         auto& message = reinterpret_cast<ErrorMessage&>(outMessage._data[0]);
         const uint32_t size = std::min(CRITICAL_MESSAGE_MAX_SIZE, (uint32_t) s.size());
         strncpy(message._message, s.c_str(), size);
         message._size = size;
         message._type = type;
-        _frontQueue->publish(cursor, MSG_SZ);
-#endif
+        _msgQueue.publish(cursor, MSG_SZ);
     }
 
     void sendGenericMessageToFront(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0) const {
-#ifndef BACKTEST
-        _sendGenericMessage(*_frontQueue, type, value1, value2, value3);
-#endif
+        _sendMessage<GenericMessage>(
+                getResource(ResourceId::FrontSide)->_msgQueue,
+                type,
+                [=](GenericMessage& message) {
+                    message._number_1 = value1;
+                    message._number_2 = value2;
+                    message._number_3 = value3;
+                });
     }
 
     template<typename MsgT, typename MsgPopulateFunc>
     void sendMessageToFront(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc) const {
-#ifndef BACKTEST
-        _sendMessage<MsgT>(*_frontQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc));
-#endif
+        _sendMessage<MsgT>(getResource(ResourceId::FrontSide)->_msgQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc));
     }
 
     void sendGenericMessageToExecutor(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0) const {
-        _sendGenericMessage(*_executorQueue, type, value1, value2, value3);
+        _sendMessage<GenericMessage>(
+                getResource(ResourceId::Execution)->_msgQueue,
+                type,
+                [=](GenericMessage& message) {
+                    message._number_1 = value1;
+                    message._number_2 = value2;
+                    message._number_3 = value3;
+                });
     }
 
     template<typename MsgT, typename MsgPopulateFunc>
     void sendMessageToExecutor(ViperMessageType type, MsgPopulateFunc&& msgPopulateFunc, uint32_t msgDataSize = 0) const {
-        _sendMessage<MsgT>(*_executorQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc), msgDataSize);
+        _sendMessage<MsgT>(getResource(ResourceId::Execution)->_msgQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc));
     }
 
     void sendGridUpdateToExecutor(GridUpdate& update) const {
-        _sendMessage<GridUpdateMessage>(
-                *_executorQueue,
+        sendMessageToExecutor<GridUpdateMessage>(
                 ViperMessageType::GridUpdate,
                 [&](GridUpdateMessage& message) {
                     message._gridUpdate = &update;
@@ -105,7 +115,11 @@ public:
     }
 
     void sendGenericMessage(ViperMessageType type, int64_t value1 = 0, int64_t value2 = 0, int64_t value3 = 0) const {
-        _sendGenericMessage(_msgQueue, type, value1, value2, value3);
+        sendMessage<GenericMessage>(type, [=](GenericMessage& message) {
+            message._number_1 = value1;
+            message._number_2 = value2;
+            message._number_3 = value3;
+        });
     }
 
     template<typename MsgT, typename MsgPopulateFunc>
@@ -176,7 +190,7 @@ protected:
     void _onPostCreate(const libconfig::Setting& config);
 
     template<typename MsgT, typename MessagePopulateFunc>
-    void _sendMessage(RingBufferQueue<>& queue,
+    ALWAYS_INLINE void _sendMessage(RingBufferQueue<>& queue,
                       ViperMessageType type,
                       MessagePopulateFunc&& msgPopulateFunc,
                       uint32_t msgDataSize = 0) const {
@@ -195,14 +209,6 @@ protected:
         auto& message = reinterpret_cast<MsgT&>(outMessage._data[0]);
         msgPopulateFunc(message);
         queue.publish(cursor, sz);
-    }
-
-    void _sendGenericMessage(RingBufferQueue<>& queue, ViperMessageType type, int64_t value1, int64_t value2, int64_t value3) const {
-        _sendMessage<GenericMessage>(queue, type, [=](GenericMessage& message) {
-            message._number_1 = value1;
-            message._number_2 = value2;
-            message._number_3 = value3;
-        });
     }
 };
 

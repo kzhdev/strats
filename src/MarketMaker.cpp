@@ -55,7 +55,7 @@ bool MarketMaker::pricesAndQuantitiesValid() const noexcept {
             continue;
         }
         auto check = [this](const md::top_t::level_t& book, uint32_t side, const ConfigContract& contract) -> bool {
-            if(book.pr != hf::NULL_PRICE && ((book.q < 0) || (book.o < 0))) {
+            if(book.pr != hf::NULL_PRICE && (book.q < 0)) {
                 LOG(0, "MM {C[i1]}. Failed pricesAndQuantity check, refusing to start. side={i2} px={i3} q={i4} o={i5}", contract._internalId, side, book.pr, book.q, book.o);
                 std::string errorMessage = boost::str(boost::format("Quantity Check Failed.  Refusing to start. Contract=%1% side=%2% px=%3% q=%4% o=%5%")
                                                       % contract._name % side % book.pr % book.q % book.o);
