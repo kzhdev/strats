@@ -545,7 +545,7 @@ public:
             message._contractId = internalId;
             message._side = order->_side;
             message._qty = size;
-            message._strategy = StrategyId::Execution;  // not used
+            message._strategy = StrategyId::MarketMaker;  // not used
             message._type = FillType::NegativeScalpCheck;
             message._price = price;
             message._source = FillSource::Quote;    // not used
@@ -982,7 +982,7 @@ public:
                 if(attemptToCancelRemainder) {
                     int remainder = _slow._iopTracking.cancelGTCs(internalId);
                     bool anyStrategyEnabled = false;
-                    for(int i = 0; i < static_cast<int>(StrategyId::Execution); ++i) {
+                    for(auto i = 0u; i < toUInt(StrategyId::MAX); ++i) {
                         if(getStrategy(static_cast<StrategyId>(i))->isEnabled()) {
                             anyStrategyEnabled = true;
                             break;
@@ -1042,7 +1042,7 @@ public:
                     }
                 }
                 else if (config._key == PERCENT_MSG_HEDGES) {
-                    double percent = boost::lexical_cast<double>(cell.value());
+                    auto percent = boost::lexical_cast<double>(cell.value());
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
                         for (auto& kvp : _throttlers) {
@@ -1051,7 +1051,7 @@ public:
                     }
                 }
                 else if (config._key == PERCENT_MSG_REDUCE_QUOTE) {
-                    double percent = boost::lexical_cast<double>(cell.value());
+                    auto percent = boost::lexical_cast<double>(cell.value());
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
                         for (auto& kvp : _throttlers) {
@@ -1069,7 +1069,7 @@ public:
                     }
                 }
                 else if(config._key == ORDER_RATE_CLIPS) {
-                    uint32_t clips = boost::lexical_cast<uint32_t>(cell.value());
+                    auto clips = boost::lexical_cast<uint32_t>(cell.value());
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
                         _newOrderModifyOrderRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
@@ -1077,7 +1077,7 @@ public:
                     }
                 }
                 else if(config._key == ORDER_RATE_SUM_TOTAL) {
-                    hf::qty_t sumTotal = boost::lexical_cast<hf::qty_t>(cell.value());
+                    auto sumTotal = boost::lexical_cast<hf::qty_t>(cell.value());
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
                         _newOrderModifyOrderRateChecker.changeSumTotal(sumTotal, clockUtil::GetCycles());
@@ -1085,7 +1085,7 @@ public:
                     }
                 }
                 else if(config._key == ORDER_RATE_PERIOD) {
-                    uint32_t period = boost::lexical_cast<uint32_t>(cell.value());
+                    auto period = boost::lexical_cast<uint32_t>(cell.value());
                     uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
                     auto shift = static_cast<Shifts>(cell.col() - 1);
                     if (_viperConfig._currentShift == shift) {
@@ -1140,11 +1140,11 @@ public:
         }
         else if (update._update.gridid() == toUInt(WindowIds::ContractParametersRv)) {
             for (const proto::GridCell& cell : update._update.cells()) {
-                ContractParameterRVColumns columnType = static_cast<ContractParameterRVColumns>(cell.col());
+                auto columnType = static_cast<ContractParameterRVColumns>(cell.col());
                 if (columnType == ContractParameterRVColumns::HedgeTolerance) {
                     const uint32_t internalId = cell.row();
                     ContractState& state = _contractStates[internalId];
-                    double value = boost::lexical_cast<double>(cell.value());
+                    auto value = boost::lexical_cast<double>(cell.value());
                     state._ime.updateHedgeTolerance(ToRhonePrice(value));
                 }
             }
@@ -1759,7 +1759,7 @@ public:
             if (_oldQuoteExt[i] != quoteExt[i]) {
                 sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
                                           (quoteExt.test(i) ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled),
-                                          i + toUInt(StrategyId::Execution) * 2);
+                                          i + toUInt(StrategyId::MAX) * 2);
             }
         }
     }
@@ -1887,6 +1887,42 @@ public:
         DLOG(0, "EXE received MD batch. bid={i1} extSeqNum={i2} venue={i3}", batch.bid, batch.extSequenceNumber,
              toUInt(batch.venue))
 #endif
+        if (BOOST_UNLIKELY(batch.size <= sizeof(md::MDBatch))) {
+            logging::GetLogger().logWarning(boost::str(boost::format(
+                    "EXE received CORRUPTED MD BATCH. bid=%1% count=%2% hwTS=%3% srcTS=%4% srcSentTS=%5% stratTS=%6% venue=%7% extSeqNum=%8%") %
+                    batch.bid % batch.count % batch.time.hwTS % batch.time.srcTS % batch.time.srcSentTS % batch.time.stratTS %
+                    static_cast<int>(batch.venue) % batch.extSequenceNumber));
+            return;
+        }
+
+        if (BOOST_UNLIKELY((batch.venue == hf::VENUE::CME) && (batch.bid <= _lastMDbid[toUInt(batch.venue)]))) {
+            uint64_t eventMask = 0;
+            const auto* data = batch.data;
+            for (auto i = batch.count; i; --i) {
+                const auto& mde = reinterpret_cast<const md::MDEvent&>(*data);
+                data += mde.size;
+                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
+            }
+            logging::GetLogger().logWarning(boost::str(boost::format(
+                    "EXE DUPLICATE MD BATCH. bid=%1% count=%2% hwTS=%3% srcTS=%4% srcSentTS=%5% stratTS=%6% venue=%7% extSeqNum=%8% eventMask=%9%") %
+                batch.bid % batch.count % batch.time.hwTS % batch.time.srcTS % batch.time.srcSentTS % batch.time.stratTS %
+                static_cast<int>(batch.venue) % batch.extSequenceNumber % eventMask));
+        }
+
+        if (BOOST_LIKELY(batch.venue < hf::VENUE::LAST)) {
+            _lastMDbid[toUInt(batch.venue)] = batch.bid;
+        }
+    }
+
+    void onPostMDBatch(const md::MDBatch &batch) override {
+        for (auto internalId : _mdUpdated) {
+            if (internalId < _contractStates.size()) {
+                auto& state = _contractStates[internalId];
+                state._lastMDbid = batch.bid;
+            }
+        }
+        _mdUpdated.clear();
+    }
 
         if (BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMDbid[toUInt(batch.venue)]))) {
             uint64_t eventMask = 0;
@@ -1953,6 +1989,11 @@ public:
 
         ContractState& state = _contractStates[internalId];
         if (!state._contract._toMarketMake) {
+            return;
+        }
+
+        if (batch.bid <= state._lastMDbid) {
+            logging::GetLogger().logWarning(boost::str(boost::format("EXE %1%. Skip stale MD. Update. bid=%2% lastMDbid=%3%") % state._contract._name % batch.bid % state._lastMDbid));
             return;
         }
 
@@ -2871,7 +2912,7 @@ public:
                 message._contractId = ime._internalId;
                 message._side = ToViperSide(order.side);
                 message._qty = filledQty;
-                message._strategy = StrategyId::Execution;  // not used
+                message._strategy = StrategyId::MarketMaker;  // not used
                 message._type = FillType::NegativeScalpCheck;
                 message._price = filledPrice;
                 message._source = FillSource::Quote;    // not used
@@ -2964,19 +3005,17 @@ public:
         if (need_clean_up) {
             if (BOOST_LIKELY(i < md::top_t::LEVEL_NUM)) {
                 auto n = md::top_t::LEVEL_NUM - i;
-//                TLOG(0, "EXE {i1}. Side {i2} before clean book", getContract(internalId), side)
-//                for (uint32_t i = 0; i < md::top_t::LEVEL_NUM; ++i) {
-//                    auto& l = book.l[i];
-//                    TLOG(0, "    - {i1}@{d1}", l.q, ToDollars(l.pr))
-//                }
-                memcpy(&book.l[0], &book.l[i], sizeof(md::top_t::level_t) * n);
+                LOG(0, "EXE {i1}. Side {i2} before clean book. i={i3}", getContract(internalId), side, i)
+                for (auto& l : book.l) {
+                    LOG(0, "    - {i1}@{d1}", l.q, ToDollars(l.pr))
+                }
+                memmove(&book.l[0], &book.l[i], sizeof(md::top_t::level_t) * n);
                 book.l[n].pr = hf::NULL_PRICE;
                 book.l[n].q = 0;
-//                TLOG(0, "EXE {i1}. Side {i2} after clean book", getContract(internalId), side)
-//                for (uint32_t i = 0; i < md::top_t::LEVEL_NUM; ++i) {
-//                    auto& l = book.l[i];
-//                    TLOG(0, "    - {i1}@{d1}", l.q, ToDollars(l.pr))
-//                }
+                LOG(0, "EXE {i1}. Side {i2} after clean book", getContract(internalId), side)
+                for (auto& l : book.l) {
+                    LOG(0, "    - {i1}@{d1}", l.q, ToDollars(l.pr))
+                }
             } else {
                 book.l[0].pr = hf::NULL_PRICE;
                 book.l[0].q = 0;
@@ -3029,7 +3068,7 @@ public:
 
     bool canSystemSendOrders() const noexcept {
         static_assert(toUInt(StrategyId::MarketMaker) == 0 && toUInt(StrategyId::RelativeValue) == 1 &&
-                      toUInt(StrategyId::ArbieSpreader) == 2 && toUInt(StrategyId::Execution) == 3,
+                      toUInt(StrategyId::ArbieSpreader) == 2 && toUInt(StrategyId::MAX) == 3,
                       "Hard coding strategies in check, need to modify if new strategies");
         return _strategies[toUInt(StrategyId::MarketMaker)]->isEnabled() |
                _strategies[toUInt(StrategyId::RelativeValue)]->isEnabled() |
@@ -3047,17 +3086,8 @@ public:
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
         auto connection = state._rhoneRouter.getRouteForNextNewOrder(state._contract._venue);
-#ifdef ENABLE_LATENCY_TRACK
-        mb();
-        auto timestsamp = hf::util::TimeUtils::clock_gettime();
-        mb();
-#endif
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), orderType,
-                                                         ToRhoneSide(side), price, size,
-                                                         om::STP_ACTION::CANCEL_PASSIVE);
-#ifdef ENABLE_LATENCY_TRACK
-        order->debug.i[TIMESTAMP] = timestsamp;
-#endif
+                                                         ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_PASSIVE);
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_UNLIKELY(order == nullptr)) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
@@ -3066,7 +3096,7 @@ public:
             addRoutingStateToNewLimitOrder(*order, internalId, connection);
             ++state._ime._messages._inserts;
             if (!isHedge) {
-                addMessageToThrottler(now, connection);
+                addMessageToThrottler(now, connection, state._contract._venue);
             }
             state._rhoneRouter.setNextRoute(state._contract._venue, now, _b3hb._oneMillisecondInTicks);
         }
@@ -3153,7 +3183,7 @@ public:
         sendGenericMessageToFront(ViperMessageType::ChangeUseGTC, id, enabled);
     }
 
-    void addMessageToThrottler(uint64_t now, strat::om_queue_info_t* connection) {
+    void addMessageToThrottler(uint64_t now, strat::om_queue_info_t* connection, hf::VENUE venue) {
         auto port_gid = strat::port_gid(*connection);
         auto it = _throttlers.find(port_gid.value());
         if (it == _throttlers.end()) {
@@ -3166,7 +3196,8 @@ public:
             uint32_t inDangerZonePeriodInMics = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(MSG_REDUCE_QUOTE_MICS));
             uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(inDangerZonePeriodInMics, _frequency);
 
-            it->second.initialize(_frequency, port_gid, 1, _transactionCapacity[toUInt(strat::venue(*connection))], percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
+            it->second.initialize(_frequency, venue, port_gid, 1, _transactionCapacity[toUInt(strat::venue(*connection))],
+                                  percentMsgReduceQuote, percentMsgHedges, inDangerZonePeriod, atCapacityPeriod);
         }
         addMessageToThrottler(now, it->second);
     }
@@ -3204,15 +3235,8 @@ public:
 
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
-#ifdef ENABLE_LATENCY_TRACK
-        mb();
-        auto timestsamp = hf::util::TimeUtils::clock_gettime();
-        mb();
-#endif
         om::order_t* order = this->context().createOrderExt(_iid, om::RISK_TYPE::TRADING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), om::ORDER_TYPE::FAK, ToRhoneSide(side), price, 0, size, state._contract._orderIncrementQty, 0, om::STP_ACTION::CANCEL_PASSIVE);
-#ifdef ENABLE_LATENCY_TRACK
-        order->debug.i[TIMESTAMP] = timestsamp;
-#endif
+
         if (order == nullptr) {
             LOG(0, "Could not send FAK order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
         } else {
@@ -3266,11 +3290,6 @@ public:
         }
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
-#ifdef ENABLE_LATENCY_TRACK
-        mb();
-        const_cast<om::order_t*>(order)->debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
-        mb();
-#endif
         const bool done = this->context().modifyOrder(order->oid, price, size, om::STP_ACTION::CANCEL_PASSIVE, om::RISK_TYPE::ENTERING);
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_LIKELY(done)) {
@@ -3289,7 +3308,7 @@ public:
     void setThrottlingBanner(Throttler& throttler, THROTTLING_MODE mode) {
         for (auto& state : _contractStates) {
             if (state._contract._toMarketMake) {
-                if (mode == throttler.getMode()) {
+                if (state._contract._venue == throttler.getVenue() && mode == throttler.getMode()) {
                     state._ime.setThrottlingBanner(mode);
                 }
             }

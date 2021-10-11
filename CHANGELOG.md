@@ -1,3 +1,19 @@
+#Version 1.54.3.0
+- Fix overfill allocation. If MM is not enabled or quote externally, the overfill will be sent to the strategy with
+  the best external price.
+- Added Enabled column in AS config
+- Suppress RV hedge skip club GUI messages. Disable RV when skip club reached 50 times.
+
+#Version 1.54.2.1
+- Merge 1.53.1.0 changes
+- Fix IME internal matching fill price calculation
+
+#Version 1.54.2.0
+- Fix FillArb causes Leftover Quantity error
+
+#Version 1.54.1.1
+- Fix throttler banner doesn't consider venue which could enable contracts with wrong venue
+
 #Version 1.54.1.0
 - Fix outlier statistics
 - Fix ENABLE_LATENCY_TRACK build
@@ -7,7 +23,8 @@
   and caused an unsolicited order cancel
 
 #Version 1.53.1.0
-- Fix candidate > target when modify order canceled due to exected qty greater than modified qty.
+- Fix candidate > target when modify order canceled due to exec qty greater than modified qty.
+- Fix EXE unresponsive
 
 #Version 1.54.0.10
 - Fix Candidate > target when order filled while modify in-flight

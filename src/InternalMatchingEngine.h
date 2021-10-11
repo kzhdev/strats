@@ -853,7 +853,7 @@ public:
 
     hf::price_t getPersistedPrice(uint32_t side) {
         hf::price_t toReturn = hf::NULL_PRICE;
-        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
             auto price = _topLevelsByStrategyBySide[i][side];
             if (price != hf::NULL_PRICE) {
                 if (toReturn == hf::NULL_PRICE) {
@@ -930,7 +930,7 @@ public:
             order->_size -= fillSize;
             size -= fillSize;
             filled_qty += fillSize;
-            cost += order->_price * filled_qty;
+            cost += order->_price * fillSize;
             _notifyInternalMarketChange = true;
             doExternalReductionAfterInternalFill(order, fillSize);
             if (order->_size == 0) {
@@ -1374,12 +1374,16 @@ public:
     void allocateExternalQuoteFill(hf::price_t filledPrice, hf::qty_t filledQty, const om::order_t &order, LevelsT& levels, MapT& map, hf::batch_id_t bid) {
         LOG(0, "IME {C[i1]}. External fill. Allocating to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), ToViperSide(order.side), ToDollars(filledPrice), filledQty)
         hf::qty_t filledSize = filledQty;
+        StrategyId bestStrategy = StrategyId::MAX;
         for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
             auto& level = levelIt->second;
             auto& orders = level._orders;
             for (auto orderIt = orders.begin(); orderIt != orders.end(); ) {
                 LOG(0, "IME {C[i1]}. Matching on level. Price={d1} NumberOfOrders={i2}", getContractName(), ToDollars(level._price), level._orders.size())
                 Order* o = *orderIt;
+                if (bestStrategy == StrategyId::MAX) {
+                    bestStrategy = o->_strategy;
+                }
                 auto fillSource = o->_type == Order::Type::Quoting ? FillSource::Quote : FillSource::Hedge;
                 if (o->_externalSize == filledSize) {
                     LOG(0, "IME {C[i1]}. Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
@@ -1419,18 +1423,11 @@ public:
         if (filledSize > 0) {
             const uint32_t side = ToViperSide(order.side);
             auto mm = _executor->getStrategy(StrategyId::MarketMaker);
-            if (!mm->isContractQuoteExternal(_internalId)) {
-                auto rv = _executor->getStrategy(StrategyId::RelativeValue);
-                auto as = _executor->getStrategy(StrategyId::ArbieSpreader);
-                if (rv->isContractQuoteExternal(_internalId) && !as->isContractQuoteExternal(_internalId)) {
-                    LOG(0, "IME {C[i1]}. Only RV quote externally. Send overfill to RV. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
-                    _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
-                    return;
-                } else if (!rv->isContractQuoteExternal(_internalId) && as->isContractQuoteExternal(_internalId)) {
-                    LOG(0, "IME {C[i1]}. Only AS quote externally. Send overfill to AS. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
-                    _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::ArbieSpreader, FillType::External, FillSource::Overfill);
-                    return;
-                }
+            if ((!mm->isEnabled() || !mm->canQuoteExternally() || !mm->isContractQuoteExternal(_internalId)) &&
+                (bestStrategy != StrategyId::MAX)) {
+                LOG(0, "IME {C[i1]}. MM cannot quote externally. Send overfill to strategy {i2}. Side={i3} Price={d1} Size={i4}", getContractName(), toUInt(bestStrategy), side, ToDollars(filledPrice), filledSize)
+                _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+                return;
             }
             LOG(0, "IME {C[i1]}. Send overfill to MM. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
             _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
@@ -1439,7 +1436,7 @@ public:
 
     void getAllOutOfMarket(bool cancelGtc = false) {
         LOG(0, "IME {C[i1]}. Removing all orders from market.", getContractName())
-        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
             _notifyInternalMarketChange = true;
             removeOrderByStrategy<BID>((StrategyId)i);
             removeOrderByStrategy<ASK>((StrategyId)i);
@@ -2147,7 +2144,7 @@ public:
     std::map<hf::price_t, PriceLevel, std::greater<hf::price_t>> _bidLevels;
     std::map<hf::price_t, PriceLevel> _askLevels;
 
-    hf::price_t _topLevelsByStrategyBySide[toUInt(StrategyId::Execution)][2];
+    hf::price_t _topLevelsByStrategyBySide[toUInt(StrategyId::MAX)][2];
 
     hf::price_t _relativeValueHedgeMatchingTolerance = 0;
     hf::price_t _tickSize;

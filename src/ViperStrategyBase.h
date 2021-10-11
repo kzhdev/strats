@@ -258,6 +258,7 @@ private:
     T const& underlying() const noexcept { return static_cast<T const&>(*this); }
 
     void checkSystemState() {
+        CONDITIONAL_SCOPED_PERF_POINT(AS_CheckSysState, [this]() -> bool { return strategyId() == StrategyId::ArbieSpreader; });
         SystemState state = _state.load(std::memory_order_relaxed);
         if (state != _oldState) {
             if (onSystemStateChange(state)) {
@@ -275,7 +276,7 @@ private:
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
                                       (quoteExt == SystemState::Enabled ? proto::SystemState::SystemStateEnabled
                                                                         : proto::SystemState::SystemStateDisabled),
-                                      toUInt(strategyId()) + toUInt(StrategyId::Execution));
+                                      toUInt(strategyId()) + toUInt(StrategyId::MAX));
             _oldQuoteExt = quoteExt;
         }
 
@@ -343,18 +344,31 @@ private:
     }
 
     void drainInternalMessages() {
+#ifdef ENABLE_PERF
+        uint64_t begin = 0;
+        if (underlying().strategyId() == StrategyId::ArbieSpreader) {
+            begin = clockUtil::getCpuTicksStart();
+        }
         uint32_t drainSize = 0;
+#endif
         while(_msgQueue.end() != _msgCursor) {
             auto& msg = reinterpret_cast<ViperMessage&>(_msgQueue[_msgCursor].data[0]);
             assert(msg._size);
             _msgCursor += msg._size;
             underlying().handleViperMessage(msg);
+#ifdef ENABLE_PERF
             ++drainSize;
+#endif
         }
 
-        if (drainSize) {
-            DLOG(0, "{i1} msgQueue drain size. {i2}", strategyName(), drainSize)
+#ifdef ENABLE_PERF
+        if (drainSize & begin) {
+            auto end = clockUtil::getCpuTicksEnd();
+            PerfMonitor::get()->addPerfPoint(PerfId::AS_DrainInternalMessage, PerfType::Begin, begin);
+            PerfMonitor::get()->addPerfPoint(PerfId::AS_DrainInternalMessage, PerfType::End, end);
+            ADD_PERF_VALUE(AS_DrainInternalMessageCount, drainSize);
         }
+#endif
     }
 
     void checkAutoDisable(uint64_t now) {

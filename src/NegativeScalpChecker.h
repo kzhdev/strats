@@ -109,6 +109,7 @@ public:
     };
 
     void addEntry(hf::price_t pnl, uint64_t now, StrategyId strategy) {
+        assert(strategy != StrategyId::MAX);
         Entry &entry = _entries[_head];
         entry._time = now;
         entry._pnl = pnl;
@@ -381,14 +382,14 @@ public:
     }
 
     void recalculateOpenPnl(uint32_t index, hf::price_t price) {
-        for (size_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+        for (size_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
             auto& pnl = _contractPnlCalculators[i][index];
             auto& aggPnl = _pnl[i];
             pnl.onMarkPriceChange(price, aggPnl, _pnlTotal);
         }
     }
 
-    std::vector<ContractPnlCalculator> _contractPnlCalculators[toUInt(StrategyId::Execution)];
+    std::vector<ContractPnlCalculator> _contractPnlCalculators[toUInt(StrategyId::MAX)];
     Pnl _pnl[toUInt(StrategyId::MAX)];
     Pnl _pnlTotal;
 };

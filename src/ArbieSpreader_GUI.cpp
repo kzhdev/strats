@@ -16,6 +16,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
     auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderParameters, "Arbie Spreader Parameter", proto::GridType::Table);
 
     guiThings.addHeader(definition, {
+        headerCell(ArbieSpreaderParameterColumns::Enabled, "Enabled", false, proto::DataType::bool_type),
         headerCell(ArbieSpreaderParameterColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type),
         headerCell(ArbieSpreaderParameterColumns::Edge, "Edge", false, proto::DataType::double_type),
         headerCell(ArbieSpreaderParameterColumns::ActualEdge, "ActualEdge", true, proto::DataType::double_type),
@@ -43,6 +44,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
         uint32_t internalId = _viperConfig.getInternalId(config._contract);
         guiThings.addRowHeaderCell(WindowIds::ArbieSpreaderParameters, rowHeader, internalId, config._contract);
         guiThings.addRow(cells, internalId, {
+            rowCell(ArbieSpreaderParameterColumns::Enabled, std::to_string(config._enabled)),
             rowCell(ArbieSpreaderParameterColumns::QuoteExternal, std::to_string(config._quoteExternal)),
             rowCell(ArbieSpreaderParameterColumns::Edge, std::to_string(config._edge)),
             rowCell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(config._edge * _edgeMultiplier)),
@@ -164,6 +166,13 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
             auto& contract = _contracts[internalId];
             auto columnType = static_cast<ArbieSpreaderParameterColumns>(cell.col());
             switch (columnType) {
+                case ArbieSpreaderParameterColumns::Enabled: {
+                    auto value = boost::lexical_cast<bool>(cell.value());
+                    LOG(0, "AS {C[i1]}. Enabled changed. {i2}->{i3}", contract.name(), contract._enabled, value)
+                    contract._enabled = value;
+                    updatedContracts.emplace_back(&contract);
+                    break;
+                }
                 case ArbieSpreaderParameterColumns::QuoteExternal: {
                     auto value = boost::lexical_cast<bool>(cell.value());
                     LOG(0, "AS {C[i1]}. QuoteExternal changed. {i2}->{i3}", contract.name(), contract._quoteExternally, value)

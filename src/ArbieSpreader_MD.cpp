@@ -12,7 +12,7 @@ void ArbieSpreader::onMDUpdate(const md::MDUpdateEvent &event, uint32_t internal
     }
 
     if (contract._lastMDbid >= batchId) {
-        logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._def._name % batchId % contract._lastMDbid));
+        logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Skip stale MD. Update. bid=%2% lastMDbid=%3%") % contract._def._name % batchId % contract._lastMDbid));
         return;
     }
 
@@ -32,7 +32,7 @@ void ArbieSpreader::onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent &
     }
 
     if (contract._lastMDbid >= batch.bid) {
-        logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._def._name % batch.bid % contract._lastMDbid));
+        logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Skip stale MD. Trade. bid=%2% lastMDbid=%3%") % contract._def._name % batch.bid % contract._lastMDbid));
         return;
     }
 
@@ -115,19 +115,19 @@ void ArbieSpreader::handleICEMDStatus(const md::MDStatusEvent& event, Contract& 
         }
         case 'C': {
             contract.setCanTrade(false);
-            LOG(0, "AS {C[i1]}. market data - closed. Used in pricing={i2}", contract.name(), contract._enabled)
+            LOG(0, "AS {C[i1]}. market data - closed. Used in pricing={i2}", contract.name(), (contract._usedInQuoting | contract._usedInPath))
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed. Used in pricing=%2%") % contract._def._name % contract._enabled));
             break;
         }
         case 'E': {
             contract.setCanTrade(false);
-            LOG(0, "AS {C[i1]}. market data - expired. Used in pricing={i2}", contract.name(), contract._enabled)
+            LOG(0, "AS {C[i1]}. market data - expired. Used in pricing={i2}", contract.name(), (contract._usedInQuoting | contract._usedInPath))
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - expired. Used in pricing=%2%") % contract._def._name % contract._enabled));
             break;
         }
         case '1': {
             contract.setCanTrade(false);
-            LOG(0, "AS {C[i1]}. market data - entered pre-open. Used in pricing={i2}", contract.name(), contract._enabled)
+            LOG(0, "AS {C[i1]}. market data - entered pre-open. Used in pricing={i2}", contract.name(), (contract._usedInQuoting | contract._usedInPath))
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open.  Used in pricing=%2%") % contract._def._name % contract._enabled));
             break;
         }
@@ -145,20 +145,20 @@ void ArbieSpreader::handle_CME_B3_MDStatus(const md::MDStatusEvent& event, Contr
         }
         case 2: {
             contract.setCanTrade(false);
-            LOG(0, "AS {C[i1]}. market data - halted. Used in pricing={i2}", contract.name(), contract._enabled)
+            LOG(0, "AS {C[i1]}. market data - halted. Used in pricing={i2}", contract.name(), (contract._usedInQuoting | contract._usedInPath));
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - halted. Used in pricing=%2%.") % contract._def._name % contract._enabled));
             break;
         }
         case 18:
         case 4: {
             contract.setCanTrade(false);
-            LOG(0, "AS {C[i1]} market data - closed({i2}). Used in pricing={i3}", contract.name(), (uint32_t)(event.extStatus), contract._enabled)
+            LOG(0, "AS {C[i1]} market data - closed({i2}). Used in pricing={i3}", contract.name(), (uint32_t)(event.extStatus), (contract._usedInQuoting | contract._usedInPath))
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - closed(%2%). Used in pricing=%3%.") % contract._def._name % event.extStatus % contract._enabled));
             break;
         }
         case 21: {
             contract.setCanTrade(false);
-            LOG(0, "AS {C[i1]} market data - entered pre-open. Used in pricing={i2}", contract.name(), contract._enabled)
+            LOG(0, "AS {C[i1]} market data - entered pre-open. Used in pricing={i2}", contract.name(), (contract._usedInQuoting | contract._usedInPath))
 //            disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing=%2%") % contract._def._name % contract._enabled));
             break;
         }

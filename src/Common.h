@@ -134,6 +134,7 @@ enum class MarketMakerParametersColumns {
     QuoteGap,
 };
 enum class ArbieSpreaderParameterColumns {
+    Enabled,
     QuoteExternal,
     Edge,
     ActualEdge,
@@ -482,13 +483,13 @@ inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectT
 }
 
 enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown, CancelGtcAndDisable};
-enum class StrategyId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, MAX};  // Execution must the last
+enum class StrategyId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, MAX};  // Execution must the last
 enum class ResourceId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, FrontSide};   // Strategy resource must added before Execution
 enum class DataSeries {VectorPrice, LTF, STF};
 
 inline constexpr const char* toString(StrategyId id) {
-    constexpr const char* strategies[] = { "MM", "RV", "AS", "EXE" };
-    static_assert((sizeof(strategies) / sizeof(char*)) == toUInt(StrategyId::MAX), "Not match with StrategyId");
+    constexpr const char* strategies[] = { "MM", "RV", "AS",  "MAX"};
+    static_assert((sizeof(strategies) / sizeof(char*)) == toUInt(StrategyId::MAX) + 1, "Not match with StrategyId");
     return strategies[toUInt(id)];
 }
 
@@ -499,7 +500,7 @@ inline constexpr const char* toString(ResourceId id) {
 }
 
 inline constexpr const char* strategyFullName(StrategyId id) {
-    constexpr const char* strategies[] = { "MarketMaker", "RelativeValue", "ArbieSpreader", "Execution" };
+    constexpr const char* strategies[] = { "MarketMaker", "RelativeValue", "ArbieSpreader" };
     static_assert((sizeof(strategies) / sizeof(char*)) == toUInt(StrategyId::MAX), "Not match with StrategyId");
     return strategies[toUInt(id)];
 }
@@ -1091,7 +1092,7 @@ struct Order {
 constexpr uint8_t orderId(StrategyId strategyId, Order::Type type) {
     return toUInt(strategyId) * 2 + type;
 }
-constexpr uint8_t MAX_ORDER_ID = toUInt(StrategyId::Execution) * 2;
+constexpr uint8_t MAX_ORDER_ID = toUInt(StrategyId::MAX) * 2;
 constexpr Order::Type getOrderType(uint8_t orderId) {
     return ((orderId & 1) == 0) ? Order::Type::Hedging : Order::Type::Quoting;
 }

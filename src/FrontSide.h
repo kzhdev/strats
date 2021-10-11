@@ -142,12 +142,10 @@ public:
         }
         _iid = hf::ConfigManager::getULong(config, "iid");
 
-        _internalHeartbeatTimestamps.resize(toUInt(StrategyId::MAX));
+        _internalHeartbeatTimestamps.resize(toUInt(ResourceId::FrontSide), 0);
         for (auto strategy : _strategies) {
             strategy->init(_frequency, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
-            _internalHeartbeatTimestamps[toUInt(strategy->strategyId())] = 0;
         }
-        _internalHeartbeatTimestamps[toUInt(StrategyId::Execution)] = 0;
 
         _executor->init(_frequency, internalHeartbeatPeriod, transactionCapacity, _iid, economicNumberCsv);
 
@@ -206,8 +204,8 @@ public:
 
     void checkInternalHeartbeats(uint64_t now_in_cycles) {
         bool isBad = false;
-        for (uint32_t i = 0; i < (toUInt(StrategyId::MAX)); ++i) {
-            isBad |= checkInternalHeartbeat((StrategyId)(i), now_in_cycles);
+        for (uint32_t i = 0; i < (toUInt(ResourceId::FrontSide)); ++i) {
+            isBad |= checkInternalHeartbeat(i, now_in_cycles);
         }
         if (isBad) {
             killProcess();
@@ -229,14 +227,14 @@ public:
         kill(getpid(), SIGKILL);
     }
 
-    bool checkInternalHeartbeat(StrategyId id, uint64_t now) {
-        uint64_t last = _internalHeartbeatTimestamps[toUInt(id)];
+    bool checkInternalHeartbeat(uint32_t id, uint64_t now) {
+        uint64_t last = _internalHeartbeatTimestamps[id];
         bool breach = false;
         if (last > 0) {
             uint64_t elapsed = now - last;
             breach = elapsed > _maxInternalHeartbeatTime;
             if (breach) {
-                std::string message = boost::str(boost::format("%1% not responsive.") % toString(id));
+                std::string message = boost::str(boost::format("%1% not responsive.") % toString(static_cast<ResourceId>(id)));
                 sendErrorMessage(message, ErrorType::Critical);
                 logging::GetLogger().logError(message);
             }
@@ -272,7 +270,7 @@ public:
             }
             if (_loginTime > 0 && (now - _loginTime) >= _versionSendingTime) {
                 sendViperVersion();
-                for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+                for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
                     for(const auto& position : _viperConfig._unallocatedPositionsFromFile[i]) {
                         sendErrorMessage("Unallocated " + std::string(toString((StrategyId)i)) +
                             " position loaded from file.  Contract=" + position.first + " Position=" + std::to_string(position.second), ErrorType::Critical);
@@ -387,7 +385,7 @@ public:
     bool checkAndActOnPnl(bool onParamChange) {
         bool violationExists = false;
         bool strategyPnlBreached;
-        for(int i = 0; i < toInt(StrategyId::Execution); ++i) {
+        for(int i = 0; i < toInt(StrategyId::MAX); ++i) {
             violationExists |= checkAndActOnPnlForStrategy(static_cast<StrategyId>(i), false, onParamChange, i == 0, strategyPnlBreached);
         }
         return violationExists;
@@ -452,10 +450,10 @@ public:
                 case ViperMessageType::SwitchChangeReply: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
                     auto id = toUInt(reply._number_3);
-                    if (id < toUInt(StrategyId::Execution) * 2) {
+                    if (id < toUInt(StrategyId::MAX) * 2) {
                         _clientAcceptor->sendSwitchChangeReply(id, toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                     } else {
-                        auto venue = id - toUInt(StrategyId::Execution) * 2;
+                        auto venue = id - toUInt(StrategyId::MAX) * 2;
                         _clientAcceptor->sendSwitchChangeReply(_guiThings.venueToMainControlRowIndex(venue), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                     }
                     sendSwitchSound(reply._number_2);
@@ -1335,7 +1333,7 @@ public:
                     _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, shift);
 
                     bool pnlBreached = false;
-                    for (uint32_t ii = 0; ii < toUInt(StrategyId::Execution); ++ii) {
+                    for (uint32_t ii = 0; ii < toUInt(StrategyId::MAX); ++ii) {
                         if (_pnlLimitsChecker.checkStrategyLimits(static_cast<StrategyId>(ii))) {
                             LOG(0, "Reject shift change. shift={i1}. Strategy {i2} pnlLimits breached", shift, ii)
                             sendErrorMessage(boost::str(boost::format(
@@ -1805,7 +1803,7 @@ public:
         // Strategy : MM can always enable.  Other strategies can only enable if not in breech of strategy/total PnL
         // Strategy QuoteExternal : Can only enable if not in breach of strategy/total PnL
         // Exchange QuoteExternal : Allow if total pnl is not breached
-        if (row < toUInt(StrategyId::Execution)) {
+        if (row < toUInt(StrategyId::MAX)) {
             auto strategy = _strategies[row];
             std::string message;
             bool strategyPnlBreached;
@@ -1816,8 +1814,8 @@ public:
             else {
                 onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),"GUI requested",toString(strategy->strategyId()));
             }
-        } else if (row < toUInt(StrategyId::Execution) * 2) {
-            auto strategy = _strategies[row - toUInt(StrategyId::Execution)];
+        } else if (row < toUInt(StrategyId::MAX) * 2) {
+            auto strategy = _strategies[row - toUInt(StrategyId::MAX)];
             std::string message;
             bool strategyPnlBreached;
             if(state == SystemState::Enabled && checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true, strategyPnlBreached)) {
