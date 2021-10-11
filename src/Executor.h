@@ -1914,40 +1914,7 @@ public:
         }
     }
 
-    void onPostMDBatch(const md::MDBatch &batch) override {
-        for (auto internalId : _mdUpdated) {
-            if (internalId < _contractStates.size()) {
-                auto& state = _contractStates[internalId];
-                state._lastMDbid = batch.bid;
-            }
-        }
-        _mdUpdated.clear();
-    }
-
-        if (BOOST_UNLIKELY((batch.venue != hf::VENUE::ICE) && (batch.bid <= _lastMDbid[toUInt(batch.venue)]))) {
-            uint64_t eventMask = 0;
-            const auto* data = batch.data;
-            for (auto i = batch.count; i; --i) {
-                const auto& mde = reinterpret_cast<const md::MDEvent&>(*data);
-                data += mde.size;
-                eventMask |= (1ull << static_cast<uint8_t>(mde.type));
-            }
-            logging::GetLogger().logWarning(boost::str(boost::format(
-                    "EXE DUPLICATE MD BATCH. bid=%1% count=%2% hwTS=%3% srcTS=%4% srcSentTS=%5% stratTS=%6% venue=%7% extSeqNum=%8% eventMask=%9%") %
-                batch.bid % batch.count % batch.time.hwTS % batch.time.srcTS % batch.time.srcSentTS % batch.time.stratTS %
-                static_cast<int>(batch.venue) % batch.extSequenceNumber % eventMask));
-        }
-        _lastMDbid[toUInt(batch.venue)] = batch.bid;
-    }
-
     void onPostMDBatch(const md::MDBatch &batch, bool multi_batch_send_complete) override {
-        for (auto internalId : _mdUpdated) {
-            if (internalId < _contractStates.size()) {
-                auto& state = _contractStates[internalId];
-                state._lastMDbid = batch.bid;
-            }
-        }
-        _mdUpdated.clear();
     }
 
     COLD
