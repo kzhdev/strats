@@ -13,12 +13,12 @@ ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract
     , _id(id)
     , _side(side)
     , _name(std::move(name)) {
-    _multipliers.resize(numAllContracts, 0);
+    _contractToPathContract.resize(numAllContracts, nullptr);
     for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
         auto& pathContract = _leanContracts[i];
         pathContract._side = pathContract._multiplier > 0 ? _side : (1 - _side);
         pathContract._contract->_usedInPath = true;
-        _multipliers[pathContract._internalId] = pathContract._multiplier;
+        _contractToPathContract[pathContract._internalId] = &pathContract;
     }
 }
 
@@ -38,8 +38,8 @@ bool ArbieSpreader::Path::canHedge(hf::qty_t size) const noexcept {
         auto side = market->getSide();
         auto price = market->getPrice();
         if (price == hf::NULL_PRICE || market->getId() == MarketIds::__end__ ||
-            pathContract._contract->_lastPriceInPathCalculation[side] == hf::NULL_PRICE ||
-            IsBetter(pathContract._contract->_lastPriceInPathCalculation[side], price, side) ||
+            pathContract._lastPriceInPathCalculation == hf::NULL_PRICE ||
+            IsBetter(pathContract._lastPriceInPathCalculation, price, side) ||
             market->getAdjustedSize() < size) {
             return false;
         }

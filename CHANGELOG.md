@@ -1,3 +1,5 @@
+- Fix _lastPriceInPathCalculation tracking might apply to wrong side
+
 #Version 1.54.3.0
 - Fix overfill allocation. If MM is not enabled or quote externally, the overfill will be sent to the strategy with
   the best external price.

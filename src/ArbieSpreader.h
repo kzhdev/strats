@@ -55,6 +55,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
     struct PathContract {
         Contract* _contract;
+        hf::price_t _lastPriceInPathCalculation = hf::NULL_PRICE;
         int32_t _multiplier;
         uint32_t _internalId;
         uint32_t _side;
@@ -78,7 +79,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         hf::price_t _rvSTFMove = 0;
         hf::price_t _commission;
         std::vector<PathContract> _leanContracts;
-        std::vector<int32_t> _multipliers;
+        std::vector<PathContract*> _contractToPathContract;
         PriceQtyPair _priceSize;
         PriceQtyPair _oldPriceSize;
         uint32_t _id;
@@ -192,7 +193,6 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         hf::price_t _extCommission = 0.;
         hf::price_t _hedgeOffsetPrice = 0;
         hf::qty_t _quoteSize = 0;
-        hf::price_t _lastPriceInPathCalculation[2];
 
         struct Quote {
             hf::price_t _leanPrice = hf::NULL_PRICE;
@@ -789,7 +789,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
                  ToDollars(bestHedgeMarket->getPrice()), ToDollars(marketPrice))
 #endif
 
-            pathContract._contract->_lastPriceInPathCalculation[_side] = marketPrice;
+            pathContract._lastPriceInPathCalculation = marketPrice;
             _priceSize._price += pathContract._multiplier * marketPrice;
 
             if (_priceSize._size > size) {
@@ -870,8 +870,9 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         return;
     }
 
-    auto multiplier = _multipliers[contract->_def._internalId];
-    auto delta = (multiplier * priceDelta);
+    auto pathContract = _contractToPathContract[contract->_def._internalId];
+    assert(pathContract);
+    auto delta = (pathContract->_multiplier * priceDelta);
     TLOG(0, "AS {C[i1]}. {i2} Path {i3} Side={i4} {i5}@{i6} Apply delta {i7} _sizeDetermineContract={i8}", _contract->name(),
          Side, _id, _side, _priceSize._size, _priceSize._price, delta, (_sizeDetermineContract ? _sizeDetermineContract->_def._internalId : -1))
     _priceSize._price += delta;
@@ -923,7 +924,7 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
     }
 
     if (priceDelta) {
-        contract->_lastPriceInPathCalculation[_side] = newPrice;
+        pathContract->_lastPriceInPathCalculation = newPrice;
     }
 }
 
