@@ -1,3 +1,6 @@
+#Version 1.53.2.0
+- Reset potentialOverFill when order modify rejected due to fill
+
 #Version 1.53.1.0
 - Fix candidate > target when modify order canceled due to exec qty greater than modified qty.
 - Fix EXE unresponsive
