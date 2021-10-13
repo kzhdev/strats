@@ -1316,19 +1316,6 @@ public:
                     }
                     break;
                 }
-                case PricingConfigsColumns::SweepTicks: {
-                    auto& ref = _sweepDefinition.getRef(gridCell.row());
-                    uint32_t gridValue = boost::lexical_cast<uint32_t>(gridCell.value());
-                    ref._sweepTicksAtPrice = static_cast<hf::price_t>(gridValue) * contract._definition._tickSize;
-                    LOG(0, "RV {C[i1]}. sweepDefinition changed. ExternalValue={i2} InTicks={i3}", getContract(contract._internalId), gridValue, ref._sweepTicksAtPrice)
-                    break;
-                }
-                case PricingConfigsColumns::SweepQty: {
-                    auto& ref = _sweepDefinition.getRef(gridCell.row());
-                    ref._tradedQty = boost::lexical_cast<int32_t>(gridCell.value());
-                    LOG(0, "RV {C[i1]}. sweepQty changed. Value={i2}", getContract(contract._internalId), ref._tradedQty);
-                    break;
-                }
                 case PricingConfigsColumns::QuantityMultiplier: {
 #ifndef IS_DEV
                     if (contract._definition._venue != hf::VENUE::B3) {
@@ -1350,7 +1337,9 @@ public:
                     sendUpdate = true;
                     break;
                 }
-                case PricingConfigsColumns::PricingMultiplier:
+                case PricingConfigsColumns::SweepTicks:
+                case PricingConfigsColumns::SweepQty:
+                case PricingConfigsColumns::PricingMultiplier:  // read only
                 case PricingConfigsColumns::ASExtCommission:
                     break;
             }
@@ -1415,60 +1404,7 @@ public:
 
     //Must be thread safe if verbose == false
     bool validateRvPricingConfigUpdate(GridUpdate& update, bool verbose = true) {
-        bool errorsOccured = false;
-        for(int i = 0; i < update._update.cells_size(); ++i) {
-            proto::GridCell& gridCell = *update._update.mutable_cells(i);
-            PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
-            switch (columnType) {
-                case PricingConfigsColumns::SweepTicks: {
-                    bool errorOccuredInThisCheck = false;
-                    try {
-                        int32_t value = boost::lexical_cast<int32_t>(gridCell.value());
-                        if (value <= 0) {
-                            if (verbose) { sendErrorMessage("PricingConfigsColumn::SweepTicks <= 0", ErrorType::Critical); }
-                            errorsOccured = errorOccuredInThisCheck = true;
-                        }
-                        RvContract &contract = _contracts[gridCell.row()];
-                        uint64_t maxValue = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) / contract._definition._tickSize;
-                        if (static_cast<uint64_t>(value) > maxValue) {
-                            if (verbose) { sendErrorMessage("PricingConfigsColumn::SweepTicks too big.  value=" + std::to_string(value), ErrorType::Critical); }
-                            errorsOccured = errorOccuredInThisCheck = true;
-                        }
-                    }
-                    catch(const boost::bad_lexical_cast& blc) {
-                        if(verbose) { sendErrorMessage("Error parsing SweepTicks value", ErrorType::Critical); }
-                        errorsOccured = errorOccuredInThisCheck = true;
-                    }
-
-                    if(errorOccuredInThisCheck && verbose) {
-                        const auto& def = _sweepDefinition.getRef(gridCell.row());
-                        gridCell.set_value(std::to_string(def._sweepTicksAtPrice / _contracts[gridCell.row()]._definition._tickSize));
-                    }
-                    break;
-                }
-                case PricingConfigsColumns::SweepQty: {
-                    bool errorOccuredInThisCheck = false;
-                    try {
-                        if (boost::lexical_cast<int32_t>(gridCell.value()) < 0) {
-                            if (verbose) { sendErrorMessage("PricingConfigsColumn::SweepQty < 0", ErrorType::Critical); }
-                            errorsOccured = errorOccuredInThisCheck = true;
-                        }
-                    }
-                    catch(const boost::bad_lexical_cast& blc) {
-                        if(verbose) { sendErrorMessage("Error parsing SweepQty value", ErrorType::Critical); }
-                        errorsOccured = errorOccuredInThisCheck = true;
-                    }
-
-                    if(errorOccuredInThisCheck && verbose) {
-                        gridCell.set_value(std::to_string(_sweepDefinition.getRef(gridCell.row())._tradedQty));
-                    }
-                    break;
-                }
-                default:
-                    break;
-            }
-        }
-        return !errorsOccured;
+        return true;
     }
 
     COLD
@@ -1583,24 +1519,6 @@ public:
             case md::MDEvent::TYPE::FAK_DONE: {
                 const auto &event = static_cast<const md::MDFakDonenEvent &> (mde);
                 handleFakDone(ToViperSide(event._side), internalId, event._oid.value());
-                break;
-            }
-            case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
-                const auto &event = static_cast<const md::MDIntraEventSweepEvent &> (mde);
-
-                LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
-                const auto &sweepLimits = _sweepDefinition.getRef(internalId);
-                if (sweepLimits.sweepDetected(event)) {
-                    if (BOOST_LIKELY(isEnabled())) {
-                        LOG(0, "RV {C[i1]}. Sweep detected, disabling RV, disabling ExternalQuote. PriceLimit={i2} QtyLimit={i3} event.diff={i4} event.qty={i5}",
-                            getContract(internalId), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty, event.diff, event.qty)
-                        disableRelativeValue("Sweep detected by RV (more info to follow)", true);
-                        disableQuoteExternal();
-                        sendErrorMessage("Sweep info: disabling RV, disabling RV external quoting.  Contract=" + getContractName(internalId) + " PriceLimit=" +
-                                         std::to_string(sweepLimits._sweepTicksAtPrice) + " QtyLimit=" + std::to_string(sweepLimits._tradedQty) +
-                                         " event.diff=" + std::to_string(event.diff) + " event.qty=" + std::to_string(event.qty), ErrorType::Critical);
-                    }
-                }
                 break;
             }
             default:
@@ -2040,7 +1958,6 @@ public:
     void initializeFromPricingConfig(std::vector<PricingConfig>& config) {
         _weights.init(_numberOfAllContracts);
         _useWeightedMid.init(_numberOfAllContracts);
-        _sweepDefinition.initDefault(_numberOfAllContracts);
         _maxTicksWide.init(_numberOfAllContracts);
         for (uint32_t index = 0; index < _numberOfAllContracts; ++index) {
             PricingConfig& pc = config[index];
@@ -2052,7 +1969,6 @@ public:
             _useWeightedMid.setValue(index, pc._useWeightedMid);
             contract._pricingMultiplier = pc._pricingMultiplier;
             contract._quantityMultiplier = pc._quantityMultiplier;
-            _sweepDefinition.setValue(index, {._sweepTicksAtPrice=pc._sweepTicks * contract._definition._tickSize, ._tradedQty=pc._sweepQuantity});
             _maxTicksWide.setValue(index, config[index]._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config[index]._maxTicksWide * contract._definition._tickSize);
         }
     }
@@ -3121,15 +3037,6 @@ public:
     uint64_t _lastEmaTime;
 
     double _widthMultiplier = 0;
-
-    struct SimpleSweepDefinition {
-        hf::price_t _sweepTicksAtPrice;
-        uint32_t _tradedQty;
-        bool sweepDetected(const md::MDIntraEventSweepEvent& event) const {
-            return (std::abs(event.diff) >= _sweepTicksAtPrice) && (event.qty >= _tradedQty);
-        }
-    };
-    Vector<SimpleSweepDefinition> _sweepDefinition;
 
 private:
     std::unordered_set<uint32_t> _updatedContracts;

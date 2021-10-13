@@ -77,6 +77,15 @@ class Executor final : public strat::StrategyT<Executor>, public ViperResource {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
     bool _mmOrderFilled = false;
 
+    struct SimpleSweepDefinition {
+        hf::price_t _sweepTicksAtPrice;
+        uint32_t _tradedQty;
+        bool sweepDetected(const md::MDIntraEventSweepEvent& event) const {
+            return (std::abs(event.diff) >= _sweepTicksAtPrice) && (event.qty >= _tradedQty);
+        }
+    };
+    std::vector<SimpleSweepDefinition> _sweepDefinition;
+
 public:
     Executor()
         : _fillBannerTimer(*this)
@@ -939,212 +948,287 @@ public:
 
     //Note the return value is ignored!  Theoretically the Stacker validation should return false?
     bool processGridChange(GridUpdate& update) {
-        if (update._update.gridid() == toUInt(WindowIds::StackerParameters)) {
-            for (proto::GridCell& cell : *update._update.mutable_cells()) {
-                const uint32_t internalId = cell.row();
-                ContractState& state = _contractStates[internalId];
-                StackerParametersColumns columnType = static_cast<StackerParametersColumns>(cell.col());
-                bool attemptToCancelRemainder = false;
-                if(columnType == StackerParametersColumns::UseGTC) {
-                    if (1 == atoi(cell.value().c_str())) {
-                        if(!_viperConfig._allowGTCs) {
-                            sendErrorMessage("EnableGTCs changed to true for contract" + _viperConfig._allContracts[internalId]._name + ". This shouldn't be possible!  overriding", ErrorType::Critical);
-                            LOG(0, "EXE: Contract {C[i1]} EnableGTCs changed to true for contract, this shouldn't be possible.  Overriding", getContract(internalId));
-                            cell.set_value("0");
-                            continue;
-                        }
-                    }
-                    else {
-                        attemptToCancelRemainder = true;
-                    }
-                }
-
-                //Note this can also change values if further validation fails
-                std::string errorMessage;
-                if(!state._ime.tryHandleStackerParameterUpdate(cell, errorMessage)) {
-                    sendErrorMessage("StackerParameterUpdate failed: " + errorMessage, ErrorType::Critical);
-                    LOG(0, "EXE: Contract {C[i1]} Stacker parameter update failed", getContract(internalId));
-                }
-
-                //As a safety, check to see if any GTCs remain in the market that we must cancel
-                if(attemptToCancelRemainder) {
-                    int remainder = _slow._iopTracking.cancelGTCs(internalId);
-                    bool anyStrategyEnabled = false;
-                    for(auto i = 0u; i < toUInt(StrategyId::MAX); ++i) {
-                        if(getStrategy(static_cast<StrategyId>(i))->isEnabled()) {
-                            anyStrategyEnabled = true;
-                            break;
-                        }
-                    }
-                    if (remainder && anyStrategyEnabled) {
-                        LOG(0, "EXE: Contract {C[i1]} GTCs still in market after attempting to disable.  Canceling remainder.  NumRemainderCancelled={i2}", getContract(internalId), remainder);
-                        sendErrorMessage("Contract " + getContractName(internalId) + ": GTCs found in market after OM attempted to cancel all.  See previous rows for more details GTCs.  NumberFoundAndCancelled=" + std::to_string(remainder), ErrorType::Critical);
-                    }
-                }
-            }
-        }
-        else if (update._update.gridid() == toUInt(WindowIds::GlobalConfigs)) {
-            for (int i = 0; i < update._update.cells_size(); ++i) {
-                proto::GridCell& cell = *update._update.mutable_cells(i);
-                GlobalConfig& config = _viperConfig._globalConfigs[cell.row()];
-                if (config._key == QUOTE_BANNER_PERIOD) {
-                    uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        for (auto& state : _contractStates) {
-                            state._ime.handleQuoteBannerUpdate(period);
-                        }
-                    }
-                } else if (config._key == FILL_BANNER_PERIOD) {
-                    uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        for (auto& state : _contractStates) {
-                            state._ime.handleFillBannerUpdate(period);
-                        }
-                    }
-                } else if (config._key == SELF_MATCH_BANNER_MICS) {
-                    uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        for (auto& state : _contractStates) {
-                            state._ime.handleRejectBannerUpdate(period);
-                        }
-                    }
-                } else if (config._key == MSG_REDUCE_QUOTE_MICS) {
-                    uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        for (auto& kvp : _throttlers) {
-                            kvp.second.updateInDangerZonePeriod(inDangerZonePeriod);
-                        }
-                    }
-                }
-                else if (config._key == MSG_HEDGES_INTERVAL_MICS) {
-                    uint64_t atCapacityPeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        for (auto& kvp : _throttlers) {
-                            kvp.second.updateAtCapacityPeriod(atCapacityPeriod);
-                        }
-                    }
-                }
-                else if (config._key == PERCENT_MSG_HEDGES) {
-                    auto percent = boost::lexical_cast<double>(cell.value());
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        for (auto& kvp : _throttlers) {
-                            kvp.second.updateHedgePercentage(percent);
-                        }
-                    }
-                }
-                else if (config._key == PERCENT_MSG_REDUCE_QUOTE) {
-                    auto percent = boost::lexical_cast<double>(cell.value());
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        for (auto& kvp : _throttlers) {
-                            kvp.second.updateDangerZonePercentage(percent);
-                        }
-                    }
-                }
-                else if (config._key == HEDGE_BANNER_MICS) {
-                    uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        for (auto& state : _contractStates) {
-                            state._ime.handleHedgeQuoteBannerUpdate(period);
-                        }
-                    }
-                }
-                else if(config._key == ORDER_RATE_CLIPS) {
-                    auto clips = boost::lexical_cast<uint32_t>(cell.value());
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        _newOrderModifyOrderRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
-                        LOG(0, "Order Rate Checker.  Update max clips={i1}", clips);
-                    }
-                }
-                else if(config._key == ORDER_RATE_SUM_TOTAL) {
-                    auto sumTotal = boost::lexical_cast<hf::qty_t>(cell.value());
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        _newOrderModifyOrderRateChecker.changeSumTotal(sumTotal, clockUtil::GetCycles());
-                        LOG(0, "Order Rate Checker.  Update sum total={i1}", sumTotal);
-                    }
-                }
-                else if(config._key == ORDER_RATE_PERIOD) {
-                    auto period = boost::lexical_cast<uint32_t>(cell.value());
-                    uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
-                    auto shift = static_cast<Shifts>(cell.col() - 1);
-                    if (_viperConfig._currentShift == shift) {
-                        _newOrderModifyOrderRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
-                        LOG(0, "Order Rate Checker. Update period={i1} periodInCycles={i2}", period, periodInCycles)
-                    }
-                } else if (config._key == AUTO_SHUTDOWN_TIME) {
-                    auto shift = cell.col() - 1;
-                    const auto& orgShutdownTime = _viperConfig._globalConfigs[cell.row()]._shifts[shift];
-                    int32_t orgValue = -1;
-                    try {
-                        orgValue = boost::lexical_cast<int32_t>(orgShutdownTime);
-                    }
-                    catch (boost::bad_lexical_cast&) {
-                        _viperConfig._globalConfigs[cell.row()]._shifts[shift] = "-1";
-                    }
-                    try {
-                        auto value = boost::lexical_cast<int32_t>(cell.value());
-                        uint32_t hour, min, sec;
-                        if (value == -1) {
-                            _shutdownTime = -1;
-                            LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> -1", shift, orgValue)
-                        } else if (verifyHHMMSSTime(value, hour, min, sec)) {
-                            LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> {i3}", shift, orgValue, value)
-                            if ((Shifts)shift == _viperConfig._currentShift) {
-                                _shutdownTime = convertTimeToCycles(hour, min, sec, clockUtil::GetCycles(), _frequency);
+        auto gridId = static_cast<WindowIds>(update._update.gridid());
+        switch (gridId) {
+            case WindowIds::StackerParameters: {
+                for (proto::GridCell& cell : *update._update.mutable_cells()) {
+                    const uint32_t internalId = cell.row();
+                    ContractState& state = _contractStates[internalId];
+                    StackerParametersColumns columnType = static_cast<StackerParametersColumns>(cell.col());
+                    bool attemptToCancelRemainder = false;
+                    if(columnType == StackerParametersColumns::UseGTC) {
+                        if (1 == atoi(cell.value().c_str())) {
+                            if(!_viperConfig._allowGTCs) {
+                                sendErrorMessage("EnableGTCs changed to true for contract" + _viperConfig._allContracts[internalId]._name + ". This shouldn't be possible!  overriding", ErrorType::Critical);
+                                LOG(0, "EXE: Contract {C[i1]} EnableGTCs changed to true for contract, this shouldn't be possible.  Overriding", getContract(internalId));
+                                cell.set_value("0");
+                                continue;
                             }
-                        } else {
-                            LOG(0, "Shift {i1} AutoShutdownTime {i2} invalid format. Revert value back to {i3}", shift, value, orgValue)
-                            sendErrorMessage(boost::str(boost::format("AutoShutdownTime %1% invalid format. Revert value back to %2%") % value % orgValue),
+                        }
+                        else {
+                            attemptToCancelRemainder = true;
+                        }
+                    }
+
+                    //Note this can also change values if further validation fails
+                    std::string errorMessage;
+                    if(!state._ime.tryHandleStackerParameterUpdate(cell, errorMessage)) {
+                        sendErrorMessage("StackerParameterUpdate failed: " + errorMessage, ErrorType::Critical);
+                        LOG(0, "EXE: Contract {C[i1]} Stacker parameter update failed", getContract(internalId));
+                    }
+
+                    //As a safety, check to see if any GTCs remain in the market that we must cancel
+                    if(attemptToCancelRemainder) {
+                        int remainder = _slow._iopTracking.cancelGTCs(internalId);
+                        bool anyStrategyEnabled = false;
+                        for(auto i = 0u; i < toUInt(StrategyId::MAX); ++i) {
+                            if(getStrategy(static_cast<StrategyId>(i))->isEnabled()) {
+                                anyStrategyEnabled = true;
+                                break;
+                            }
+                        }
+                        if (remainder && anyStrategyEnabled) {
+                            LOG(0, "EXE: Contract {C[i1]} GTCs still in market after attempting to disable.  Canceling remainder.  NumRemainderCancelled={i2}", getContract(internalId), remainder);
+                            sendErrorMessage("Contract " + getContractName(internalId) + ": GTCs found in market after OM attempted to cancel all.  See previous rows for more details GTCs.  NumberFoundAndCancelled=" + std::to_string(remainder), ErrorType::Critical);
+                        }
+                    }
+                }
+                break;
+            }
+            case WindowIds::GlobalConfigs: {
+                for (int i = 0; i < update._update.cells_size(); ++i) {
+                    proto::GridCell& cell = *update._update.mutable_cells(i);
+                    GlobalConfig& config = _viperConfig._globalConfigs[cell.row()];
+                    if (config._key == QUOTE_BANNER_PERIOD) {
+                        uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            for (auto& state : _contractStates) {
+                                state._ime.handleQuoteBannerUpdate(period);
+                            }
+                        }
+                    } else if (config._key == FILL_BANNER_PERIOD) {
+                        uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            for (auto& state : _contractStates) {
+                                state._ime.handleFillBannerUpdate(period);
+                            }
+                        }
+                    } else if (config._key == SELF_MATCH_BANNER_MICS) {
+                        uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            for (auto& state : _contractStates) {
+                                state._ime.handleRejectBannerUpdate(period);
+                            }
+                        }
+                    } else if (config._key == MSG_REDUCE_QUOTE_MICS) {
+                        uint64_t inDangerZonePeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            for (auto& kvp : _throttlers) {
+                                kvp.second.updateInDangerZonePeriod(inDangerZonePeriod);
+                            }
+                        }
+                    }
+                    else if (config._key == MSG_HEDGES_INTERVAL_MICS) {
+                        uint64_t atCapacityPeriod = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            for (auto& kvp : _throttlers) {
+                                kvp.second.updateAtCapacityPeriod(atCapacityPeriod);
+                            }
+                        }
+                    }
+                    else if (config._key == PERCENT_MSG_HEDGES) {
+                        auto percent = boost::lexical_cast<double>(cell.value());
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            for (auto& kvp : _throttlers) {
+                                kvp.second.updateHedgePercentage(percent);
+                            }
+                        }
+                    }
+                    else if (config._key == PERCENT_MSG_REDUCE_QUOTE) {
+                        auto percent = boost::lexical_cast<double>(cell.value());
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            for (auto& kvp : _throttlers) {
+                                kvp.second.updateDangerZonePercentage(percent);
+                            }
+                        }
+                    }
+                    else if (config._key == HEDGE_BANNER_MICS) {
+                        uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(cell.value()), _frequency);
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            for (auto& state : _contractStates) {
+                                state._ime.handleHedgeQuoteBannerUpdate(period);
+                            }
+                        }
+                    }
+                    else if(config._key == ORDER_RATE_CLIPS) {
+                        auto clips = boost::lexical_cast<uint32_t>(cell.value());
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            _newOrderModifyOrderRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
+                            LOG(0, "Order Rate Checker.  Update max clips={i1}", clips);
+                        }
+                    }
+                    else if(config._key == ORDER_RATE_SUM_TOTAL) {
+                        auto sumTotal = boost::lexical_cast<hf::qty_t>(cell.value());
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            _newOrderModifyOrderRateChecker.changeSumTotal(sumTotal, clockUtil::GetCycles());
+                            LOG(0, "Order Rate Checker.  Update sum total={i1}", sumTotal);
+                        }
+                    }
+                    else if(config._key == ORDER_RATE_PERIOD) {
+                        auto period = boost::lexical_cast<uint32_t>(cell.value());
+                        uint64_t periodInCycles = GetCyclesFromMilliSeconds(period, _frequency);
+                        auto shift = static_cast<Shifts>(cell.col() - 1);
+                        if (_viperConfig._currentShift == shift) {
+                            _newOrderModifyOrderRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
+                            LOG(0, "Order Rate Checker. Update period={i1} periodInCycles={i2}", period, periodInCycles)
+                        }
+                    } else if (config._key == AUTO_SHUTDOWN_TIME) {
+                        auto shift = cell.col() - 1;
+                        const auto& orgShutdownTime = _viperConfig._globalConfigs[cell.row()]._shifts[shift];
+                        int32_t orgValue = -1;
+                        try {
+                            orgValue = boost::lexical_cast<int32_t>(orgShutdownTime);
+                        }
+                        catch (boost::bad_lexical_cast&) {
+                            _viperConfig._globalConfigs[cell.row()]._shifts[shift] = "-1";
+                        }
+                        try {
+                            auto value = boost::lexical_cast<int32_t>(cell.value());
+                            uint32_t hour, min, sec;
+                            if (value == -1) {
+                                _shutdownTime = -1;
+                                LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> -1", shift, orgValue)
+                            } else if (verifyHHMMSSTime(value, hour, min, sec)) {
+                                LOG(0, "Shift {i1} AutoShutdownTime changed {i2} -> {i3}", shift, orgValue, value)
+                                if ((Shifts)shift == _viperConfig._currentShift) {
+                                    _shutdownTime = convertTimeToCycles(hour, min, sec, clockUtil::GetCycles(), _frequency);
+                                }
+                            } else {
+                                LOG(0, "Shift {i1} AutoShutdownTime {i2} invalid format. Revert value back to {i3}", shift, value, orgValue)
+                                sendErrorMessage(boost::str(boost::format("AutoShutdownTime %1% invalid format. Revert value back to %2%") % value % orgValue),
+                                                 ErrorType::Normal);
+                                cell.set_value(orgShutdownTime);
+                            }
+                        }
+                        catch (boost::bad_lexical_cast&) {
+                            LOG(0, "AutoShutdownTime value invalid. Revert value back to {i1}", orgValue)
+                            sendErrorMessage(boost::str(boost::format("AutoShutdownTime %1% invalid. Revert value back to %2%") % cell.value() % orgValue),
                                              ErrorType::Normal);
                             cell.set_value(orgShutdownTime);
                         }
+                    } else if (config._key == AUTO_RV_DISABLE_TIME) {
+                        auto* rv = getStrategy(StrategyId::RelativeValue);
+                        setAutoDisableTime(rv, cell);
+                    } else if (config._key == AUTO_MM_DISABLE_TIME) {
+                        auto* mm = getStrategy(StrategyId::MarketMaker);
+                        setAutoDisableTime(mm, cell);
+                    } else if (config._key == AUTO_AS_DISABLE_TIME) {
+                        auto* as = getStrategy(StrategyId::ArbieSpreader);
+                        setAutoDisableTime(as, cell);
                     }
-                    catch (boost::bad_lexical_cast&) {
-                        LOG(0, "AutoShutdownTime value invalid. Revert value back to {i1}", orgValue)
-                        sendErrorMessage(boost::str(boost::format("AutoShutdownTime %1% invalid. Revert value back to %2%") % cell.value() % orgValue),
-                                         ErrorType::Normal);
-                        cell.set_value(orgShutdownTime);
+                }
+                break;
+            }
+            case WindowIds::ContractParametersRv: {
+                for (const proto::GridCell& cell : update._update.cells()) {
+                    auto columnType = static_cast<ContractParameterRVColumns>(cell.col());
+                    if (columnType == ContractParameterRVColumns::HedgeTolerance) {
+                        const uint32_t internalId = cell.row();
+                        ContractState& state = _contractStates[internalId];
+                        auto value = boost::lexical_cast<double>(cell.value());
+                        state._ime.updateHedgeTolerance(ToRhonePrice(value));
                     }
-                } else if (config._key == AUTO_RV_DISABLE_TIME) {
-                    auto* rv = getStrategy(StrategyId::RelativeValue);
-                    setAutoDisableTime(rv, cell);
-                } else if (config._key == AUTO_MM_DISABLE_TIME) {
-                    auto* mm = getStrategy(StrategyId::MarketMaker);
-                    setAutoDisableTime(mm, cell);
-                } else if (config._key == AUTO_AS_DISABLE_TIME) {
-                    auto* as = getStrategy(StrategyId::ArbieSpreader);
-                    setAutoDisableTime(as, cell);
                 }
+                break;
             }
-        }
-        else if (update._update.gridid() == toUInt(WindowIds::ContractParametersRv)) {
-            for (const proto::GridCell& cell : update._update.cells()) {
-                auto columnType = static_cast<ContractParameterRVColumns>(cell.col());
-                if (columnType == ContractParameterRVColumns::HedgeTolerance) {
-                    const uint32_t internalId = cell.row();
-                    ContractState& state = _contractStates[internalId];
-                    auto value = boost::lexical_cast<double>(cell.value());
-                    state._ime.updateHedgeTolerance(ToRhonePrice(value));
+            case WindowIds::TraderSwitch: {
+                switchTrader(update);
+                break;
+            }
+            case WindowIds::GTCManagement: {
+                _slow._iopTracking.handleGTCManagementGridUpdate(update);
+                break;
+            }
+            case WindowIds::EconomicNumbers: {
+                handleEconomicNumbersUpdate(update._update);
+                break;
+            }
+            case WindowIds::PricingConfig: {
+                for (int i = 0; i < update._update.cells_size(); ++i) {
+                    proto::GridCell& gridCell = *update._update.mutable_cells(i);
+                    PricingConfigsColumns columnType = static_cast<PricingConfigsColumns>(gridCell.col());
+                    auto internalId = gridCell.row();
+                    switch (columnType) {
+                        case PricingConfigsColumns::SweepTicks: {
+                            auto& sweepDefinition = _sweepDefinition[internalId];
+                            auto& state = _contractStates[internalId];
+                            auto gridValue = boost::lexical_cast<uint32_t>(gridCell.value());
+                            bool invalid = false;
+                            try {
+                                auto value = boost::lexical_cast<int32_t>(gridCell.value());
+                                if (value <= 0) {
+                                    sendErrorMessage("PricingConfigsColumn::SweepTicks <= 0", ErrorType::Critical);
+                                    invalid = true;
+                                }
+                                uint64_t maxValue = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) / state._contract._tickSize;
+                                if (static_cast<uint64_t>(value) > maxValue) {
+                                    sendErrorMessage("PricingConfigsColumn::SweepTicks too big.  value=" + std::to_string(value), ErrorType::Critical);
+                                    invalid = true;
+                                }
+                            }
+                            catch(const boost::bad_lexical_cast& /*blc*/) {
+                                sendErrorMessage("Error parsing SweepTicks value", ErrorType::Critical);
+                                invalid = true;
+                            }
+
+                            if (invalid) {
+                                gridCell.set_value(std::to_string(sweepDefinition._sweepTicksAtPrice / state._contract._tickSize));
+                            } else {
+                                sweepDefinition._sweepTicksAtPrice = static_cast<hf::price_t>(gridValue) * state._contract._tickSize;
+                                LOG(0, "EXE {C[i1]}. sweepDefinition changed. ExternalValue={i2} InTicks={i3}", getContract(internalId), gridValue, sweepDefinition._sweepTicksAtPrice)
+                            }
+                            break;
+                        }
+                        case PricingConfigsColumns::SweepQty: {
+                            auto& sweepDefinition = _sweepDefinition[internalId];
+                            bool invalid = false;
+                            try {
+                                if (boost::lexical_cast<int32_t>(gridCell.value()) < 0) {
+                                    sendErrorMessage("PricingConfigsColumn::SweepQty < 0", ErrorType::Critical);
+                                    invalid = true;
+                                }
+                            }
+                            catch(const boost::bad_lexical_cast& /*blc*/) {
+                                sendErrorMessage("Error parsing SweepQty value", ErrorType::Critical);
+                                invalid = true;
+                            }
+
+                            if(invalid) {
+                                gridCell.set_value(std::to_string(sweepDefinition._tradedQty));
+                            } else {
+                                sweepDefinition._tradedQty = boost::lexical_cast<int32_t>(gridCell.value());
+                                LOG(0, "EXE {C[i1]}. sweepQty changed. Value={i2}", getContract(internalId), sweepDefinition._tradedQty);
+                            }
+                            break;
+                        }
+                        default :
+                            break;
+                    }
                 }
+                break;
             }
-        }
-        else if (update._update.gridid() == toUInt(WindowIds::TraderSwitch)) {
-            switchTrader(update);
-        }
-        else if(update._update.gridid() == toUInt(WindowIds::GTCManagement)) {
-            _slow._iopTracking.handleGTCManagementGridUpdate(update);
-        }
-        else if (update._update.gridid() == toUInt(WindowIds::EconomicNumbers)) {
-            handleEconomicNumbersUpdate(update._update);
+            default:
+                break;
         }
         return true;
     }
@@ -1526,6 +1610,7 @@ public:
             }
             _b3hb._oneMillisecondInTicks = GetCyclesFromMilliSeconds(1, _frequency);
 
+            _sweepDefinition.resize(_viperConfig._allContracts.size());
             for (uint32_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
                 const ConfigContract &contract = _viperConfig._allContracts[i];
                 auto& state = _contractStates[i];
@@ -1548,6 +1633,10 @@ public:
                     state._contract = contract;
                 }
                 _usedVenues.insert(contract._venue);
+                PricingConfig& pc = _viperConfig._pricingConfigs[i];
+                auto& sweepDefinition = _sweepDefinition[i];
+                sweepDefinition._sweepTicksAtPrice = pc._sweepTicks * contract._tickSize;
+                sweepDefinition._tradedQty = pc._sweepQuantity;
             }
 
             validateContracts(_viperConfig._allContracts);
@@ -2444,7 +2533,27 @@ public:
         }
     }
 
-    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event, const md::MDBatch& batch) {}
+    void onMDIntraEventSweep(const md::MDIntraEventSweepEvent& event, const md::MDBatch& batch) {
+        auto internalId = sidToInternalId(event.sid);
+        LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
+        const auto &sweepLimits = _sweepDefinition[internalId];
+        if (sweepLimits.sweepDetected(event)) {
+            foreachStrategy([this, &sweepLimits, internalId, &event](ViperStrategyBase* strategy) {
+                if (strategy->strategyId() != StrategyId::MarketMaker && strategy->isEnabled()) {
+                    LOG(0, "EXE {C[i1]}. Sweep detected, disabling strategy {i2}, disabling ExternalQuote. PriceLimit={i3} QtyLimit={i4} event.diff={i5} event.qty={i6}", getContract(internalId),
+                        strategyName(strategy->strategyId()), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty,
+                        event.diff, event.qty)
+                    strategy->disable();
+                    strategy->disableQuoteExternal();
+                    sendErrorMessage(boost::str(boost::format(
+                            "Sweep info: disabling %1%, disabling %1% external quoting. Contract=%2% PriceLimit=%3% QtyLimit=%4% event.diff=%5% event.qty=%6%")
+                            % toString(strategy->strategyId()) % getContractName(internalId)
+                            % sweepLimits._sweepTicksAtPrice % sweepLimits._tradedQty % event.diff
+                            % event.qty), ErrorType::Critical);
+                }
+            });
+        }
+    }
 
     void onMDPreOpenPrice(const md::MDPreOpenPriceEvent &event, const md::MDBatch &/*batch*/) {
         _slow._iopTracking.onIOPUpdate(event);

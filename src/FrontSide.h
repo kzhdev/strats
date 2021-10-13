@@ -1276,6 +1276,7 @@ public:
                     onGridUpdateAccepted(toUInt(WindowIds::NegativeScalpChecker));
                 }
                 else if (windowId == WindowIds::PricingConfig) {
+                    sendGridUpdateToExecutor(gridUpdate);
                     _strategies[toUInt(StrategyId::RelativeValue)]->sendGridUpdate(gridUpdate);
                     _strategies[toUInt(StrategyId::ArbieSpreader)]->sendGridUpdate(gridUpdate);
                 }
