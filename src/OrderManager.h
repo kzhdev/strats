@@ -1349,7 +1349,7 @@ public:
 
         //If we need to undo whatever is in the front of the chain, probably due to a modify reject.  Different enough from cancelWorkingInChain
         //because of how we have to handle _flight and _acknowledged quantities that we don't want to overload it
-        void undoModifyInFrontChain(om::order_t& order) {
+        void undoModifyInFrontChain(om::order_t& order, bool dueToFill = false) {
 
             //See comments in Modify Reject method, I'm not even sure how we get here for CME
             if (BOOST_LIKELY(_om->_contract._venue == hf::VENUE::ICE)) {
@@ -1384,6 +1384,10 @@ public:
                 }
                 else {
                     _flight -= currentQty - priorQty;
+
+                    if (dueToFill && _potentialOverfill) {
+                        _potentialOverfill -= GetQuantity(order, POTENTIAL_OVERFILL_QTY);
+                    }
                 }
 
                 LOG(0, "**** priorLevel: Target={i1}|{i2} Acked={i3} Flight={i4} Trade={i5} Leaves={i6} NumFlightout={i7}", priorLevel->_target[0],
@@ -1609,14 +1613,14 @@ public:
                 if (BOOST_UNLIKELY(mutableOrder.action_flags.is_active)) {
                     //How the heck do we get here?  Rejected due to fill, but is active !?  I think this was bad logic in old stacker.
                     //We're going to treat it as best as we can, similar to an ice SMP reject that leaves the order working.
-                    undoModifyInFrontChain(mutableOrder);
+                    undoModifyInFrontChain(mutableOrder, true);
                     mutableOrder.action_flags.is_modifying = isStillModifyingAfterModifyAck(order);
                     _om->disableMarketMakerAfterStackerRejects("OM::onOrderReplaceRejected (rejectedDueToFill && is_active");
                 } else {
                     // In Rhone 3.55 OrderReplaceReject due to fill might come before fill events
                     // If the order is still in current level, it means the fill event has not come yet.
                     if (hasOrder(mutableOrder)) {
-                        undoModifyInFrontChain(mutableOrder);
+                        undoModifyInFrontChain(mutableOrder, true);
                     }
                     mutableOrder.action_flags.is_modifying = false;
                 }
