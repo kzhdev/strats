@@ -1,4 +1,7 @@
+#Version 1.54.4.0
 - Fix _lastPriceInPathCalculation tracking might apply to wrong side
+- Disable AS and AS quote external on sweep
+- [rhonepubic] Handle FAK partial fill
 
 #Version 1.53.2.0
 - Reset potentialOverFill when order modify rejected due to fill
