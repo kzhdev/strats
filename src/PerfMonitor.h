@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hf/Service.h>
+#include <util/Service.h>
 #include "LockFreeQueue.h"
 #include "logging/Logger.h"
 #include "ClockUtil.h"
@@ -247,7 +247,7 @@ struct ScopedPerfPoint {
 
 #else   // ENABLE_PERF
 
-class PerfMonitor : public virtual hf::Service {
+class PerfMonitor : public virtual rhone::util::Service {
 public:
     void onRun() {}
 };

@@ -184,10 +184,10 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
             hf::qty_t _externalSize = 0;
             int32_t _hedgePath = -1;
 
-            Quote& operator=(const Quote& rhs) noexcept {
-                memcpy(this, &rhs, sizeof(Quote));
-                return *this;
-            }
+//            Quote& operator=(const Quote& rhs) noexcept {
+//                memcpy(this, &rhs, sizeof(Quote));
+//                return *this;
+//            }
 
             bool operator==(const Quote& rhs) const noexcept {
                 return !(operator!=(rhs));

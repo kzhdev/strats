@@ -483,7 +483,7 @@ inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectT
 
 enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown, CancelGtcAndDisable};
 enum class StrategyId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, MAX};  // Execution must the last
-enum class ResourceId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, FrontSide};   // Strategy resource must added before Execution
+enum class ResourceId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, FrontSide, _Resource_MAX_};   // Strategy resource must added before Execution
 enum class DataSeries {VectorPrice, LTF, STF};
 
 inline constexpr const char* toString(StrategyId id) {
@@ -1443,7 +1443,28 @@ enum class ViperMessageType : uint8_t {
     STFUpdate,
     TransferPositionToRV,
 
+
     VectorParameterUpdate,
+
+#ifdef VIPER_BACKTEST
+    MD_Add_Order,
+    MD_Delete_Order,
+    MD_Modify_Order,
+    MD_Status,
+    MD_TradeDetails,
+    MD_UpdateToLimitBook,
+    MD_UpdateToStrategy,
+    OM_SubmitOrder,
+    OM_ModifyOrder,
+    OM_CancelOrder,
+    OM_OrderAccepted,
+    OM_OrderModified,
+    OM_OrderCanceled,
+    OM_OrderExecution,
+    OM_OrderRejected,
+    OM_OrderModifyRejected,
+    OM_OrderCancelRejected,
+#endif
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};
@@ -1452,9 +1473,19 @@ enum THROTTLING_MODE {THROTTLING_MODE_NONE, THROTTLING_MODE_DANGER_ZONE, THROTTL
 
 #pragma pack(1)
 struct ViperMessage {
+#ifdef VIPER_BACKTEST
+    uint64_t _timestamp;
+#endif
     uint32_t _size;
     ViperMessageType _type;
+#ifdef VIPER_BACKTEST
+    union {
+        hf::VENUE _venue;
+        ResourceId _source;
+    };
+#else
     ResourceId _source;
+#endif
     char _data[0];
 };
 #pragma pack()

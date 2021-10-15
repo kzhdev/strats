@@ -208,7 +208,11 @@ namespace Python {
 
         strat::om_queue_info_t* getRouteForNextNewOrder(hf::VENUE venue) {
             if(useSimpleRoute(venue)) {
+#ifndef VIPER_BACKTEST
                 return _simpleRoundRobinRoute.getAllConnections()[_simpleRoundRobinRoute.getNextConnectionIndex()];
+#else
+                return nullptr;
+#endif
             }
             return _b3Router->getRouteForNextNewOrder();
         }

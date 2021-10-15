@@ -161,7 +161,24 @@ public:
                             boost::str(boost::format("MDPool is not set for MDQueue with name '%1%'") % name));
                 }
 
+//#ifdef VIPER_BACKTEST
+//                {
+//                    auto n = name + "_strategy";
+//                    auto* const ptr = dynamic_cast<md::queue::MDQueueResource*> (rhone::util::ResourceManager::getResourceP(n));
+//                    if (!ptr) {
+//                        logging::GetLogger().logErrorAndThrow(
+//                                boost::str(boost::format("Cannot Find MDQueue by name '%1%'") % n));
+//                    }
+//
+//                    if (!ptr->getPoolP()) {
+//                        logging::GetLogger().logErrorAndThrow(
+//                                boost::str(boost::format("MDPool is not set for MDQueue with name '%1%'") % n));
+//                    }
+//                    MarketDataConsumerBase::mdQueue().emplace_back(ptr);
+//                }
+//#else
                 MarketDataConsumerBase::mdQueue().emplace_back(ptr);
+//#endif
             }
         }
 
@@ -1541,7 +1558,7 @@ public:
                             logging::GetLogger().logInfo(boost::str(boost::format("Conn=%1% venue=%2% port_gid=%3% is_convenient=%4%")
                                 % conn.getName() % to_string(strat::venue(conn)) % strat::port_gid(conn).value() % strat::is_convenience(conn)));
                         }
-#ifndef BACKTEST
+#ifndef VIPER_BACKTEST
                         logging::GetLogger().logErrorAndThrow(boost::str(boost::format("No viable connection for %1% %2%")
                             % to_string(contract._venue) % contract._name));
 #endif
@@ -1650,7 +1667,7 @@ public:
     bool gatherRhoneLimitsAndSendToRV(om::port_gid_t port_gid) {
         std::unordered_map<uint32_t, int64_t> internalIdToLimit;
 
-#ifndef BACKTEST
+#ifndef VIPER_BACKTEST
         for(const auto& kvp : _viperConfig._sidToInternalId) {
             const auto* limit = this->context().getRiskLimits(port_gid, kvp.first);
             if(limit) {
@@ -1846,13 +1863,9 @@ public:
 
     // Strategy MD event callbacks which we are not used directly
     void onTradeCleanedMDUpdate(const md::MDUpdateEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDTradeDetails(const md::MDTradeDetailsEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onEndTradeSummary(const md::MDEndTradeSummary &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDAddOrder(const md::MDAddOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+
     void onMDSnapshotOrders(const md::MDSnapshotOrdersEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDDeleteOrder(const md::MDDeleteOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDModifyOrder(const md::MDModifyOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDModifyOrderWithNewID(const md::MDModifyOrderWithNewIDEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDLevelChange(const md::MDLevelChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDLevelClear(const md::MDLevelClearEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDLevelDelete(const md::MDLevelDeleteEvent &/*event*/, const md::MDBatch &/*batch*/) {}
@@ -1860,10 +1873,23 @@ public:
     void onMDLevelNew(const md::MDLevelNewEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDLevelOverlay(const md::MDLevelOverlayEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDLimitPrice(const md::MDLimitPriceEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDModifyOrderWithNewID(const md::MDModifyOrderWithNewIDEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDVolumes(const md::MDVolumesEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDSettlementPublished(const md::MDSettlementPublishedEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDChannelStateChange(const md::MDChannelStateChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDTransactionEvent(const md::MDTransactionEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+
+#ifdef VIPER_BACKTEST
+    virtual void onMDAddOrder(const md::MDAddOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    virtual void onMDDeleteOrder(const md::MDDeleteOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    virtual void onMDModifyOrder(const md::MDModifyOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    virtual void onMDTradeDetails(const md::MDTradeDetailsEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+#else
+    void onMDAddOrder(const md::MDAddOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDDeleteOrder(const md::MDDeleteOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDModifyOrder(const md::MDModifyOrderEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+    void onMDTradeDetails(const md::MDTradeDetailsEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+#endif
     void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent& event, const om::strategy_order_t& order, const md::MDBatch& /*batch*/) {
         const uint32_t internalId = sidToInternalId(event.sid);
         if(BOOST_LIKELY(internalId != INVALID_INTERNAL_ID)) {
@@ -1947,7 +1973,11 @@ public:
         logging::GetLogger().logError(buffer.str());
     }
 
+#ifdef VIPER_BACKTEST
+    virtual void onMDUpdate(const md::MDUpdateEvent& event, const md::MDBatch &batch) {
+#else
     void onMDUpdate(const md::MDUpdateEvent& event, const md::MDBatch &batch) {
+#endif
         const uint32_t internalId = sidToInternalId(event.sid);
         if (internalId == INVALID_INTERNAL_ID) {
             return;
@@ -2071,7 +2101,11 @@ public:
         }
     }
 
+#ifndef VIPER_BACKTEST
     void onMDStatus(const md::MDStatusEvent &event, const md::MDBatch &batch) {
+#else
+    virtual void onMDStatus(const md::MDStatusEvent &event, const md::MDBatch &batch) {
+#endif
         const uint32_t internalId = sidToInternalId(event.sid);
         if (internalId == INVALID_INTERNAL_ID) {
             return;
@@ -3035,10 +3069,16 @@ public:
 
         ContractState& state = _contractStates[internalId];
         assert(state._contract._venue != hf::VENUE::B3 || (state._contract.toValidQty(size) == size));
+#ifndef VIPER_BACKTEST
         auto connection = state._rhoneRouter.getRouteForNextNewOrder(state._contract._venue);
         om::order_t* order = this->context().createOrder(_iid, om::RISK_TYPE::ENTERING, state._rhoneRouter.getRoutingPolicyForNextNewOrder(state._contract._venue), orderType,
                                                          ToRhoneSide(side), price, size,
                                                          om::STP_ACTION::CANCEL_PASSIVE);
+#else
+        auto connection = nullptr;
+        om::order_t* order = createOrder(_iid, om::RISK_TYPE::ENTERING, state._contract._venue, state._contract._sid,
+                                         orderType, ToRhoneSide(side), price, size, om::STP_ACTION::CANCEL_PASSIVE);
+#endif
         const uint64_t now = clockUtil::GetCycles();
         if (BOOST_UNLIKELY(order == nullptr)) {
             LOG(0, "Could not send limit order. Contract={C[i1]} Side={i2} Price={d1} Size={i3}", getContract(internalId), side, ToDollars(price), size)
@@ -3055,6 +3095,19 @@ public:
         return order;
     }
 
+#ifdef VIPER_BACKTEST
+    virtual om::order_t* createOrder(om::instance_id_t iid,
+                                    om::RISK_TYPE risk,
+                                    hf::VENUE venue,
+                                    uint32_t sid,
+                                    om::ORDER_TYPE type,
+                                    hf::SIDE side,
+                                    hf::price_t price,
+                                    hf::qty_t qty,
+                                    om::STP_ACTION stp = om::STP_ACTION::CANCEL_AGGRESSOR,
+                                    const char (* tag)[om::TAG_SIZE] = nullptr) { return nullptr; }
+#endif
+
     void addRoutingStateToNewLimitOrder(om::order_t& order, uint32_t internalId) {
         ContractState& state = _contractStates[internalId];
         auto connection = state._rhoneRouter.getRouteForNextNewOrder(state._contract._venue);  //Assigning all GTCs the same connection?
@@ -3063,7 +3116,9 @@ public:
 
     void addRoutingStateToNewLimitOrder(om::order_t& order, uint32_t internalId, const strat::om_queue_info_t* connection) {
         order.debug.i[INTERNAL_ID] = internalId;
+#ifndef VIPER_BACKTEST
         order.debug.i[ROUTE] = strat::port_gid(*connection).value();
+#endif
         order.debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
     }
 

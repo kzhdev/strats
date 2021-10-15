@@ -2,7 +2,8 @@ message(STATUS "Add RhoneDS build")
 
 add_executable(RhoneDsBackTest ${SOURCE_FILES_APP} ${SOURCE_FILES_LIB} ${PROTO})
 target_compile_options(RhoneDsBackTest PRIVATE -Wno-unused-parameter)
-target_compile_definitions(RhoneDsBackTest PRIVATE BACKTEST)
+target_compile_definitions(RhoneDsBackTest PRIVATE VIPER_BACKTEST)
+target_compile_definitions(RhoneTestLib PRIVATE VIPER_BACKTEST)
 
 target_include_directories(RhoneDsBackTest PUBLIC
         ./

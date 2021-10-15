@@ -23,6 +23,10 @@ http://www.fsf.org/licensing/licenses
 #include <locale.h>
 using namespace std;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wformat-overflow"
+
 #if defined(AE_CPU)
 #if (AE_CPU==AE_INTEL)
 
@@ -11279,4 +11283,6 @@ namespace alglib_impl
 
 
 }
+
+#pragma GCC diagnostic pop
 

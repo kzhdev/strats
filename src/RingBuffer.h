@@ -14,6 +14,13 @@ class RingBuffer {
 public:
     RingBuffer() = default;
 
+    RingBuffer(uint32_t size)
+        : _data(new T[size + (1'000'000 / sizeof(T))])  //Need a buffer for writing at the end
+        , _size(size)
+        , _mask(_size - 1) {
+        assert(size && !(size & (size -1)));    // size must be power of 2
+    }
+
     ~RingBuffer() {
         if(_data) {
             delete[] _data;
@@ -47,7 +54,7 @@ public:
         return _data[_cursor.fetch_add(num, std::memory_order_acq_rel) & _mask];
     }
 
-    uint64_t last() const noexcept {
+    [[nodiscard]] uint64_t end() const noexcept {
         return _cursor.load(std::memory_order_relaxed);
     }
 
