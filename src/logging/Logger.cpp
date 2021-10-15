@@ -36,13 +36,13 @@ namespace logging {
         kdbLogger = logger;
     }
 
-    hf::queue::ViperLoggerQueueResource* viperLogger = nullptr;
+    Python::ViperLoggerQueueResource* viperLogger = nullptr;
 
-    hf::queue::ViperLoggerQueueResource* GetViperLogger() noexcept {
+    Python::ViperLoggerQueueResource* GetViperLogger() noexcept {
         return viperLogger;
     }
 
-    void setViperLogger(hf::queue::ViperLoggerQueueResource* logger) noexcept {
+    void setViperLogger(Python::ViperLoggerQueueResource* logger) noexcept {
         viperLogger = logger;
     }
 }

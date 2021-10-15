@@ -72,9 +72,8 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
         if (viperResources.empty()) {
             logging::GetLogger().logErrorAndThrow("No Viper resource found");
         }
-
         _resources.resize(toUInt(ResourceId::_Resource_MAX_));
-        _strategies.resize(toUInt(StrategyId::Execution));
+        _strategies.resize(toUInt(StrategyId::MAX));
 
         for (auto resource : viperResources) {
             auto viperResource = dynamic_cast<ViperResource*>(resource);
@@ -92,7 +91,7 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
             }
         }
 
-        for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
             if (BOOST_UNLIKELY(_strategies[i] == nullptr)) {
                 logging::GetLogger().logWarning(boost::str(boost::format("Strategy %1% not exist") % strategyFullName((StrategyId)i)));
                 _strategies[i] = &s_dummyStrategys[i];
@@ -103,7 +102,7 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
         if (!viperLogQueueList || viperLogQueueList->empty()) {
             logging::GetLogger().logErrorAndThrow("ViperLoggerQueue not found");
         }
-        auto viperLogQueue = reinterpret_cast<hf::queue::ViperLoggerQueueResource*>(*viperLogQueueList->begin());
+        auto viperLogQueue = reinterpret_cast<Python::ViperLoggerQueueResource*>(*viperLogQueueList->begin());
         viperLogQueue->clear();
         logging::setViperLogger(viperLogQueue);
     }

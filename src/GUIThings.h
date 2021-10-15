@@ -1,7 +1,6 @@
 #ifndef VIPER_GUI_THINGS_H
 #define VIPER_GUI_THINGS_H
 
-#include <hf/util/TimeUtils.h>
 #include <util/VenueUtils.h>
 #include "messages/python.pb.h"
 #include "ViperConfig.h"
@@ -375,7 +374,6 @@ public:
                 setCell(cells, contractIndex, PnlDetailColumns::ASTotal, std::to_string(pnl.getTotal()));
                 break;
             }
-            case StrategyId::Execution:
             case StrategyId::MAX:
                 break;
         }
@@ -386,7 +384,7 @@ public:
         message.set_gridid(toUInt(WindowIds::Errors));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        setCell(cells, _errorMessageNumber, ErrorsColumns::Time, std::to_string(TimeUtils::clock_gettime()));
+        setCell(cells, _errorMessageNumber, ErrorsColumns::Time, std::to_string(rhone::util::getTimeStamp().time_since_epoch().count()));
         setCell(cells, _errorMessageNumber, ErrorsColumns::Message, std::string(m._message, m._size));
         setCell(cells, _errorMessageNumber, ErrorsColumns::Type, std::to_string(toUInt(m._type)));
         ++_errorMessageNumber;
@@ -398,7 +396,7 @@ public:
         auto cells = message.mutable_cells();
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
-            setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(TimeUtils::clock_gettime()));
+            setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(rhone::util::getTimeStamp().time_since_epoch().count()));
             setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(toUInt(trader)));
             setCell(cells, _auditMessageNumber, AuditColumns::Grid, std::to_string(toUInt(gridId)));
             setCell(cells, _auditMessageNumber, AuditColumns::Row, getRowLabel(gridId, gridCell.row()));
@@ -413,7 +411,7 @@ public:
         message.set_gridid(toUInt(WindowIds::Audit));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(TimeUtils::clock_gettime()));
+        setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(rhone::util::getTimeStamp().time_since_epoch().count()));
         setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(toUInt(trader)));
         setCell(cells, _auditMessageNumber, AuditColumns::Grid, std::to_string(toUInt(WindowIds::ManualFillsEntry)));
         std::string value = createManualFillString(contractId, size, strategy);
@@ -435,7 +433,7 @@ public:
         auto cells = message.mutable_cells();
         auto& contract = _config->_allContracts[fill._contractId];
         auto color = static_cast<uint32_t>(fill._side == BID ? Color::TRANSPARENT_BID_BLUE : Color::TRANSPARENT_OFFER_RED);
-        hf::nanos_t time = TimeUtils::clock_gettime();
+        hf::nanos_t time = rhone::util::getTimeStamp().time_since_epoch().count();
         setCell(cells, _fillNumber, FillsColumns::Number, std::to_string(_fillNumber), color);
         setCell(cells, _fillNumber, FillsColumns::Time, std::to_string(time), color);
         setCell(cells, _fillNumber, FillsColumns::Contract, std::to_string(contract._internalId), color);
@@ -509,7 +507,7 @@ public:
                 point->set_chartid(vectorIndex);
                 point->set_dataseriesid(toUInt(DataSeries::LTF));
                 point->set_value(ltf);
-                point->set_time(hf::util::TimeUtils::clock_gettime());
+                point->set_time(rhone::util::getTimeStamp().time_since_epoch().count());
             }
             {
                 const double mkt = relativeValue->_currentVectorMarketPrices->getValue(vectorIndex);
@@ -517,7 +515,7 @@ public:
                 point->set_chartid(vectorIndex);
                 point->set_dataseriesid(toUInt(DataSeries::VectorPrice));
                 point->set_value(mkt);
-                point->set_time(hf::util::TimeUtils::clock_gettime());
+                point->set_time(rhone::util::getTimeStamp().time_since_epoch().count());
             }
             {
                 double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
@@ -525,7 +523,7 @@ public:
                 point->set_chartid(vectorIndex);
                 point->set_dataseriesid(toUInt(DataSeries::STF));
                 point->set_value(stf);
-                point->set_time(hf::util::TimeUtils::clock_gettime());
+                point->set_time(rhone::util::getTimeStamp().time_since_epoch().count());
             }
         }
     }
@@ -1428,15 +1426,15 @@ public:
         uint32_t headerOffset = 0;
 
         // Strategy Enable
-        for (; headerOffset < toUInt(StrategyId::Execution); ++headerOffset) {
+        for (; headerOffset < toUInt(StrategyId::MAX); ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, strategyFullName((StrategyId)headerOffset));
             setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
         }
 
         // Strategy Quote External
-        for (; headerOffset < toUInt(StrategyId::Execution) * 2; ++headerOffset) {
+        for (; headerOffset < toUInt(StrategyId::MAX) * 2; ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset,
-                             boost::str(boost::format("%1% QuoteExternal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::Execution)))));
+                             boost::str(boost::format("%1% QuoteExternal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::MAX)))));
             setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
         }
 

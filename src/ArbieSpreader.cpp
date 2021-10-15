@@ -8,8 +8,10 @@ static rhone::util::ResourceRegistrator<ArbieSpreader> s_registrator("ArbieSprea
 
 /*static*/
 const ArbieSpreader::ShortTermFairOffset ArbieSpreader::Contract::_zeroStfOffset;
+ArbieSpreader* ArbieSpreader::_self = nullptr;
 
 void ArbieSpreader::init(double frequency, uint64_t internalHeartbeatPeriod, std::function<bool(uint32_t)> pnlLimitsChecker) {
+    ArbieSpreader::_self = this;
     ViperStrategyBase::init(frequency, internalHeartbeatPeriod, std::move(pnlLimitsChecker));
     auto numFactors = _viperConfig._vectorConfigs.size();
     _vectorsRange.resize(numFactors, 0.);
@@ -30,7 +32,8 @@ void ArbieSpreader::initializeContracts() {
     auto numContracts = _viperConfig._allContracts.size();
     _contracts.resize(numContracts);
     _lastOrderRequests.resize(numContracts);
-    _effected_markets.reserve(numContracts);
+    _affected_markets.reserve(numContracts * 2);
+    _delayedBestMarketUpdate.reserve(numContracts);
     _allPaths.reserve(65536);
     if (_viperConfig._allContracts.size() > _contractUpdatedFlag.size()) {
         logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Number of contracts > %1%") % _contractUpdatedFlag.size()));
@@ -49,6 +52,7 @@ void ArbieSpreader::initializeContracts() {
         if (iter != asConfig.end()) {
             contract._usedInQuoting = true;
             auto& config = *iter;
+            contract._enabled = config._enabled;
             contract._quoteExternally = config._quoteExternal;
             _edgeMultiplier = boost::lexical_cast<double>(_viperConfig.getGlobal(AS_EDGE_MULTIPLIER));
             contract._edge = ToRhonePrice(config._edge * _edgeMultiplier);
@@ -69,31 +73,57 @@ void ArbieSpreader::initializeContracts() {
                     if (!pathContract) {
                         logging::GetLogger().logErrorAndThrow("Contract " + configPathContract._contract + " not found");
                     }
-                    pathContracts.emplace_back(&_contracts[pathContract->_internalId], configPathContract._multiplier);
+                    pathContracts.emplace_back(&_contracts[pathContract->_internalId], configPathContract._multiplier, pathContract->_internalId);
 
-                    for (auto& leg : pathContract->_legs) {
-                        auto it = pathShortTermFares.find(leg._index);
+                    if (pathContract->_legs.empty()) {
+                        auto it = pathShortTermFares.find(pathContract->_internalId);
                         if (it == pathShortTermFares.end()) {
-                            pathShortTermFares.try_emplace(leg._index, leg._index, -configPathContract._multiplier * leg._ratio);
+                            pathShortTermFares.try_emplace(pathContract->_internalId, pathContract->_internalId, -configPathContract._multiplier);
                         } else {
-                            it->second._ratio -= configPathContract._multiplier * leg._ratio;
+                            it->second._ratio -= configPathContract._multiplier;
 
                             if (it->second._ratio == 0) {
                                 pathShortTermFares.erase(it);
                             }
                         }
+                    } else {
+                        for (auto& leg : pathContract->_legs) {
+                            auto it = pathShortTermFares.find(leg._index);
+                            if (it == pathShortTermFares.end()) {
+                                pathShortTermFares.try_emplace(leg._index, leg._index, -configPathContract._multiplier * leg._ratio);
+                            } else {
+                                it->second._ratio -= configPathContract._multiplier * leg._ratio;
+
+                                if (it->second._ratio == 0) {
+                                    pathShortTermFares.erase(it);
+                                }
+                            }
+                        }
                     }
                 }
 
-                for (auto& leg : configContract._legs) {
-                    auto it = pathShortTermFares.find(leg._index);
+                if (configContract._legs.empty()) {
+                    auto it = pathShortTermFares.find(configContract._internalId);
                     if (it == pathShortTermFares.end()) {
-                        pathShortTermFares.try_emplace(leg._index, leg._index, leg._ratio);
+                        pathShortTermFares.try_emplace(configContract._internalId, configContract._internalId, 1);
                     } else {
-                        it->second._ratio += leg._ratio;
+                        it->second._ratio += 1;
 
                         if (it->second._ratio == 0) {
                             pathShortTermFares.erase(it);
+                        }
+                    }
+                } else {
+                    for (auto& leg : configContract._legs) {
+                        auto it = pathShortTermFares.find(leg._index);
+                        if (it == pathShortTermFares.end()) {
+                            pathShortTermFares.try_emplace(leg._index, leg._index, leg._ratio);
+                        } else {
+                            it->second._ratio += leg._ratio;
+
+                            if (it->second._ratio == 0) {
+                                pathShortTermFares.erase(it);
+                            }
                         }
                     }
                 }
@@ -120,18 +150,18 @@ void ArbieSpreader::initializeContracts() {
                     };
                 }
 
-                _allPaths.emplace_back(BID, path._name, id, &contract, pathContracts, path, stfOffset);
+                _allPaths.emplace_back(BID, path._name, id, &contract, pathContracts, path, stfOffset, numContracts);
                 auto& bidPath = _allPaths.back();
-                for (auto& pathContract : pathContracts) {
-                    pathContract._contract->_affectedPaths.emplace_back(&bidPath);
+                for (auto& pathContract : bidPath._leanContracts) {
+                    pathContract._contract->_affectedPaths[pathContract._side].emplace_back(&bidPath);
                 }
                 contract._paths[BID].emplace_back(&bidPath);
-                _allPaths.emplace_back(ASK, path._name, id, &contract, pathContracts, path, stfOffset);
+                _allPaths.emplace_back(ASK, path._name, id, &contract, pathContracts, path, stfOffset, numContracts);
                 auto& askPath = _allPaths.back();
                 bidPath._otherSidePath = &askPath;
                 askPath._otherSidePath = &bidPath;
-                for (auto& pathContract : pathContracts) {
-                    pathContract._contract->_affectedPaths.emplace_back(&askPath);
+                for (auto& pathContract : askPath._leanContracts) {
+                    pathContract._contract->_affectedPaths[pathContract._side].emplace_back(&askPath);
                 }
                 contract._paths[ASK].emplace_back(&askPath);
 
@@ -286,6 +316,9 @@ void ArbieSpreader::registerOrderClient() {
 }
 
 void ArbieSpreader::runCycle(uint64_t now) {
+#ifdef ENABLE_PERF
+    auto begin = clockUtil::getCpuTicksStart();
+#endif
     uint32_t nUpdate = 0;
     auto last = _updatedContracts.end();
     auto size = last - _updatedContractCursor;
@@ -307,10 +340,11 @@ void ArbieSpreader::runCycle(uint64_t now) {
 
     if (nUpdate) {
 #ifdef ENABLE_PERF
-        PerfMonitor::get()->addPerfPoint(PerfId::AS_RunCycle, PerfType::Begin, now);
-#endif
-        ADD_PERF_POINT(PerfId::AS_RunCycle, PerfType::End);
+        auto end = clockUtil::getCpuTicksEnd();
+        PerfMonitor::get()->addPerfPoint(PerfId::AS_RunCycle, PerfType::Begin, begin);
+        PerfMonitor::get()->addPerfPoint(PerfId::AS_RunCycle, PerfType::End, end);
         ADD_PERF_VALUE(PerfId::AS_UpdateContractCount, nUpdate);
+#endif
         const uint64_t latency = clockUtil::GetCycles() - now;
         ILOG(0, "AS. CalculateQuotes Latency {i1}. {i2} updated contract(s). size={i3}", latency, nUpdate, size)
     }
@@ -326,7 +360,7 @@ bool ArbieSpreader::canEnable() const noexcept {
 
 void ArbieSpreader::handleCheckQuotes() {
     LOG(0, "AS check quotes {i1}", 0);
-    updateQuotes(false, true);
+    updateQuotes(false);
 }
 
 bool ArbieSpreader::isContractQuoteExternal(uint32_t contractId) const noexcept {
@@ -334,19 +368,11 @@ bool ArbieSpreader::isContractQuoteExternal(uint32_t contractId) const noexcept 
 }
 
 void ArbieSpreader::onQuoteExternalChanged(SystemState quoteExt) {
-    updateQuotes(true, state() == SystemState::CheckQuotes);
+    updateQuotes(true);
 }
 
 void ArbieSpreader::onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
-    updateQuotes(true, state() == SystemState::CheckQuotes);
-}
-
-void ArbieSpreader::addUpdatedContract(Contract& contract) {
-    for (auto* path : contract._affectedPaths) {
-        if (path->_dirty) {
-            pushUpdatedContract(path->_contract);
-        }
-    }
+    updateQuotes(true);
 }
 
 void ArbieSpreader::pushUpdatedContract(Contract* contract) {
@@ -355,42 +381,55 @@ void ArbieSpreader::pushUpdatedContract(Contract* contract) {
     _updatedContracts.publish(index);
 }
 
-void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket) {
-    bool bestMarketChanged= false;
+void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate) {
     if (updatedMarket->getSide() == BID) {
-        bestMarketChanged = contract.updateBestMarket<BID>(updatedMarket);
+        auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<BID>();
+        if (contract.updateBestMarket<BID>(updatedMarket)) {
+            if (!delayPathUpdate) {
+                contract.updateAffectedPathsBestMarket<BID>(oldBestPrice);
+            } else {
+                _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
+            }
+        }
     } else {
-        bestMarketChanged = contract.updateBestMarket<ASK>(updatedMarket);
-    }
-    if (bestMarketChanged) {
-        contract.setMarketDirty(updatedMarket->getSide());
-        addUpdatedContract(contract);
-    }
-}
-
-void ArbieSpreader::updateQuotes(bool force, bool checkQuote) {
-    for (auto& contract : _contracts) {
-        if (contract._usedInQuoting) {
-            updateQuotes(contract, force, checkQuote);
+        auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<ASK>();
+        if (contract.updateBestMarket<ASK>(updatedMarket)) {
+            if (!delayPathUpdate) {
+                contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice);
+            } else {
+                _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
+            }
         }
     }
 }
 
-bool ArbieSpreader::updateQuotes(Contract& contract, bool force, bool checkQuote) {
+void ArbieSpreader::updateQuotes(bool force) {
+    for (auto& contract : _contracts) {
+        if (contract._usedInQuoting) {
+            updateQuotes(contract, force);
+        }
+    }
+}
+
+bool ArbieSpreader::updateQuotes(Contract& contract, bool force) {
     SCOPED_PERF_POINT(PerfId::AS_UpdateQuotes);
     contract.updatePaths(force);
 
-    if (!isEnabled() && !checkQuote) {
+    if (BOOST_UNLIKELY(!isEnabled() && (state() != SystemState::CheckQuotes))) {
         return false;
     }
 
-    bool canQuoteExternal = canQuoteExternally() && canExchangeQuoteExternally(contract._def._venue) && contract._quoteExternally;
-    auto& lastRequest = _lastOrderRequests[contract._def._internalId];
-    bool quoteUpdated = updateQuote<BID>(contract, force, canQuoteExternal, lastRequest);
-    quoteUpdated |= updateQuote<ASK>(contract, force, canQuoteExternal, lastRequest);
+    bool quoteUpdated = false;
+    {
+        SCOPED_PERF_POINT(PerfId::AS_CreateQuote);
+        bool canQuoteExternal = canQuoteExternally() && canExchangeQuoteExternally(contract._def._venue) && contract._quoteExternally;
+        auto& lastRequest = _lastOrderRequests[contract._def._internalId];
+        quoteUpdated = updateQuote<BID>(contract, force, canQuoteExternal, lastRequest);
+        quoteUpdated |= updateQuote<ASK>(contract, force, canQuoteExternal, lastRequest);
 
-    if (quoteUpdated) {
-        _orderRequestMgr.notifyOrderRequest(contract._def._internalId, StrategyId::ArbieSpreader, lastRequest);
+        if (quoteUpdated) {
+            _orderRequestMgr.notifyOrderRequest(contract._def._internalId, StrategyId::ArbieSpreader, lastRequest);
+        }
     }
     return quoteUpdated;
 }
@@ -412,4 +451,18 @@ void ArbieSpreader::sendHedgeOrder(uint32_t internalId,
             hedgeContractId, orderId(StrategyId::ArbieSpreader, Order::Type::Hedging), side, internalPrice,
             externalPrice, size, external, false, 0, 0, marketId, hedgeId);
     _orderRequestMgr.notifyOrderRequest(hedgeContractId, StrategyId::ArbieSpreader, _lastOrderRequests[hedgeContractId]);
+}
+
+void ArbieSpreader::processDelayedBestMarketUpdate() {
+    for (auto& marketOldPricePair : _delayedBestMarketUpdate) {
+        auto market = marketOldPricePair.first;
+        auto& contract = _contracts[market->getContractId()];
+        auto oldBestPrice = marketOldPricePair.second;
+        if (market->getSide() == BID) {
+            contract.updateAffectedPathsBestMarket<BID>(oldBestPrice);
+        } else {
+            contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice);
+        }
+    }
+    _delayedBestMarketUpdate.clear();
 }

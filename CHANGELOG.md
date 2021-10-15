@@ -1,7 +1,67 @@
+#Version 1.54.3.0
+- Fix overfill allocation. If MM is not enabled or quote externally, the overfill will be sent to the strategy with
+  the best external price.
+- Added Enabled column in AS config
+- Suppress RV hedge skip club GUI messages. Disable RV when skip club reached 50 times.
+
+#Version 1.54.2.1
+- Merge 1.53.1.0 changes
+- Fix IME internal matching fill price calculation
+
+#Version 1.54.2.0
+- Fix FillArb causes Leftover Quantity error
+
+#Version 1.54.1.1
+- Fix throttler banner doesn't consider venue which could enable contracts with wrong venue
+
+#Version 1.54.1.0
+- Fix outlier statistics
+- Fix ENABLE_LATENCY_TRACK build
+- Fix Fills from FillArbs applied to wrong level
+- Optimize ArbieSpreader path calculation by applying market data delta
+- Fix candidate > target issue when an order modified multiple times, and the order filled in the middle of modify chain
+  and caused an unsolicited order cancel
+
+#Version 1.53.1.0
+- Fix candidate > target when modify order canceled due to exec qty greater than modified qty.
+- Fix EXE unresponsive
+
+#Version 1.54.0.10
+- Fix Candidate > target when order filled while modify in-flight
+- AbieSpreader hedge w/o updatePath if the hedging market still present
+- Make AbieSpreader hedgeId unique across all contracts
+- Notify strategy FAKDone when Executor received FAK fill/cancel in case FAKDone event not come or come late in MD feed
+- Added outliers statistics in perf monitor
+- Made perf monitor timestamp more accurate
+- Disable AbieSpreader if it self matched 50 times in IME
+- Enable fillArb
+- [rhonepublic] updated to 4.1.5
+- [rhonepublic] fix simulator TradeSummary message
+
+#Version 1.53.0.31
+- Add logging to debug EXE hang
+
+#Version 1.54.0.9
+- Reduce MD feed logging
+- Do not send AS quote update if the price and size did not change only the hedge path changed.
+- Fix AS ASK aggressive quote not unadjusted if AS quotes crossed
+- [rhonepublic] Fixed missing FAK done event. When multiple FAK fills in same OM batch, only the first order issued FAK done event.
+- Reduce AS unnecessary re-calculation. Re-calculate when best market price changed or should quote less or can quote more
+- Fix AS aggressive quote unadjusted too early after internal matching
+
+#Version 1.54.0.8
+- Merged 1.53.0.29
+- Added conditional perf point
+- Fix ArbieSpreader STFOffset reduction didn't handle outright contract
+
+#Version 1.53.0.29
+- Changed IME to match internal and external orders
+
 #Version 1.54.0.7
 - Fix AS ExtCommission update not convert double to hf::price_t
 - Added percentage perf type
 - Added diagnostic logging for AS MaxTicksThroughMarket breach
+- Fix RV not sending STFs to AS after re-enable
 
 #Version 1.54.0.6
 - Fix MM Position Update issue

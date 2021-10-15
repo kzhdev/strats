@@ -20,8 +20,8 @@ Logger& GetLogger() noexcept;
 hf::queue::DebugQueue* GetKdbLogger() noexcept;
 void setKdbLogger(hf::queue::DebugQueue* logger) noexcept;
 
-hf::queue::ViperLoggerQueueResource* GetViperLogger() noexcept;
-void setViperLogger(hf::queue::ViperLoggerQueueResource* logger) noexcept;
+Python::ViperLoggerQueueResource* GetViperLogger() noexcept;
+void setViperLogger(Python::ViperLoggerQueueResource* logger) noexcept;
 
 }
 

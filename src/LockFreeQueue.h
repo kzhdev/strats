@@ -7,8 +7,7 @@
 #include <util/log.h>
 #include <boost/format.hpp>
 
-namespace hf {
-namespace queue {
+namespace Python {
 
 LOCAL_EXPLICIT_LOG_DECLARE("LockFreeQueue.h", LockFreeQueueSpace)
 
@@ -115,4 +114,4 @@ public:
     }
 };
 
-}}
+}

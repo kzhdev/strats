@@ -162,6 +162,7 @@ struct ArbieSpreaderConfig {
     double _edge;
     double _hedgeOffset;
     double _maxTicksThroughMarket;
+    bool _enabled;
     bool _quoteExternal;
     std::vector<ArbieSpreaderPath> _paths;
 };
@@ -299,7 +300,7 @@ struct ViperConfig {
         _mmLastFillPriceFileName = mmLastFillPriceFillName;
         _asPathFileName = asPathFilename;
 
-        for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
             if(!tryGetInitialPos(i)) {
                 return false;
             }
@@ -376,7 +377,7 @@ struct ViperConfig {
             return false;
         }
 
-        for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
             good = loadAndCullInitialPositions(i);
             if(!good) {
                 return false;
@@ -923,6 +924,7 @@ struct ViperConfig {
             ArbieSpreaderConfig config;
             uint32_t i = 0;
             config._contract = values[i++];
+            config._enabled = values[i++] == "TRUE";
             config._quoteExternal = values[i++] == "TRUE";
             config._quoteSize = boost::lexical_cast<hf::qty_t>(values[i++]);
             config._edge = boost::lexical_cast<double>(values[i++]);
@@ -1844,6 +1846,9 @@ struct ViperConfig {
                 auto columnType = static_cast<ArbieSpreaderParameterColumns>(gridCell.col());
 
                 switch (columnType) {
+                    case ArbieSpreaderParameterColumns::Enabled:
+                        config._enabled = boost::lexical_cast<bool>(gridCell.value());
+                        break;
                     case ArbieSpreaderParameterColumns::QuoteExternal:
                         config._quoteExternal = boost::lexical_cast<bool>(gridCell.value());
                         break;
@@ -1993,7 +1998,7 @@ struct ViperConfig {
             return PNLRows::Total;
         }
 
-        for (uint32_t i = toUInt(StrategyId::MarketMaker); i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = toUInt(StrategyId::MarketMaker); i < toUInt(StrategyId::MAX); ++i) {
             if (strcmp(toString((StrategyId)i), strategy.c_str()) == 0) {
                 return static_cast<PNLRows>(i);
             }
@@ -2319,6 +2324,7 @@ struct ViperConfig {
         writeHeader(output, AS_CONFIGS, _arbieSpreaderConfigHeader);
         for (auto& config : _arbieSpreaderConfigs) {
             output << config._contract;
+            output << "," << getWriteBoolValue(config._enabled);
             output << "," << getWriteBoolValue(config._quoteExternal);
             output << "," << config._quoteSize;
             output << "," << config._edge;
@@ -2393,12 +2399,12 @@ struct ViperConfig {
     std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
-    std::vector<int32_t> _positions[toUInt(StrategyId::Execution)];
+    std::vector<int32_t> _positions[toUInt(StrategyId::MAX)];
     std::vector<std::string> _relativeValueHeader  = {"quoteExternal", "hedgeTolerance", "commission", "RVWidth", "%stfMove", "maxTicksThroughMarket", "staticQuote", "quoteSize" };
     static constexpr const char* _positionHeader[] = {"Contract", "position"};
 
     std::vector<ArbieSpreaderConfig> _arbieSpreaderConfigs;
-    std::vector<std::string> _arbieSpreaderConfigHeader = {"quoteExternal", "quoteSize", "edge", "hedgeOffset", "maxTicksThroughMarket"};
+    std::vector<std::string> _arbieSpreaderConfigHeader = {"enabled", "quoteExternal", "quoteSize", "edge", "hedgeOffset", "maxTicksThroughMarket"};
 
     std::vector<MarketMakerConfig> _marketMakerConfigs;
     std::vector<std::string> _marketMakerHeader = {
@@ -2489,7 +2495,7 @@ struct ViperConfig {
     UpdateSelector<ViperConfig> _updateSelector;
 
     std::string _fileName; //model
-    std::string _posFileName[toUInt(StrategyId::Execution)]; //none-MM position
+    std::string _posFileName[toUInt(StrategyId::MAX)]; //none-MM position
     std::string _economicNumbersFileName;
     std::string _mmLastFillPriceFileName;
     std::string _asPathFileName;
@@ -2500,7 +2506,7 @@ struct ViperConfig {
     bool _allowStatusGrid = false;
 
     //Slow-path data structures
-    std::unordered_map<std::string, int> _unallocatedPositionsFromFile[toUInt(StrategyId::Execution)];
+    std::unordered_map<std::string, int> _unallocatedPositionsFromFile[toUInt(StrategyId::MAX)];
 
     Traders _currentTrader = Traders::Steven;
     Shifts _currentShift = Shifts::US;

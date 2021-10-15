@@ -14,7 +14,7 @@ class ViperLogger : public logging::RhoneLogger {
     uint64_t _currentFileSize = 0;
     std::string _logDir;
     std::ofstream _logfile;
-    std::weak_ptr<hf::queue::ViperLoggerQueueResource> _logQueue;
+    std::weak_ptr<Python::ViperLoggerQueueResource> _logQueue;
 
 public:
     ~ViperLogger() override = default;

@@ -88,7 +88,7 @@ namespace Python {
             }
 
             hf::nanos_t end = getTS();
-            auto milliseconds = (end - start) / hf::util::TimeUtils::ONE_MS;
+            auto milliseconds = (end - start) / 1000000LL;
             LOG(0, "IOPTracker Request={i1} TimeToProcess={i2}ms", update.cellbutton().col(), milliseconds);
         }
 
@@ -202,7 +202,7 @@ namespace Python {
 
             hf::nanos_t endTS = getTS();
 
-            LOG(0, "IOPTracker Gather GTC elapsed time: {i1}ms",((endTS - startTS) / hf::util::TimeUtils::ONE_MS));
+            LOG(0, "IOPTracker Gather GTC elapsed time: {i1}ms",((endTS - startTS) / 1000000LL));
         }
 
         void sendIOPUpdate(uint32_t internalId) {
@@ -396,7 +396,7 @@ namespace Python {
             asm volatile("" ::: "memory");
             clock_gettime(CLOCK_MONOTONIC_COARSE, &ts);
             asm volatile("" ::: "memory");
-            return (ts.tv_sec * hf::util::TimeUtils::ONE_SECOND) + ts.tv_nsec;
+            return (ts.tv_sec * 1000000000LL) + ts.tv_nsec;
         }
 
         struct bbbo { hf::price_t _bid = hf::NULL_PRICE; hf::price_t _ask = hf::NULL_PRICE; };

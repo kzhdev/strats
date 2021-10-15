@@ -104,7 +104,7 @@ namespace {
         }
 
         void verifyGetLevelForExchangeAction(const om::order_t& cmeOrder, const om::order_t& iceOrder) {
-            ASSERT_EQ(_cme->getLevelForExchangeAction(cmeOrder)->_price, _ice->getLevelForExchangeAction(iceOrder)->_price);
+            ASSERT_EQ(_cme->getRestingLevel(cmeOrder)->_price, _ice->getRestingLevel(iceOrder)->_price);
         }
 
         void verifyGetRestingLevel(const om::order_t& cmeOrder, const om::order_t& iceOrder) {

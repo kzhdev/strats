@@ -16,6 +16,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
     auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderParameters, "Arbie Spreader Parameter", proto::GridType::Table);
 
     guiThings.addHeader(definition, {
+        headerCell(ArbieSpreaderParameterColumns::Enabled, "Enabled", false, proto::DataType::bool_type),
         headerCell(ArbieSpreaderParameterColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type),
         headerCell(ArbieSpreaderParameterColumns::Edge, "Edge", false, proto::DataType::double_type),
         headerCell(ArbieSpreaderParameterColumns::ActualEdge, "ActualEdge", true, proto::DataType::double_type),
@@ -43,6 +44,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
         uint32_t internalId = _viperConfig.getInternalId(config._contract);
         guiThings.addRowHeaderCell(WindowIds::ArbieSpreaderParameters, rowHeader, internalId, config._contract);
         guiThings.addRow(cells, internalId, {
+            rowCell(ArbieSpreaderParameterColumns::Enabled, std::to_string(config._enabled)),
             rowCell(ArbieSpreaderParameterColumns::QuoteExternal, std::to_string(config._quoteExternal)),
             rowCell(ArbieSpreaderParameterColumns::Edge, std::to_string(config._edge)),
             rowCell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(config._edge * _edgeMultiplier)),
@@ -164,6 +166,13 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
             auto& contract = _contracts[internalId];
             auto columnType = static_cast<ArbieSpreaderParameterColumns>(cell.col());
             switch (columnType) {
+                case ArbieSpreaderParameterColumns::Enabled: {
+                    auto value = boost::lexical_cast<bool>(cell.value());
+                    LOG(0, "AS {C[i1]}. Enabled changed. {i2}->{i3}", contract.name(), contract._enabled, value)
+                    contract._enabled = value;
+                    updatedContracts.emplace_back(&contract);
+                    break;
+                }
                 case ArbieSpreaderParameterColumns::QuoteExternal: {
                     auto value = boost::lexical_cast<bool>(cell.value());
                     LOG(0, "AS {C[i1]}. QuoteExternal changed. {i2}->{i3}", contract.name(), contract._quoteExternally, value)
@@ -237,8 +246,8 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                         LOG(0, "AS {C[i1]}. Path {i2} commission changed. {i3}->{i4}", contract.name(), path->_id, path->_config->_commission, value)
                         path->_config->_commission = value;
                         path->_commission = path->_otherSidePath->_commission = ToRhonePrice(value);
-                        path->_otherSidePath->_dirty = true;
-                        path->_dirty = true;
+                        path->_otherSidePath->_recalc = true;
+                        path->_recalc = true;
                         updatedContracts.emplace_back(&contract);
                         break;
                     }
@@ -248,8 +257,15 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                             path->_config->_enabled, value)
                         if (path->_config->_enabled != value) {
                             path->_config->_enabled = value;
-                            path->_dirty = true;
-                            path->_otherSidePath->_dirty = true;
+                            if (!value) {
+                                path->_priceSize.reset();
+                                path->_resort = true;
+                                path->_otherSidePath->_priceSize.reset();
+                                path->_otherSidePath->_resort = true;
+                            } else {
+                                path->_recalc = true;
+                                path->_otherSidePath->_recalc = true;
+                            }
                         }
                         updatedContracts.emplace_back(&contract);
                         break;
@@ -271,9 +287,11 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
 
                 if (contract._extCommission != value) {
                     contract._extCommission = ToRhonePrice(value);
-                    for (auto path : contract._affectedPaths) {
-                        path->_dirty = true;
-                        updatedContracts.emplace_back(path->_contract);
+                    for (auto& pathsBySide : contract._affectedPaths) {
+                        for (auto* path : pathsBySide) {
+                            path->_recalc = true;
+                            updatedContracts.emplace_back(path->_contract);
+                        }
                     }
                 }
             }
@@ -317,14 +335,14 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
             if (configContract) {
                 auto& contract = _contracts[configContract->_internalId];
                 contract._edge = ToRhonePrice(asConfig._edge * _edgeMultiplier);
-                updateQuotes(contract, true, state() == SystemState::CheckQuotes);
+                updateQuotes(contract);
             } else {
                 assert(false);
             }
         }
     } else {
         for (auto contract : updatedContracts) {
-            updateQuotes(*contract, true, state() == SystemState::CheckQuotes);
+            updateQuotes(*contract, true);
         }
     }
 }

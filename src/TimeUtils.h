@@ -50,14 +50,6 @@ namespace Python {
 
         static std::string strftime(const char *__restrict format, hf::nanos_t nanos);
 
-        static hf::nanos_t clock_gettime() {
-            // http://linuxmogeb.blogspot.com/2013/10/how-does-clockgettime-work.html
-            struct timespec ts;
-            ::clock_gettime(CLOCK_REALTIME, &ts);
-            //
-            return TimeUtils::nanos(ts.tv_sec, ts.tv_nsec);
-        }
-
         static constexpr hf::nanos_t to_nanos(const int hh = 0, const int mm = 0, const int ss = 0, const hf::nanos_t nanos = 0) {
             return ((hh * 60L + mm) * 60L + ss) * ONE_SECOND + nanos;
         }

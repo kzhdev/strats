@@ -29,7 +29,7 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
         }
         case ViperMessageType::ASInternalMatchingDone: {
             const auto& reply = reinterpret_cast<const GenericMessage&> (message._data[0]);
-            handleASInternalMatchingDone(reply._number_1);
+            handleASInternalMatchingDone(reply._number_1, reply._number_2, reply._number_3);
             break;
         }
         case ViperMessageType::HedgeMDAdjsutAck: {
@@ -49,11 +49,6 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
         case ViperMessageType::InternalHedgeDone: {
             const auto& hedgeDone = reinterpret_cast<const InternalHedgeDone&> (message._data[0]);
             handleInternalHedgeDone(hedgeDone);
-            break;
-        }
-        case ViperMessageType::ASQuoteAdjustmentACK: {
-            const auto& msg = reinterpret_cast<const GenericMessage&> (message._data[0]);
-            handleASQuoteAdjustmentACK(msg._number_1, msg._number_2, msg._number_3);
             break;
         }
         case ViperMessageType::STFUpdate: {
@@ -100,6 +95,11 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
             handleVectorParameterUpdate(msg);
             break;
         }
+        case ViperMessageType::FAKDone: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            handleFakDone(msg._number_1, msg._number_2, msg._number_3);
+            break;
+        }
         default:
             TLOG(0, "AS. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
@@ -117,8 +117,8 @@ void ArbieSpreader::handleHedgeMarketDataAdjustmentAck(const HedgeMarketDataAdju
 }
 
 void ArbieSpreader::handleInternalHedgeDone(const InternalHedgeDone& message) {
-    DLOG(0, "AS {C[i1]}. InternalHedgeDone. Side={i2} HedgeId={i3} Market={i4}",
-         getContract(message._instrumentIndex), message._side, message._hedgeId, message._marketIndex)
+    LOG(0, "AS {C[i1]}. InternalHedgeDone. Side={i2} HedgeId={i3} Market={i4}", getContract(message._instrumentIndex),
+        message._side, message._hedgeId, message._marketIndex)
     assert(message._marketIndex < MARKET_ID_EXTERNAL);
     auto& contract = _contracts[message._instrumentIndex];
     Market& market = contract._markets[message._side][Market::Internal];
@@ -127,33 +127,27 @@ void ArbieSpreader::handleInternalHedgeDone(const InternalHedgeDone& message) {
     }
 }
 
-void ArbieSpreader::handleASInternalMatchingDone(uint32_t contractId) {
+void ArbieSpreader::handleASInternalMatchingDone(uint32_t contractId, hf::qty_t bidFills, hf::qty_t askFills) {
     DLOG(0, "AS {C[i1]}. AS internal matching done.", getContract(contractId))
     auto& contract = _contracts[contractId];
-    if (contract._markets[BID][Market::Internal].undoAsQuoteAdjustment(_effected_markets)) {
-        markContractDirty(contract, &contract._markets[BID][Market::Internal]);
+    // If order filled internally, undoASQuoteAdjustment will be done in updateHedge
+    if (!bidFills) {
+        if (contract._markets[BID][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
+            markContractDirty(contract, &contract._markets[BID][Market::Internal]);
+        }
     }
-    if (contract._markets[ASK][Market::Internal].undoAsQuoteAdjustment(_effected_markets)) {
-        markContractDirty(contract, &contract._markets[ASK][Market::Internal]);
+
+    if (!askFills) {
+        if (contract._markets[ASK][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
+            markContractDirty(contract, &contract._markets[ASK][Market::Internal]);
+        }
     }
-    for (Market* market : _effected_markets) {
+
+    for (Market* market : _affected_markets) {
         auto& effected_contract = _contracts[market->getContractId()];
         markContractDirty(effected_contract, market);
     }
-    _effected_markets.clear();
-}
-
-void ArbieSpreader::handleASQuoteAdjustmentACK(uint32_t contractId, uint32_t side, hf::qty_t adjSize) {
-    auto& contract = _contracts[contractId];
-    auto otherSide = GetOtherSide(side);
-    if (contract._markets[otherSide][Market::Type::External].ackAsQuoteAdjustment(adjSize, _effected_markets)) {
-        markContractDirty(contract, &contract._markets[otherSide][Market::Type::External]);
-        for (Market* market : _effected_markets) {
-            auto& effected_contract = _contracts[market->getContractId()];
-            markContractDirty(effected_contract, market);
-        }
-        _effected_markets.clear();
-    }
+    _affected_markets.clear();
 }
 
 void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
@@ -177,6 +171,9 @@ void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
 
         if (!configContract._legs.empty()) {
             Contract& contract = _contracts[stf->_contractId];
+            if (contract._stf == hf::NULL_PRICE || stf->_fair == hf::NULL_PRICE) {
+                logging::GetLogger().logInfo(boost::str(boost::format("AS %1%. STF=%2%") % configContract._name % ToDollars(stf->_fair)));
+            }
             contract._stf = stf->_fair;
         }
         ++stf;
@@ -218,12 +215,28 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
     }
 
     if (_stfOffset != stfOffset) {
-        _stfOffset = stfOffset;
         LOG(0, "AS {C[i1]}. Path {i2} STFOffset={d1} RvSTFMove={d2}", _contract->name(), (*_paths.begin())->_id,
-            ToDollars(_stfOffset), ToDollars(_rvSTFMove))
-        for (auto path : _paths) {
-            path->_dirty = true;
+            ToDollars(stfOffset), ToDollars(_rvSTFMove))
+        if (stfOffset == hf::NULL_PRICE) {
+            for (auto path : _paths) {
+                path->_priceSize.reset();
+                path->_resort = true;
+            }
         }
+        else if (_stfOffset == hf::NULL_PRICE) {
+            for (auto path : _paths) {
+                path->_recalc = true;
+            }
+        } else {
+            auto diff =  stfOffset - _stfOffset;
+            for (auto path : _paths) {
+                if (path->_priceSize.valid()) {
+                    path->_priceSize._price += diff;
+                    path->_resort = true;
+                }
+            }
+        }
+        _stfOffset = stfOffset;
         return true;
     }
     return false;
@@ -273,7 +286,7 @@ void ArbieSpreader::onEconomicNumberEnded(EconomicNumber::Color color) {
     }
 
     enable();
-    updateQuotes(true, state() == SystemState::CheckQuotes);
+    updateQuotes(true);
     LOG(0,"AS enabled {i1}", 0)
     sendErrorMessage("AS enabled on EconomicNumber ended.", ErrorType::Normal);
 }
@@ -290,7 +303,7 @@ void ArbieSpreader::onShiftUpdate(uint32_t shift) {
                     }
                 }
                 _edgeMultiplier = multiplier;
-                updateQuotes(true, state() == SystemState::CheckQuotes);
+                updateQuotes(true);
             }
             break;
         }

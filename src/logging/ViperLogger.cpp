@@ -46,7 +46,7 @@ bool ViperLogger::doLogin(ConnectionInfo& ci, int fd, std::string path, const st
                 return false;
             }
             info.initialize();
-            _logQueue = std::dynamic_pointer_cast<hf::queue::ViperLoggerQueueResource>(info.ptr);
+            _logQueue = std::dynamic_pointer_cast<Python::ViperLoggerQueueResource>(info.ptr);
         }
     }
     return loginOk;
@@ -56,7 +56,7 @@ void ViperLogger::writeViperLog() {
     om::debug_t* di;
     auto queue = _logQueue.lock();
     while(queue && (di = queue->read())) {
-        auto ts = hf::util::TimeUtils::clock_gettime();
+        auto ts = rhone::util::getTimeStamp().time_since_epoch().count();
 
         uint32_t nInts = di->ch[0];
         uint32_t nDoubles = di->ch[1];

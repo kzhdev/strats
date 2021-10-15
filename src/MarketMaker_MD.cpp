@@ -11,7 +11,7 @@ void MarketMaker::onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId
     }
 
     if (BOOST_UNLIKELY(mm._lastMDbid >= bid)) {
-        logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % mm._contract._name % bid % mm._lastMDbid));
+        logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. Update. bid=%2% lastMDbid=%3%") % mm._contract._name % bid % mm._lastMDbid));
         return;
     }
 
@@ -25,7 +25,7 @@ void MarketMaker::onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent& ev
     }
 
     if (BOOST_UNLIKELY(mm._lastMDbid >= batch.bid)) {
-        logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % mm._contract._name % batch.bid % mm._lastMDbid));
+        logging::GetLogger().logWarning(boost::str(boost::format("MM %1%. Skip stale MD. Trade. bid=%2% lastMDbid=%3%") % mm._contract._name % batch.bid % mm._lastMDbid));
         return;
     }
 

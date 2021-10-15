@@ -153,15 +153,13 @@ public:
         }
         _iid = hf::ConfigManager::getULong(config, "iid");
 
-        _internalHeartbeatTimestamps.resize(toUInt(StrategyId::MAX));
+        _internalHeartbeatTimestamps.resize(toUInt(ResourceId::FrontSide), 0);
         for (auto strategy : _strategies) {
             if (!strategy) {
                 continue;
             }
             strategy->init(_frequency, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
-            _internalHeartbeatTimestamps[toUInt(strategy->strategyId())] = 0;
         }
-        _internalHeartbeatTimestamps[toUInt(StrategyId::Execution)] = 0;
 
         _executor->init(_frequency, internalHeartbeatPeriod, transactionCapacity, _iid, economicNumberCsv);
 
@@ -220,8 +218,8 @@ public:
 
     void checkInternalHeartbeats(uint64_t now_in_cycles) {
         bool isBad = false;
-        for (uint32_t i = 0; i < (toUInt(StrategyId::MAX)); ++i) {
-            isBad |= checkInternalHeartbeat((StrategyId)(i), now_in_cycles);
+        for (uint32_t i = 0; i < (toUInt(ResourceId::FrontSide)); ++i) {
+            isBad |= checkInternalHeartbeat(i, now_in_cycles);
         }
         if (isBad) {
             killProcess();
@@ -230,7 +228,7 @@ public:
 
     void sendGUIHeartbeat(uint64_t now_in_cycles) {
         if(now_in_cycles > _guiHeartbeatTime) {
-            _clientAcceptor->sendGuiHeartbeat(hf::util::TimeUtils::clock_gettime());
+            _clientAcceptor->sendGuiHeartbeat(rhone::util::getTimeStamp().time_since_epoch().count());
             _guiHeartbeatTime = now_in_cycles + _guiHeartbeatInterval;
         }
     }
@@ -243,14 +241,14 @@ public:
         kill(getpid(), SIGKILL);
     }
 
-    bool checkInternalHeartbeat(StrategyId id, uint64_t now) {
-        uint64_t last = _internalHeartbeatTimestamps[toUInt(id)];
+    bool checkInternalHeartbeat(uint32_t id, uint64_t now) {
+        uint64_t last = _internalHeartbeatTimestamps[id];
         bool breach = false;
         if (last > 0) {
             uint64_t elapsed = now - last;
             breach = elapsed > _maxInternalHeartbeatTime;
             if (breach) {
-                std::string message = boost::str(boost::format("%1% not responsive.") % toString(id));
+                std::string message = boost::str(boost::format("%1% not responsive.") % toString(static_cast<ResourceId>(id)));
                 sendErrorMessage(message, ErrorType::Critical);
                 logging::GetLogger().logError(message);
             }
@@ -286,7 +284,7 @@ public:
             }
             if (_loginTime > 0 && (now - _loginTime) >= _versionSendingTime) {
                 sendViperVersion();
-                for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+                for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
                     for(const auto& position : _viperConfig._unallocatedPositionsFromFile[i]) {
                         sendErrorMessage("Unallocated " + std::string(toString((StrategyId)i)) +
                             " position loaded from file.  Contract=" + position.first + " Position=" + std::to_string(position.second), ErrorType::Critical);
@@ -401,7 +399,7 @@ public:
     bool checkAndActOnPnl(bool onParamChange) {
         bool violationExists = false;
         bool strategyPnlBreached;
-        for(int i = 0; i < toInt(StrategyId::Execution); ++i) {
+        for(int i = 0; i < toInt(StrategyId::MAX); ++i) {
             violationExists |= checkAndActOnPnlForStrategy(static_cast<StrategyId>(i), false, onParamChange, i == 0, strategyPnlBreached);
         }
         return violationExists;
@@ -466,10 +464,10 @@ public:
                 case ViperMessageType::SwitchChangeReply: {
                     GenericMessage& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
                     auto id = toUInt(reply._number_3);
-                    if (id < toUInt(StrategyId::Execution) * 2) {
+                    if (id < toUInt(StrategyId::MAX) * 2) {
                         _clientAcceptor->sendSwitchChangeReply(id, toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                     } else {
-                        auto venue = id - toUInt(StrategyId::Execution) * 2;
+                        auto venue = id - toUInt(StrategyId::MAX) * 2;
                         _clientAcceptor->sendSwitchChangeReply(_guiThings.venueToMainControlRowIndex(venue), toUInt(reply._number_1), std::to_string(reply._number_2), toUInt(WindowIds::MainControl), true);
                     }
                     sendSwitchSound(reply._number_2);
@@ -742,7 +740,7 @@ public:
 
     COLD
     bool hasOverdeterminedPrice() const {
-        const auto* rv = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
+        auto* rv = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         bool hasOverdeterminedPrice = rv->canActOnMarketData();
 
 //        LOG(0, "FrontSide:::hasOverdeterminedPrice result={i1} isEnabled={i2} checkQuotes={i3}", hasOverdeterminedPrice,
@@ -750,17 +748,20 @@ public:
 
         if(hasOverdeterminedPrice) {
             for (int i = 0; i < static_cast<int>(rv->_contracts.size()); ++i) {
-                const RvContract &contract = rv->_contracts[i];
-                if (contract._usedInPricing) {
+                RvContract &contract = rv->_contracts[i];
+                if (contract._usedInPricing && !contract._logNoPrice) {
                     auto[bidPrice, bidSize, askPrice, askSize] = std::make_tuple(
                             contract.externalMarket<BID>().getPrice(), contract.externalMarket<BID>().getUnAdjustedSize(),
                             contract.externalMarket<ASK>().getPrice(), contract.externalMarket<ASK>().getUnAdjustedSize());
                     if (bidPrice == hf::NULL_PRICE || bidSize <= 0 || askPrice == hf::NULL_PRICE || askSize <= 0) {
+                        contract._logNoPrice = true;
 #ifndef VIPER_BACKTEST
                         LOG(0, "FrontSide::hasOverdeterminedPrice no pricing for contract. contract={C[i1]} i={i2} bid={i3}@{i4} ask={i5}@{i6}",
                             getContractName(contract._internalId), i, bidPrice, bidSize, askPrice, askSize);
 #endif
                         return false;
+                    } else {
+                        contract._logNoPrice = false;
                     }
                 }
             }
@@ -980,7 +981,7 @@ public:
         enum class ManualFillPriceType {Overdetermined, MarketData, MMLastFillPrice, Zero};
         hf::nanos_t time = hf::NANOS_NOT_SET;
         if(BOOST_LIKELY(_kdbLogger)) {
-            time = hf::util::TimeUtils::clock_gettime();
+            time = rhone::util::getTimeStamp().time_since_epoch().count();
             auto [d, ext] = _kdbLogger->addDIExtEvent(time);
             const auto& contract = _viperConfig._allContracts[contractId];
 
@@ -1095,7 +1096,7 @@ public:
 
     void handleRVLatencyTrackingMessage(const RVLatencyTrackingMessage& message) {
         if(BOOST_LIKELY(_kdbLogger)) {
-            auto [d, ext] = _kdbLogger->addDIExtEvent(TimeUtils::clock_gettime());
+            auto [d, ext] = _kdbLogger->addDIExtEvent(rhone::util::getTimeStamp().time_since_epoch().count());
             d.ch[0] = static_cast<char>(PersistantDICharType::RVLatencyTracking);
             d.i[0] = message._fields._extid;
             d.i[1] = message._fields._oid;
@@ -1348,7 +1349,7 @@ public:
                     _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, shift);
 
                     bool pnlBreached = false;
-                    for (uint32_t ii = 0; ii < toUInt(StrategyId::Execution); ++ii) {
+                    for (uint32_t ii = 0; ii < toUInt(StrategyId::MAX); ++ii) {
                         if (_pnlLimitsChecker.checkStrategyLimits(static_cast<StrategyId>(ii))) {
                             LOG(0, "Reject shift change. shift={i1}. Strategy {i2} pnlLimits breached", shift, ii)
                             sendErrorMessage(boost::str(boost::format(
@@ -1818,7 +1819,7 @@ public:
         // Strategy : MM can always enable.  Other strategies can only enable if not in breech of strategy/total PnL
         // Strategy QuoteExternal : Can only enable if not in breach of strategy/total PnL
         // Exchange QuoteExternal : Allow if total pnl is not breached
-        if (row < toUInt(StrategyId::Execution)) {
+        if (row < toUInt(StrategyId::MAX)) {
             auto strategy = _strategies[row];
             std::string message;
             bool strategyPnlBreached;
@@ -1829,8 +1830,8 @@ public:
             else {
                 onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),"GUI requested",toString(strategy->strategyId()));
             }
-        } else if (row < toUInt(StrategyId::Execution) * 2) {
-            auto strategy = _strategies[row - toUInt(StrategyId::Execution)];
+        } else if (row < toUInt(StrategyId::MAX) * 2) {
+            auto strategy = _strategies[row - toUInt(StrategyId::MAX)];
             std::string message;
             bool strategyPnlBreached;
             if(state == SystemState::Enabled && checkAndActOnPnlForStrategy(strategy->strategyId(), false, false, true, strategyPnlBreached)) {

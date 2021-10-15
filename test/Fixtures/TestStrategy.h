@@ -5,7 +5,7 @@
 #include <hf/hf.h>
 #include <md/md_event.h>
 #include <om/om_event.h>
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 
 namespace Python {
 

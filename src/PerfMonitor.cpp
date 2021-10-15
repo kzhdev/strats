@@ -2,7 +2,7 @@
 #include <util/ResourceManager.h>
 
 #ifdef ENABLE_PERF
-#include <hf/ConfigManager.h>
+#include <util/ConfigManager.h>
 #endif
 
 using namespace Python;
@@ -12,6 +12,8 @@ static rhone::util::ResourceRegistrator<PerfMonitor> s_registrator("PerfMonitor"
 #ifdef ENABLE_PERF
 
 PerfMonitor* PerfMonitor::_instance = nullptr;
+
+uint64_t PerfMonitor::PerfStatistics::outlierThreshold = 999999;
 
 void PerfMonitor::onCreate(const libconfig::Setting& config) {
     if (!_instance) {
@@ -29,7 +31,13 @@ void PerfMonitor::onCreate(const libconfig::Setting& config) {
     _perfQueue.clear();
 
     _frequency = clockUtil::GetCpuFrequency();
+    PerfMonitor::PerfStatistics::outlierThreshold = 999999 * _frequency;
     _logInterval = GetCyclesFromSeconds(60, _frequency);
+
+    uint32_t i = 0;
+    for (auto& stat : _statistics) {
+        stat._id = static_cast<PerfId>(i++);
+    }
 }
 
 #endif

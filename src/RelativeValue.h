@@ -310,6 +310,7 @@ struct RvContract {
     bool _canTradeStatus = false;
     bool _traded = false;
     bool _usedInPricing = false;
+    bool _logNoPrice = false;
 
     void clearLeans() {
         _quotes[BID]._leans.clear();
@@ -384,6 +385,9 @@ public:
     }
 
     void runCycle(uint64_t now) {
+#ifdef ENABLE_PERF
+        auto begin = clockUtil::getCpuTicksStart();
+#endif
         if (_numberOfFills > 0) {
             LOG(0, "RV drained number of fills. {i1}", _numberOfFills)
         }
@@ -423,8 +427,9 @@ public:
         _numberOfFills = 0;
 #ifdef ENABLE_PERF
         if (addPerf) {
-            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, now);
-            ADD_PERF_POINT(PerfId::RV_RunCycle, PerfType::End);
+            auto end = clockUtil::getCpuTicksEnd();
+            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::Begin, begin);
+            PerfMonitor::get()->addPerfPoint(PerfId::RV_RunCycle, PerfType::End, end);
         }
 #endif
     }
@@ -1577,7 +1582,7 @@ public:
         switch (mde.type) {
             case md::MDEvent::TYPE::FAK_DONE: {
                 const auto &event = static_cast<const md::MDFakDonenEvent &> (mde);
-                handleFakDone(batch.venue, event, internalId);
+                handleFakDone(ToViperSide(event._side), internalId, event._oid.value());
                 break;
             }
             case md::MDEvent::TYPE::INTRA_EVENT_SWEEP: {
@@ -1615,7 +1620,7 @@ public:
         RvContract& contract = _contracts[internalId];
 
         if (BOOST_UNLIKELY(contract._lastMDbid >= batch.bid)) {
-            logging::GetLogger().logWarning(boost::str(boost::format("RV %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batch.bid % contract._lastMDbid));
+            logging::GetLogger().logWarning(boost::str(boost::format("RV %1%. Skip stale MD. Trade. bid=%2% lastMDbid=%3%") % contract._definition._name % batch.bid % contract._lastMDbid));
             return;
         }
 
@@ -1735,7 +1740,7 @@ public:
             }
             case 21: {
                 contract._canTradeStatus = false;
-                LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), (uint32_t)(event.extStatus), contract._usedInPricing)
+                LOG(0, "RV {C[i1]} market data - entered pre-open. Used in pricing={i2}", getContract(contract._internalId), contract._usedInPricing)
                 disableRelativeValue(boost::str(boost::format("Contract %1% market data - entered pre-open. Used in pricing=%2%") % contract._definition._name % contract._usedInPricing));
                 break;
             }
@@ -1805,12 +1810,11 @@ public:
         }
     }
 
-    void handleFakDone(hf::VENUE venue, const md::MDFakDonenEvent& event, uint32_t internalId) {
+    void handleFakDone(uint32_t side, uint32_t internalId, om::strategy_order_id_t::value_type oid) {
         LOG(0, "RV {C[i1]}. Received FAK done.", internalId)
         RvContract& contract = _contracts[internalId];
-        const uint32_t side = ToViperSide(event._side);
         Market& book = contract.externalMarket(side);
-        book.handleFakDone(event._oid.value());
+        book.handleFakDone(oid);
     }
 
     void onMDUpdate(const md::MDUpdateEvent &event, uint32_t internalId, hf::batch_id_t batchBid) {
@@ -1820,7 +1824,7 @@ public:
         RvContract& contract = _contracts[internalId];
 
         if (BOOST_UNLIKELY(contract._lastMDbid >= batchBid)) {
-            logging::GetLogger().logWarning(boost::str(boost::format("RV %1%. Skip stale MD. bid=%2% lastMDbid=%3%") % contract._definition._name % batchBid % contract._lastMDbid));
+            logging::GetLogger().logWarning(boost::str(boost::format("RV %1%. Skip stale MD. Update. bid=%2% lastMDbid=%3%") % contract._definition._name % batchBid % contract._lastMDbid));
             return;
         }
 
@@ -1894,6 +1898,7 @@ public:
             sendErrorMessage("Disabling Relative Value. Reason=" + reason, ErrorType::Critical);
             sendGenericMessageToFront(ViperMessageType::SwitchChangeReply, toInt(MainControlAction::Enabled),
                                       proto::SystemState::SystemStateDisabled, toUInt(StrategyId::RelativeValue));
+            _skipClubCount = 0;
         }
     }
 
@@ -2493,9 +2498,10 @@ public:
                         needToHedge = oldNeedToHedge;
                         LOG(0, "RV {C[i1]}. Hedging. Skipping club member b/c of potential self match or 2 ticks worse. QuotePrice={d1} HedgePrice={d2} Lean={C[i2]}",
                             getContract(contract._internalId), ToDollars(leanQuotePrice), ToDollars(hedgePrice), getContract(leanContract._internalId))
-                        std::string message = boost::str(boost::format("Hedge. Club skip. C=%1% H=%2% Pc=%3% Ph=%4%")
-                                                         % contract._definition._name % leanContract._definition._name % ToDollars(leanQuotePrice) % ToDollars(hedgePrice));
-                        sendErrorMessage(message, ErrorType::Normal);
+                        if (++_skipClubCount >= 50) {
+                            disableRelativeValue("Skip club reached 50 times");
+                            break;
+                        }
                         continue;
                     }
                     const uint32_t hedgeId = getHedgeId();
@@ -2744,10 +2750,16 @@ public:
                             STFUpdate::STF* data = msg._data;
                             for (auto& kvp : _shortTermFairUpdate) {
                                 data->_contractId = kvp.first;
-                                data->_fair = reset ? hf::NULL_PRICE : kvp.second->_fair;
-                                if (BOOST_UNLIKELY(!kvp.second->_firstUpdateSent)) {
-                                    kvp.second->_firstUpdateSent = true;
-                                    logging::GetLogger().logInfo(boost::str(boost::format("RV. Send %1% stf. stf=%2%") % _contracts[kvp.first]._definition._name % kvp.second->_fair));
+                                if (reset) {
+                                    data->_fair = hf::NULL_PRICE;
+                                    kvp.second->_fair = 0;
+                                    kvp.second->_firstUpdateSent = false;
+                                } else {
+                                    data->_fair = kvp.second->_fair;
+                                    if (BOOST_UNLIKELY(!kvp.second->_firstUpdateSent)) {
+                                        kvp.second->_firstUpdateSent = true;
+                                        logging::GetLogger().logInfo(boost::str(boost::format("RV. Send %1% stf. stf=%2%") % _contracts[kvp.first]._definition._name % ToDollars(kvp.second->_fair)));
+                                    }
                                 }
                                 ++data;
                             }
@@ -3129,6 +3141,7 @@ private:
     bool _hadInternalMarketData = false;
     bool _hadExternalMarketData = false;
     uint32_t _numberOfFills = 0;
+    uint32_t _skipClubCount = 0;
 
     om::client_id_t _id;
 
