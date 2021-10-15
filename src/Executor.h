@@ -3119,7 +3119,6 @@ public:
 #ifndef VIPER_BACKTEST
         order.debug.i[ROUTE] = strat::port_gid(*connection).value();
 #endif
-        order.debug.i[TIMESTAMP] = hf::util::TimeUtils::clock_gettime();
     }
 
     void disableMarketMakerDisableQuoteExternalOnOtherStrategies(uint32_t internalId, const std::string& reason) {

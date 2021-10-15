@@ -8,9 +8,6 @@
 using namespace Python;
 
 void BackTester::onMDAddOrder(const md::MDAddOrderEvent &event, const md::MDBatch &batch) {
-    if (event.oid == 8031902790291) {
-        LOG(0, "**** Add order {i1}", event.oid)
-    }
     if (!_ready) {
         handleMDAddOrder(event, batch.venue);
     } else {
@@ -48,9 +45,6 @@ void BackTester::handleMDDeleteOrder(const md::MDDeleteOrderEvent& event, hf::VE
 }
 
 void BackTester::onMDModifyOrder(const md::MDModifyOrderEvent &event, const md::MDBatch &batch) {
-    if (event.oid == 8031902761178) {
-        LOG(0, "**** modify order {i1}", event.oid)
-    }
     assert(_ready);
     pushEvent<md::MDModifyOrderEvent>(
             ViperMessageType::MD_Modify_Order,
