@@ -407,7 +407,9 @@ void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data) {
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
         ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
     } else {
+#ifndef VIPER_BACKTEST
         LOG_WARN(boost::str(boost::format("Wanted to send GridUpdate but do not have connection. %1%") %  data.ShortDebugString()));
+#endif
     }
 }
 
@@ -416,7 +418,9 @@ void ClientsAcceptor::sendChartDataPoints(proto::DataSeriesPointSet& data) {
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
         ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_DATA_POINT_SET, data);
     } else {
+#ifndef VIPER_BACKTEST
         LOG_WARN(boost::str(boost::format("Wanted to send ChartDataPoint but do not have connection. %1%") % data.ShortDebugString()));
+#endif
     }
 }
 
@@ -425,7 +429,9 @@ void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, 
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
         ServerClientMessenger::instance()->sendSwitchChangeReply(*connection, strategy, action, value, gridId, accepted);
     } else {
+#ifndef VIPER_BACKTEST
         LOG_WARN(boost::str(boost::format("Wanted to send SwitchReply but do not have connection. ")));
+#endif
     }
 }
 
@@ -435,7 +441,9 @@ void ClientsAcceptor::handleLoginAccepted(proto::GUIInitialization& m, uint64_t 
         ServerClientMessenger::instance()->doSendClientLogin(*connection, 0, heartbeatIntervalInMilliseconds);
         ServerClientMessenger::instance()->sendGUIInitialization(*connection, m);
     } else {
+#ifndef VIPER_BACKTEST
         LOG_WARN(boost::str(boost::format("Wanted to send LoginAccepted but do not have connection. ")));
+#endif
     }
 }
 
@@ -444,7 +452,9 @@ void ClientsAcceptor::handleLoginRejected() {
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
         ServerClientMessenger::instance()->doSendClientLoginReject(*connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, "strategies reject", 0);
     } else {
+#ifndef VIPER_BACKTEST
         LOG_WARN(boost::str(boost::format("Wanted to send LoginRejected but do not have connection. ")));
+#endif
     }
 }
 
@@ -454,7 +464,9 @@ void ClientsAcceptor::handleLoggedOut() {
         ServerClientMessenger::instance()->doSendClientLogout(*connection, false, 0);
         removeTraderConnection(*connection);
     } else {
+#ifndef VIPER_BACKTEST
         LOG_WARN(boost::str(boost::format("Wanted to send LoggedOut but do not have connection. ")));
+#endif
     }
 }
 
@@ -463,7 +475,9 @@ void ClientsAcceptor::sendGridChangeReply(proto::GridUpdate& message) {
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
         ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED, message);
     } else {
+#ifndef VIPER_BACKTEST
         LOG_WARN(boost::str(boost::format("Wanted to send GridChangeReply but do not have connection. ")));
+#endif
     }
 }
 
@@ -474,7 +488,9 @@ void ClientsAcceptor::sendPlaySound(uint32_t id) {
         ClientConnection* connection = m_monitor.m_traderConnections.begin()->second.get();
         ServerClientMessenger::instance()->sendMessageToClient(*connection,  proto::SERVER_MESSAGE_TYPE_PLAY_SOUND, message);
     } else {
+#ifndef VIPER_BACKTEST
         LOG_WARN(boost::str(boost::format("Wanted to send PlaySound but do not have connection. ")));
+#endif
     }
 }
 

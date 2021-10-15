@@ -51,7 +51,7 @@ bool ServerClientMessenger::doSendFormatError(ClientConnection& traderConnection
     return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_FORMAT_ERROR, formatError);
 }
 
-bool ServerClientMessenger::doSendClientLogout(ClientConnection& traderConnection, bool isTraderActive, message_id_t messageID) {
+bool ServerClientMessenger::doSendClientLogout(ClientConnection& traderConnection, bool /*isTraderActive*/, message_id_t messageID) {
     proto::ClientClosed response;
     response.set_messageid(messageID);
     return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_CLIENT_CLOSED, response);

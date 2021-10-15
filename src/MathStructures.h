@@ -7,6 +7,7 @@
 #include "math/linalg.h"
 #include <sstream>
 #include "boost/assert.hpp"
+#include <cassert>
 
 namespace Python {
 
@@ -23,6 +24,12 @@ struct Vector {
     }
 
     Vector() {
+    }
+
+    Vector& operator= (const Vector& in) {
+        assert(_size == in._size);
+        memcpy(&_data[0], &in._data[0], _size * sizeof(T));
+        return *this;
     }
 
     Vector divide(Vector& in) {

@@ -1,10 +1,10 @@
 message(STATUS "Add RhoneDS build")
 
 # enable auto relink
-SET_SOURCE_FILES_PROPERTIES(
-        app/MainApp.cpp PROPERTIES OBJECT_DEPENDS
-        ${PROJECT_BINARY_DIR}/Rhone/bin/libRhone.a
-)
+#SET_SOURCE_FILES_PROPERTIES(
+#        app/MainApp.cpp PROPERTIES OBJECT_DEPENDS
+#        ${PROJECT_BINARY_DIR}/Rhone/bin/libRhone.a
+#)
 
 add_executable(${BINARY_NAME} ${SOURCE_FILES_APP} ${SOURCE_FILES_LIB} ${PROTO})
 target_compile_options(${BINARY_NAME} PUBLIC -Wno-write-strings)

@@ -103,14 +103,14 @@ public:
             }
         }
 
-        auto& slot = _data[cursor & _mask];
-        if (slot._id.load(std::memory_order_relaxed) != cursor) {
+        auto& s = _data[cursor & _mask];
+        if (s._id.load(std::memory_order_relaxed) != cursor) {
             // no new data available
             return nullptr;
         }
 
-        cursor += slot._num;
-        return &slot._data;
+        cursor += s._num;
+        return &s._data;
     }
 };
 

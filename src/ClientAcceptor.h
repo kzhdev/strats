@@ -22,6 +22,7 @@ class ClientConnection {
 
 public:
     ClientConnection(int fd) : m_fd{fd} { }
+    virtual ~ClientConnection() = default;
 
     ReadBuffer& getReadBuffer() { return m_readBuffer; }
 

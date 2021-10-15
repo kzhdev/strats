@@ -605,11 +605,11 @@ public:
 
     // Handle system status
 
-    void onQuoteExternalChanged(SystemState quoteExt) {
+    void onQuoteExternalChanged(SystemState /*quoteExt*/) {
         calculateQuotes();
     }
 
-    void onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& quoteExt) {
+    void onExchangeQuoteExternalChanged(const SharedSystemState::QuoteExtBitset& /*quoteExt*/) {
         calculateQuotes();
     }
 
@@ -863,7 +863,7 @@ public:
         return _updateSelector.processUpdate(update);
     }
 
-    bool validateRvVectorParametersUpdate(GridUpdate& update) {
+    bool validateRvVectorParametersUpdate(GridUpdate& /*update*/) {
         return true;
     }
 
@@ -2986,7 +2986,7 @@ public:
         return hedgingCost;
     }
 
-    double calculateSize(RvContract& contract, uint32_t leanIndex, uint32_t side, double hedgeRatio, double marketSize, double maxQuoteSize) {
+    double calculateSize(RvContract& /*contract*/, uint32_t /*leanIndex*/, uint32_t /*side*/, double hedgeRatio, double marketSize, double maxQuoteSize) {
         double size = 0;
         if (hedgeRatio > 0) {
             const double possibleSize = marketSize / hedgeRatio;

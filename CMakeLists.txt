@@ -13,7 +13,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_
     SET(HIGH_GCC_VERSION TRUE)
     include(CheckIPOSupported)
     check_ipo_supported()
-    add_compile_options(-faligned-new -Wno-missing-field-initializers -Wno-ignored-qualifiers)
+    add_compile_options(-faligned-new -Wno-missing-field-initializers -Wno-ignored-qualifiers -Wno-shadow)
 endif()
 
 message(STATUS "VIPER_VERSION: ${VIPER_VERSION}")
@@ -93,5 +93,7 @@ if ((DEFINED HIGH_GCC_VERSION) AND NOT (CMAKE_BUILD_TYPE MATCHES Debug))
     target_compile_options(${BINARY_NAME} PUBLIC -march=skylake -mtune=skylake)
 endif()
 
-add_subdirectory(src/logging EXCLUDE_FOM_ALL)
+add_subdirectory(src/logging cc)
 add_subdirectory(test EXCLUDE_FROM_ALL)
+
+include(RhoneDS_BackTest.cmake)

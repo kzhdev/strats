@@ -6,7 +6,7 @@ using namespace Python;
 
 LOG_DECLARE();
 
-static rhone::util::ResourceRegistrator<ViperLoggerQueueResource> s_registrator("hf::queue::ViperLoggerQueue");
+static rhone::util::ResourceRegistrator<ViperLoggerQueueResource> s_registrator("Python::ViperLoggerQueue");
 
 void ViperLoggerQueueResource::onCreate(const libconfig::Setting &config) {
     auto queue_size = hf::ConfigManager::getULong(config, "size", 1<<22);

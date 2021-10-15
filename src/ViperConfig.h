@@ -385,9 +385,11 @@ struct ViperConfig {
             return false;
         }
 
-        good = loadArbieSpreaderPaths(asPathFilename);
-        if (!good) {
-            return false;
+        if (!asPathFilename.empty()) {
+            good = loadArbieSpreaderPaths(asPathFilename);
+            if (!good) {
+                return false;
+            }
         }
 
         good = loadEconomicNumbers();
@@ -401,6 +403,10 @@ struct ViperConfig {
     }
 
     bool tryGetInitialPos(uint32_t strategy) {
+
+        if (_posFileName[strategy].empty()) {
+            return true;
+        }
 
         if(!std::experimental::filesystem::exists(_posFileName[strategy])) {
             logging::GetLogger().logError(std::string(toString((StrategyId)strategy)) + " Position file does not exist.  This version requires said file.  filename=" + _posFileName[strategy]);
@@ -1238,6 +1244,11 @@ struct ViperConfig {
     bool loadEconomicNumbers() {
         logging::GetLogger().logInfo("Loading Economic Numbers");
 
+        if (_economicNumbersFileName.empty()) {
+            logging::GetLogger().logWarning("Economic Numbers file not specified");
+            return true;
+        }
+
         if(!std::experimental::filesystem::exists(_economicNumbersFileName)) {
             logging::GetLogger().logError("Economic number file does not exist. filename=" + _economicNumbersFileName);
             return false;
@@ -1667,7 +1678,7 @@ struct ViperConfig {
         return true;
     }
 
-    bool onManualFills(GridUpdate& update) {
+    bool onManualFills(GridUpdate& /*update*/) {
         return true;
     }
 
@@ -1851,7 +1862,7 @@ struct ViperConfig {
         return true;
     }
 
-    bool onArbieSpreaderPathsUpdate(GridUpdate& update) {
+    bool onArbieSpreaderPathsUpdate(GridUpdate& /*update*/) {
         return true;
     }
 
@@ -2067,14 +2078,18 @@ struct ViperConfig {
         });
 
         for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
-            writeToFile(_posFileName[i], [this, i](std::ofstream& output) {
-                writePos(i,output);
-            });
+        	if (!_posFileName[i].empty()) {
+            	writeToFile(_posFileName[i], [this, i](std::ofstream& output) {
+            		writePos(i,output);
+            	});
+            }
         }
 
-        writeToFile(_asPathFileName, [this](std::ofstream& output){
-            writeArbieSpreaderPath(output);
-        });
+        if (!_asPathFileName.empty()) {
+            writeToFile(_asPathFileName, [this](std::ofstream& output){
+                writeArbieSpreaderPath(output);
+            });
+        }
     }
 
     void recordMMLastFillPrice(uint32_t contractId, hf::price_t lastFillPrice) {

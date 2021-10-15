@@ -3,6 +3,6 @@
 
 namespace Python  {
 
-static rhone::util::ResourceRegistrator<Executor> s_registrator_1("Executor");
+static rhone::util::ResourceRegistrator<Executor> s_registrator("Executor");
 
 }

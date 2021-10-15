@@ -1324,7 +1324,7 @@ public:
             //We don't want to send new orders until the Unsoc. cancel just in case _target changes
         }
 
-        void handleModifyOnNewOrderReject(om::order_t& order, hf::qty_t inFlightQty) {
+        void handleModifyOnNewOrderReject(om::order_t& order, hf::qty_t /*inFlightQty*/) {
             //This is going to look very similar to Modify Reject + Cancel
             BOOST_ASSERT(_om->_venue == hf::VENUE::ICE);
             Level* targetLevel = getTargetLevel(order);
@@ -1342,7 +1342,7 @@ public:
             }
         }
 
-        void handleCancelOnNewOrderReject(om::order_t& order, hf::qty_t cancelledQty) {
+        void handleCancelOnNewOrderReject(om::order_t& /*order*/, hf::qty_t cancelledQty) {
             BOOST_ASSERT(_om->_venue == hf::VENUE::ICE);
             _flight += cancelledQty;
         }
@@ -1462,7 +1462,7 @@ public:
             }
         }
 
-        void onOrderCanceled(const om::OMOrderCanceledEvent& event, const om::order_t& order) {
+        void onOrderCanceled(const om::OMOrderCanceledEvent& /*event*/, const om::order_t& order) {
             LOG(0, "OM {C[i1]}. Order Cancelled. Side={i2} OID={i3}", getContractName(), _om->_side, order.oid.value())
             LOG(0, "OM {C[i1]}. Before. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8}", getContractName(),
                 _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout)
@@ -1580,7 +1580,7 @@ public:
 #endif
 
 
-        void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order, Level* nextLevel) {
+        void onOrderReplaceRejected(const om::OMOrderModifyRejectedEvent& event, const om::order_t& order, Level* /*nextLevel*/) {
 #ifdef IS_DEV
             LOG(0, "OM {C[i1]}. Replace order rejected. OID={i2} Reason={i3}({i4})", getContractName(), order.oid.value(), event.reasonCodeExt, event.reasonText)
 #else
@@ -2440,7 +2440,7 @@ public:
         return order;
     }
 
-    static void SetNewOrderState(om::order_t* order, Level* level, hf::price_t price, hf::qty_t totalQuantity, hf::qty_t leavesQty, bool isHedge) {
+    static void SetNewOrderState(om::order_t* order, Level* level, hf::price_t /*price*/, hf::qty_t totalQuantity, hf::qty_t leavesQty, bool isHedge) {
         //TODO: Will segfault if order == nullptr
         order->debug.i[LEVEL_POINTER] = reinterpret_cast<uint64_t>(level);
         //TODO: If templated on _venue this only should be done for ICE.  For CME it's a no-op
