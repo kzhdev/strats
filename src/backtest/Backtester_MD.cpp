@@ -13,9 +13,10 @@ void BackTester::onMDAddOrder(const md::MDAddOrderEvent &event, const md::MDBatc
     } else {
         pushEvent<md::MDAddOrderEvent>(
                 ViperMessageType::MD_Add_Order,
-                [&event, venue = toUInt(batch.venue)](md::MDAddOrderEvent& msg) {
-                    memcpy(&msg, &event, sizeof(event));
-                    msg.size = venue;
+                [&event, &batch](ViperMessage& viperMsg, md::MDAddOrderEvent& msg) {
+                    viperMsg._timestamp = batch.time.srcTS;
+                    memcpy(&msg, &event, event.size);
+                    viperMsg._venue = batch.venue;
                 });
     }
 }
@@ -30,9 +31,10 @@ void BackTester::onMDDeleteOrder(const md::MDDeleteOrderEvent& event, const md::
     assert(_ready);
     pushEvent<md::MDDeleteOrderEvent>(
             ViperMessageType::MD_Delete_Order,
-            [&event, venue = toUInt(batch.venue)](md::MDDeleteOrderEvent& msg) {
-                memcpy(&msg, &event, sizeof(event));
-                msg.size = venue;
+            [&event, &batch](ViperMessage& viperMsg, md::MDDeleteOrderEvent& msg) {
+                viperMsg._timestamp = batch.time.srcTS;
+                memcpy(&msg, &event, event.size);
+                viperMsg._venue = batch.venue;
             });
 }
 
@@ -44,11 +46,12 @@ void BackTester::handleMDDeleteOrder(const md::MDDeleteOrderEvent& event, hf::VE
 
 void BackTester::onMDModifyOrder(const md::MDModifyOrderEvent &event, const md::MDBatch &batch) {
     assert(_ready);
-    pushEvent<md::MDDeleteOrderEvent>(
-            ViperMessageType::MD_Delete_Order,
-            [&event, venue = toUInt(batch.venue)](md::MDDeleteOrderEvent& msg) {
-                memcpy(&msg, &event, sizeof(event));
-                msg.size = venue;
+    pushEvent<md::MDModifyOrderEvent>(
+            ViperMessageType::MD_Modify_Order,
+            [&event, &batch](ViperMessage& viperMsg, md::MDModifyOrderEvent& msg) {
+                viperMsg._timestamp = batch.time.srcTS;
+                memcpy(&msg, &event, event.size);
+                viperMsg._venue = batch.venue;
             });
 }
 
@@ -95,9 +98,10 @@ void BackTester::onMDStatus(const md::MDStatusEvent &event, const md::MDBatch &b
     } else {
         pushEvent<md::MDStatusEvent>(
                 ViperMessageType::MD_Status,
-                [&event, venue = toUInt(batch.venue)](md::MDStatusEvent& msg) {
-                    memcpy(&msg, &event, sizeof(event));
-                    msg.size = venue;
+                [&event, &batch](ViperMessage& viperMsg, md::MDStatusEvent& msg) {
+                    viperMsg._timestamp = batch.time.srcTS;
+                    memcpy(&msg, &event, event.size);
+                    viperMsg._venue = batch.venue;
                 });
     }
 }
@@ -106,16 +110,37 @@ void BackTester::onMDTradeDetails(const md::MDTradeDetailsEvent &event, const md
     assert(_ready);
     pushEvent<md::MDTradeDetailsEvent>(
             ViperMessageType::MD_TradeDetails,
-            [&event, venue = toUInt(batch.venue)](md::MDTradeDetailsEvent& msg) {
-                memcpy(&msg, &event, sizeof(event));
-                msg.size = venue;
-            });
+            [&event, &batch](ViperMessage& viperMsg, md::MDTradeDetailsEvent& msg) {
+                viperMsg._timestamp = batch.time.srcTS;
+                memcpy(&msg, &event, event.size);
+                viperMsg._venue = batch.venue;
+            }, event.numberOfOrders * sizeof(md::MDTradeDetailsEvent::trade_orders_t));
 }
 
 void BackTester::handleMDTradeDetails(const md::MDTradeDetailsEvent& event, hf::VENUE venue) {
     auto internalId = sidToInternalId(event.sid);
     auto& limitBook = _limitBooks[internalId];
     limitBook.onMDTradeDetails(event, venue);
+}
+
+void BackTester::onMDUpdate(const md::MDUpdateEvent& event, const md::MDBatch &batch) {
+    if (!_ready) {
+        return;
+    }
+
+    pushEvent<md::MDUpdateEvent>(
+            ViperMessageType::MD_UpdateToLimitBook,
+            [&event, &batch](ViperMessage& viperMsg, md::MDUpdateEvent& msg) {
+                viperMsg._timestamp = batch.time.srcTS;
+                memcpy(&msg, &event, event.size);
+                viperMsg._venue = batch.venue;
+            });
+}
+
+void BackTester::handleMDUpdate(const md::MDUpdateEvent& event, hf::VENUE venue) {
+    auto internalId = sidToInternalId(event.sid);
+    auto& limitBook = _limitBooks[internalId];
+    limitBook.onMDUpdate(event, venue);
 }
 
 #endif

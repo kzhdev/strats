@@ -72,7 +72,6 @@ void ViperResource::_onPostCreate(const libconfig::Setting &config) {
         if (viperResources.empty()) {
             logging::GetLogger().logErrorAndThrow("No Viper resource found");
         }
-
         _resources.resize(toUInt(ResourceId::_Resource_MAX_));
         _strategies.resize(toUInt(StrategyId::MAX));
 

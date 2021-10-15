@@ -3,7 +3,7 @@
 
 #include <util/ConfigManager.h>
 #include <util/ResourceManager.h>
-#include <stdint.h>
+#include <cstdint>
 #include <hf/hf.h>
 #include <util/log.h>
 #include <md/md_event.h>
@@ -174,7 +174,24 @@ public:
                             boost::str(boost::format("MDPool is not set for MDQueue with name '%1%'") % name));
                 }
 
+//#ifdef VIPER_BACKTEST
+//                {
+//                    auto n = name + "_strategy";
+//                    auto* const ptr = dynamic_cast<md::queue::MDQueueResource*> (rhone::util::ResourceManager::getResourceP(n));
+//                    if (!ptr) {
+//                        logging::GetLogger().logErrorAndThrow(
+//                                boost::str(boost::format("Cannot Find MDQueue by name '%1%'") % n));
+//                    }
+//
+//                    if (!ptr->getPoolP()) {
+//                        logging::GetLogger().logErrorAndThrow(
+//                                boost::str(boost::format("MDPool is not set for MDQueue with name '%1%'") % n));
+//                    }
+//                    MarketDataConsumerBase::mdQueue().emplace_back(ptr);
+//                }
+//#else
                 MarketDataConsumerBase::mdQueue().emplace_back(ptr);
+//#endif
             }
         }
 
@@ -2930,7 +2947,7 @@ public:
         }
     }
 
-    void handleFillForUnassignedGtcOrder(hf::price_t filledPrice, hf::qty_t filledQty, hf::VENUE venue, uint32_t internalId, uint32_t side) {
+    void handleFillForUnassignedGtcOrder(hf::price_t filledPrice, hf::qty_t filledQty, hf::VENUE /*venue*/, uint32_t internalId, uint32_t side) {
         onExternalFill(internalId, StrategyId::MarketMaker, filledPrice, filledQty, side, FillSource::ViperOff);
         const auto& state = _contractStates[internalId];
         onEndOfFills(internalId, side, false, state._ime._lastMMOrderExecution);

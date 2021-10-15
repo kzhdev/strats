@@ -755,8 +755,10 @@ public:
                             contract.externalMarket<ASK>().getPrice(), contract.externalMarket<ASK>().getUnAdjustedSize());
                     if (bidPrice == hf::NULL_PRICE || bidSize <= 0 || askPrice == hf::NULL_PRICE || askSize <= 0) {
                         contract._logNoPrice = true;
+#ifndef VIPER_BACKTEST
                         LOG(0, "FrontSide::hasOverdeterminedPrice no pricing for contract. contract={C[i1]} i={i2} bid={i3}@{i4} ask={i5}@{i6}",
                             getContractName(contract._internalId), i, bidPrice, bidSize, askPrice, askSize);
+#endif
                         return false;
                     } else {
                         contract._logNoPrice = false;

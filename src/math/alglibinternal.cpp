@@ -368,7 +368,7 @@ static void ftbase_ftbasefindsmoothrec(ae_int_t n,
 
 
 
-ae_int_t getrdfserializationcode(ae_state *_state)
+ae_int_t getrdfserializationcode(ae_state */*_state*/)
 {
     ae_int_t result;
 
@@ -378,7 +378,7 @@ ae_int_t getrdfserializationcode(ae_state *_state)
 }
 
 
-ae_int_t getkdtreeserializationcode(ae_state *_state)
+ae_int_t getkdtreeserializationcode(ae_state */*_state*/)
 {
     ae_int_t result;
 
@@ -388,7 +388,7 @@ ae_int_t getkdtreeserializationcode(ae_state *_state)
 }
 
 
-ae_int_t getmlpserializationcode(ae_state *_state)
+ae_int_t getmlpserializationcode(ae_state */*_state*/)
 {
     ae_int_t result;
 
@@ -398,7 +398,7 @@ ae_int_t getmlpserializationcode(ae_state *_state)
 }
 
 
-ae_int_t getmlpeserializationcode(ae_state *_state)
+ae_int_t getmlpeserializationcode(ae_state */*_state*/)
 {
     ae_int_t result;
 
@@ -408,7 +408,7 @@ ae_int_t getmlpeserializationcode(ae_state *_state)
 }
 
 
-ae_int_t getrbfserializationcode(ae_state *_state)
+ae_int_t getrbfserializationcode(ae_state */*_state*/)
 {
     ae_int_t result;
 
@@ -430,7 +430,7 @@ unit tests can be detected.
 
 This function returns value of COND.
 *************************************************************************/
-ae_bool seterrorflag(ae_bool* flag, ae_bool cond, ae_state *_state)
+ae_bool seterrorflag(ae_bool* flag, ae_bool cond, ae_state */*_state*/)
 {
     ae_bool result;
 
@@ -478,7 +478,7 @@ variables).
   -- ALGLIB --
      Copyright 17.09.2012 by Bochkanov Sergey
 *************************************************************************/
-void touchint(ae_int_t* a, ae_state *_state)
+void touchint(ae_int_t* /*a*/, ae_state */*_state*/)
 {
 
 
@@ -493,7 +493,7 @@ variables).
   -- ALGLIB --
      Copyright 17.09.2012 by Bochkanov Sergey
 *************************************************************************/
-void touchreal(double* a, ae_state *_state)
+void touchreal(double* /*a*/, ae_state */*_state*/)
 {
 
 
@@ -508,7 +508,7 @@ NOTE: no check is performed for B<>0
   -- ALGLIB --
      Copyright 18.05.2015 by Bochkanov Sergey
 *************************************************************************/
-double coalesce(double a, double b, ae_state *_state)
+double coalesce(double a, double b, ae_state */*_state*/)
 {
     double result;
 
@@ -530,7 +530,7 @@ NOTE: no check is performed for B<>0
   -- ALGLIB --
      Copyright 18.05.2015 by Bochkanov Sergey
 *************************************************************************/
-ae_int_t coalescei(ae_int_t a, ae_int_t b, ae_state *_state)
+ae_int_t coalescei(ae_int_t a, ae_int_t b, ae_state */*_state*/)
 {
     ae_int_t result;
 
@@ -550,7 +550,7 @@ The function convert integer value to real value.
   -- ALGLIB --
      Copyright 17.09.2012 by Bochkanov Sergey
 *************************************************************************/
-double inttoreal(ae_int_t a, ae_state *_state)
+double inttoreal(ae_int_t a, ae_state */*_state*/)
 {
     double result;
 
@@ -871,7 +871,7 @@ or both are False).
   -- ALGLIB --
      Copyright 02.12.2009 by Bochkanov Sergey
 *************************************************************************/
-ae_bool aresameboolean(ae_bool v1, ae_bool v2, ae_state *_state)
+ae_bool aresameboolean(ae_bool v1, ae_bool v2, ae_state */*_state*/)
 {
     ae_bool result;
 
@@ -1750,7 +1750,7 @@ void swapi(ae_int_t* v0, ae_int_t* v1, ae_state *_state)
 /*************************************************************************
 This function is used to swap two real values
 *************************************************************************/
-void swapr(double* v0, double* v1, ae_state *_state)
+void swapr(double* v0, double* v1, ae_state */*_state*/)
 {
     double v;
 
@@ -1764,7 +1764,7 @@ void swapr(double* v0, double* v1, ae_state *_state)
 /*************************************************************************
 This function is used to return maximum of three real values
 *************************************************************************/
-double maxreal3(double v0, double v1, double v2, ae_state *_state)
+double maxreal3(double v0, double v1, double v2, ae_state */*_state*/)
 {
     double result;
 
@@ -1785,7 +1785,7 @@ double maxreal3(double v0, double v1, double v2, ae_state *_state)
 /*************************************************************************
 This function is used to increment value of integer variable
 *************************************************************************/
-void inc(ae_int_t* v, ae_state *_state)
+void inc(ae_int_t* v, ae_state */*_state*/)
 {
 
 
@@ -1796,7 +1796,7 @@ void inc(ae_int_t* v, ae_state *_state)
 /*************************************************************************
 This function is used to decrement value of integer variable
 *************************************************************************/
-void dec(ae_int_t* v, ae_state *_state)
+void dec(ae_int_t* v, ae_state */*_state*/)
 {
 
 
@@ -1810,7 +1810,7 @@ This function performs two operations:
 2. explicitly sets variable to zero if it is non-positive
 It is used by some algorithms to decrease value of internal counters.
 *************************************************************************/
-void countdown(ae_int_t* v, ae_state *_state)
+void countdown(ae_int_t* v, ae_state */*_state*/)
 {
 
 
@@ -1829,7 +1829,7 @@ void countdown(ae_int_t* v, ae_state *_state)
 This function returns product of two real numbers. It is convenient when
 you have to perform typecast-and-product of two INTEGERS.
 *************************************************************************/
-double rmul2(double v0, double v1, ae_state *_state)
+double rmul2(double v0, double v1, ae_state */*_state*/)
 {
     double result;
 
@@ -1845,7 +1845,7 @@ double rmul2(double v0, double v1, ae_state *_state)
   -- ALGLIB --
      Copyright 20.03.2009 by Bochkanov Sergey
 *************************************************************************/
-double boundval(double x, double b1, double b2, ae_state *_state)
+double boundval(double x, double b1, double b2, ae_state */*_state*/)
 {
     double result;
 
@@ -1868,7 +1868,7 @@ double boundval(double x, double b1, double b2, ae_state *_state)
 /*************************************************************************
 Allocation of serializer: complex value
 *************************************************************************/
-void alloccomplex(ae_serializer* s, ae_complex v, ae_state *_state)
+void alloccomplex(ae_serializer* s, ae_complex v, ae_state */*_state*/)
 {
 
 
@@ -1909,7 +1909,7 @@ Allocation of serializer: real array
 void allocrealarray(ae_serializer* s,
      /* Real    */ ae_vector* v,
      ae_int_t n,
-     ae_state *_state)
+     ae_state */*_state*/)
 {
     ae_int_t i;
 
@@ -1982,7 +1982,7 @@ Allocation of serializer: Integer array
 void allocintegerarray(ae_serializer* s,
      /* Integer */ ae_vector* v,
      ae_int_t n,
-     ae_state *_state)
+     ae_state */*_state*/)
 {
     ae_int_t i;
 
@@ -2056,7 +2056,7 @@ void allocrealmatrix(ae_serializer* s,
      /* Real    */ ae_matrix* v,
      ae_int_t n0,
      ae_int_t n1,
-     ae_state *_state)
+     ae_state */*_state*/)
 {
     ae_int_t i;
     ae_int_t j;
@@ -2221,7 +2221,7 @@ void copyrealmatrix(/* Real    */ ae_matrix* src,
 /*************************************************************************
 Clears integer array
 *************************************************************************/
-void unsetintegerarray(/* Integer */ ae_vector* a, ae_state *_state)
+void unsetintegerarray(/* Integer */ ae_vector* a, ae_state */*_state*/)
 {
 
     ae_vector_clear(a);
@@ -2232,7 +2232,7 @@ void unsetintegerarray(/* Integer */ ae_vector* a, ae_state *_state)
 /*************************************************************************
 Clears real array
 *************************************************************************/
-void unsetrealarray(/* Real    */ ae_vector* a, ae_state *_state)
+void unsetrealarray(/* Real    */ ae_vector* a, ae_state */*_state*/)
 {
 
     ae_vector_clear(a);
@@ -2243,7 +2243,7 @@ void unsetrealarray(/* Real    */ ae_vector* a, ae_state *_state)
 /*************************************************************************
 Clears real matrix
 *************************************************************************/
-void unsetrealmatrix(/* Real    */ ae_matrix* a, ae_state *_state)
+void unsetrealmatrix(/* Real    */ ae_matrix* a, ae_state */*_state*/)
 {
 
     ae_matrix_clear(a);
@@ -2271,7 +2271,7 @@ ae_int_t recsearch(/* Integer */ ae_vector* a,
      ae_int_t i0,
      ae_int_t i1,
      /* Integer */ ae_vector* b,
-     ae_state *_state)
+     ae_state */*_state*/)
 {
     ae_int_t mididx;
     ae_int_t cflag;
@@ -2517,14 +2517,14 @@ void _apbuffers_destroy(void* _p)
 }
 
 
-void _sboolean_init(void* _p, ae_state *_state)
+void _sboolean_init(void* _p, ae_state */*_state*/)
 {
     sboolean *p = (sboolean*)_p;
     ae_touch_ptr((void*)p);
 }
 
 
-void _sboolean_init_copy(void* _dst, void* _src, ae_state *_state)
+void _sboolean_init_copy(void* _dst, void* _src, ae_state */*_state*/)
 {
     sboolean *dst = (sboolean*)_dst;
     sboolean *src = (sboolean*)_src;
@@ -2578,14 +2578,14 @@ void _sbooleanarray_destroy(void* _p)
 }
 
 
-void _sinteger_init(void* _p, ae_state *_state)
+void _sinteger_init(void* _p, ae_state */*_state*/)
 {
     sinteger *p = (sinteger*)_p;
     ae_touch_ptr((void*)p);
 }
 
 
-void _sinteger_init_copy(void* _dst, void* _src, ae_state *_state)
+void _sinteger_init_copy(void* _dst, void* _src, ae_state */*_state*/)
 {
     sinteger *dst = (sinteger*)_dst;
     sinteger *src = (sinteger*)_src;
@@ -2639,14 +2639,14 @@ void _sintegerarray_destroy(void* _p)
 }
 
 
-void _sreal_init(void* _p, ae_state *_state)
+void _sreal_init(void* _p, ae_state */*_state*/)
 {
     sreal *p = (sreal*)_p;
     ae_touch_ptr((void*)p);
 }
 
 
-void _sreal_init_copy(void* _dst, void* _src, ae_state *_state)
+void _sreal_init_copy(void* _dst, void* _src, ae_state */*_state*/)
 {
     sreal *dst = (sreal*)_dst;
     sreal *src = (sreal*)_src;
@@ -2700,14 +2700,14 @@ void _srealarray_destroy(void* _p)
 }
 
 
-void _scomplex_init(void* _p, ae_state *_state)
+void _scomplex_init(void* _p, ae_state */*_state*/)
 {
     scomplex *p = (scomplex*)_p;
     ae_touch_ptr((void*)p);
 }
 
 
-void _scomplex_init_copy(void* _dst, void* _src, ae_state *_state)
+void _scomplex_init_copy(void* _dst, void* _src, ae_state */*_state*/)
 {
     scomplex *dst = (scomplex*)_dst;
     scomplex *src = (scomplex*)_src;
@@ -3188,7 +3188,7 @@ void tagsortmiddleir(/* Integer */ ae_vector* a,
      /* Real    */ ae_vector* b,
      ae_int_t offset,
      ae_int_t n,
-     ae_state *_state)
+     ae_state */*_state*/)
 {
     ae_int_t i;
     ae_int_t k;
@@ -3302,7 +3302,7 @@ void tagheappushi(/* Real    */ ae_vector* a,
      ae_int_t* n,
      double va,
      ae_int_t vb,
-     ae_state *_state)
+     ae_state */*_state*/)
 {
     ae_int_t j;
     ae_int_t k;
@@ -3383,7 +3383,7 @@ void tagheapreplacetopi(/* Real    */ ae_vector* a,
      ae_int_t n,
      double va,
      ae_int_t vb,
-     ae_state *_state)
+     ae_state */*_state*/)
 {
     ae_int_t j;
     ae_int_t k1;

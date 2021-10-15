@@ -1443,6 +1443,8 @@ enum class ViperMessageType : uint8_t {
     MD_Modify_Order,
     MD_Status,
     MD_TradeDetails,
+    MD_UpdateToLimitBook,
+    MD_UpdateToStrategy,
     OM_SubmitOrder,
     OM_ModifyOrder,
     OM_CancelOrder,
@@ -1467,7 +1469,14 @@ struct ViperMessage {
 #endif
     uint32_t _size;
     ViperMessageType _type;
+#ifdef VIPER_BACKTEST
+    union {
+        hf::VENUE _venue;
+        ResourceId _source;
+    };
+#else
     ResourceId _source;
+#endif
     char _data[0];
 };
 #pragma pack()

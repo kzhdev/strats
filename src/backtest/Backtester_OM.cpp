@@ -36,7 +36,10 @@ om::order_t* BackTester::createOrder(om::instance_id_t iid,
 
     pushEvent<om::pr::SendOmsOrderNewEvent>(
             ViperMessageType::OM_SubmitOrder,
-            [this, sid, side, price, qty, type, venue](om::pr::SendOmsOrderNewEvent& event) {
+            [this, sid, side, price, qty, type, venue](ViperMessage& viperMsg, om::pr::SendOmsOrderNewEvent& event) {
+                //TODO:
+                viperMsg._timestamp = hf::util::TimeUtils::clock_gettime();
+                viperMsg._venue = venue;
                 event.venue = venue;
                 event.sid = sid;
                 event.side = side;

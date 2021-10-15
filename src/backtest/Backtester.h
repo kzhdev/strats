@@ -7,20 +7,23 @@
 #include "LimitBook.h"
 
 #define MAX_BOOK 512
-#define MAX_ORDERS 2 < 20
+#define MAX_ORDERS 1 << 20
+#define MAX_EVENT 1 << 22
 
 namespace Python {
 
 class BackTester final : public Executor {
     uint64_t _begin;
     uint64_t _orderLatency;
+    uint64_t _previousTimestamp = 0;
+    uint64_t _timestamp_addon = 0;
     struct comparator {
         bool operator() (const ViperMessage* lhs, const ViperMessage* rhs) const {
             return (lhs->_timestamp > rhs->_timestamp);
         }
     };
 
-    RingBufferQueue<> _event_pool {1 << 26};
+    RingBufferQueue<> _event_pool {MAX_EVENT};
     std::priority_queue<ViperMessage*, std::vector<ViperMessage*>, comparator> _event_queue;
     RingBuffer<om::strategy_order_t> _order_pool {MAX_ORDERS};
     std::vector<om::strategy_order_t*> _reusable_orders;
@@ -31,6 +34,8 @@ class BackTester final : public Executor {
     om::strategy_order_id_t::value_type _nextStratOid {0};
     bool _ready {false};
 
+    hf::batch_id_t _lastBid = 0;
+
 public:
     BackTester() {
         _reusable_orders.reserve(1 << 16);
@@ -38,16 +43,22 @@ public:
 
     static BackTester* get() noexcept;
 
+//    void onPreMDBatch(const md::MDBatch &batch) override {}
+//    void onPostMDBatch(const md::MDBatch &batch, bool) override {}
     void onMDTradeDetails(const md::MDTradeDetailsEvent &/*event*/, const md::MDBatch &/*batch*/) override;
-    void onEndTradeSummary(const md::MDEndTradeSummary &/*event*/, const md::MDBatch &/*batch*/) {}
+//    void onEndTradeSummary(const md::MDEndTradeSummary &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDAddOrder(const md::MDAddOrderEvent &/*event*/, const md::MDBatch &/*batch*/) override;
     void onMDDeleteOrder(const md::MDDeleteOrderEvent &/*event*/, const md::MDBatch &/*batch*/) override;
     void onMDModifyOrder(const md::MDModifyOrderEvent &/*event*/, const md::MDBatch &/*batch*/) override;
     void onMDStatus(const md::MDStatusEvent &event, const md::MDBatch &batch) override;
+    void onMDUpdate(const md::MDUpdateEvent& event, const md::MDBatch &batch) override;
 
     void onStratBegin() override;
     
     void onStratEnd() override {
+        while(!_event_queue.empty()) {
+            onStratIdle();
+        }
         LOG(0, "Backtester: Ended. Duration: {i1}(s)", ((clockUtil::GetCycles() - _begin) / _frequency * 1000000000))
         rhone::util::Service::exitAll();
     }
@@ -81,6 +92,8 @@ private:
     void handleMDDeleteOrder(const md::MDDeleteOrderEvent& event, hf::VENUE venue);
     void handleMDModifyOrder(const md::MDModifyOrderEvent& event, hf::VENUE venue);
     void handleMDTradeDetails(const md::MDTradeDetailsEvent& event, hf::VENUE venue);
+    void handleMDUpdate(const md::MDUpdateEvent& event, hf::VENUE venue);
+    void sendMDUpdateToStrategy(const md::MDUpdateEvent& event, hf::VENUE venue);
 
     void submitOrder(const om::pr::SendOmsOrderNewEvent& event);
     void modifyOrder(const om::pr::SendOmsOrderModifyEvent& event);
@@ -94,9 +107,14 @@ inline void BackTester::pushEvent(ViperMessageType type, MessagePopulateFunc&& m
     auto& outMessage = reinterpret_cast<ViperMessage&>(_event_pool[cursor].data[0]);
     outMessage._size = sz;
     outMessage._type = type;
-    outMessage._timestamp = rhone::util::getTimeStamp().time_since_epoch().count();
     auto& message = reinterpret_cast<MsgT&>(outMessage._data[0]);
-    msgPopulateFunc(message);
+    msgPopulateFunc(outMessage, message);
+    if (_previousTimestamp == outMessage._timestamp) {
+        outMessage._timestamp += ++_timestamp_addon;
+    } else {
+        _previousTimestamp = outMessage._timestamp;
+        _timestamp_addon = 0;
+    }
     _event_pool.publish(cursor, sz);
     _event_queue.emplace(&outMessage);
 }

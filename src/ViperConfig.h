@@ -85,6 +85,16 @@ struct ConfigContract {
     hf::qty_t toValidQty(hf::qty_t qty) const noexcept{
         return _orderIncrementQty == 1 ? qty : qty - (qty % _orderIncrementQty);
     }
+
+#ifdef IS_DEV
+    const std::string& logging_name() const noexcept {
+        return _name;
+    }
+#else
+    uint32_t logging_name() const noexcept {
+        return _internalId;
+    }
+#endif
 };
 
 #define INVALID_INTERNAL_ID std::numeric_limits<uint32_t>::max()
@@ -2078,10 +2088,10 @@ struct ViperConfig {
         });
 
         for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
-        	if (!_posFileName[i].empty()) {
-            	writeToFile(_posFileName[i], [this, i](std::ofstream& output) {
-            		writePos(i,output);
-            	});
+            if (!_posFileName[i].empty()) {
+                writeToFile(_posFileName[i], [this, i](std::ofstream& output) {
+                    writePos(i,output);
+                });
             }
         }
 

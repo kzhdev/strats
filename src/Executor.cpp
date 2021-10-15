@@ -1,4 +1,3 @@
-#include <util/ResourceManager.h>
 #include "Executor.h"
 
 namespace Python  {

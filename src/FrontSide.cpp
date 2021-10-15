@@ -15,7 +15,9 @@ void FrontSide::onCreate(const libconfig::Setting &config) {
     const auto host = hf::ConfigManager::getString(config, "host");
     const auto port = hf::ConfigManager::getLong(config, "port");
     _clientAcceptor = new ClientsAcceptor(host, port, this, _frequency);
+#ifndef VIPER_BACKTEST
     _clientAcceptor->createMonitor();
+#endif
     createGridUpdates();
 }
 
