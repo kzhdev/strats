@@ -484,7 +484,7 @@ inline bool WasRejectedDueToBeingFilled(uint32_t rejectCode, const char* rejectT
 
 enum class SystemState {LoggedOut, LoggedIn, CheckQuotes, Enabled, Disabled, HardShutdown, CancelGtcAndDisable};
 enum class StrategyId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, MAX};  // Execution must the last
-enum class ResourceId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, FrontSide};   // Strategy resource must added before Execution
+enum class ResourceId : uint8_t {MarketMaker, RelativeValue, ArbieSpreader, Execution, FrontSide, _Resource_MAX_};   // Strategy resource must added before Execution
 enum class DataSeries {VectorPrice, LTF, STF};
 
 inline constexpr const char* toString(StrategyId id) {

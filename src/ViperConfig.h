@@ -2087,7 +2087,7 @@ struct ViperConfig {
             writeNegativeScalpCheckerConfigs(output);
         });
 
-        for (uint32_t i = 1; i < toUInt(StrategyId::Execution); ++i) {
+        for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
             if (!_posFileName[i].empty()) {
                 writeToFile(_posFileName[i], [this, i](std::ofstream& output) {
                     writePos(i,output);

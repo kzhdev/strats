@@ -45,8 +45,8 @@ namespace {
 bool s_staticVarInitialized = false;
 
 DummyStrategy* initDummyStrategies() noexcept {
-    static DummyStrategy dummys[toUInt(StrategyId::Execution)];
-    for (uint32_t i = 0; i < toUInt(StrategyId::Execution); ++i) {
+    static DummyStrategy dummys[toUInt(StrategyId::MAX)];
+    for (uint32_t i = 0; i < toUInt(StrategyId::MAX); ++i) {
         dummys[i].setResourceId(static_cast<ResourceId>(i));
         dummys[i].setStrategyId(static_cast<StrategyId>(i));
     }
