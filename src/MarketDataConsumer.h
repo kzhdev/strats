@@ -61,9 +61,12 @@ public:
                 if (BOOST_LIKELY(!idx)) continue;
 
                 auto& batch = queue->getPoolP()->getBatch(idx);
-                onMDBatch(batch);
 #ifdef ENABLE_PERF
-                ++drainSize;
+                if (onMDBatch(batch)) {
+                    ++drainSize;
+                }
+#else
+                onMDBatch(batch);
 #endif
             }
 
@@ -79,16 +82,18 @@ public:
 #endif
     }
 
-    void onMDBatch(const md::MDBatch &batch) {
+    bool onMDBatch(const md::MDBatch &batch) {
         DLOG(0, "{i1} received MD batch. bid={i2} extSeqNum={i3} venue={i4}", resourceName(underlying().id()), batch.bid,
              batch.extSequenceNumber, toUInt(batch.venue))
 
         const auto *data = batch.data;
+        bool hasUpdate = false;
         for (auto i = batch.count; i; --i) {
             const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
             data += mde.size;
             auto internalId = underlying().sidToInternalId(mde.sid);
             if (internalId != INVALID_INTERNAL_ID) {
+                hasUpdate = true;
                 switch (mde.type) {
                     case md::MDEvent::TYPE::UPDATE: {
                         const auto& event = static_cast<const md::MDUpdateEvent&> (mde);
@@ -124,6 +129,7 @@ public:
         }
         underlying().onEndMDBatch(batch.bid);
         _mdUpdated.clear();
+        return hasUpdate;
     }
 };
 
