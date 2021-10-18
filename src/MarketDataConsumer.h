@@ -62,9 +62,7 @@ public:
 
                 auto& batch = queue->getPoolP()->getBatch(idx);
 #ifdef ENABLE_PERF
-                if (onMDBatch(batch)) {
-                    ++drainSize;
-                }
+                onMDBatch(batch, drainSize);
 #else
                 onMDBatch(batch);
 #endif
@@ -82,18 +80,23 @@ public:
 #endif
     }
 
-    bool onMDBatch(const md::MDBatch &batch) {
+#ifdef ENABLE_PERF
+    void onMDBatch(const md::MDBatch &batch, uint32_t& drainSize) {
+#else
+    void onMDBatch(const md::MDBatch &batch) {
+#endif
         DLOG(0, "{i1} received MD batch. bid={i2} extSeqNum={i3} venue={i4}", resourceName(underlying().id()), batch.bid,
              batch.extSequenceNumber, toUInt(batch.venue))
 
         const auto *data = batch.data;
-        bool hasUpdate = false;
         for (auto i = batch.count; i; --i) {
             const auto &mde = reinterpret_cast<const md::MDEvent &> (*data);
             data += mde.size;
             auto internalId = underlying().sidToInternalId(mde.sid);
             if (internalId != INVALID_INTERNAL_ID) {
-                hasUpdate = true;
+#ifdef ENABLE_PERF
+                ++drainSize;
+#endif
                 switch (mde.type) {
                     case md::MDEvent::TYPE::UPDATE: {
                         const auto& event = static_cast<const md::MDUpdateEvent&> (mde);
@@ -129,7 +132,6 @@ public:
         }
         underlying().onEndMDBatch(batch.bid);
         _mdUpdated.clear();
-        return hasUpdate;
     }
 };
 
