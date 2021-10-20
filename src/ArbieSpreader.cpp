@@ -24,6 +24,7 @@ void ArbieSpreader::init(double frequency, uint64_t internalHeartbeatPeriod, std
         _vectorsRange[index] = vc._range;
         _vectorsMaxPosition[index] = vc._maxPos;
     }
+    _contractBanPeriod = GetCyclesFromSeconds(1, frequency);
     initializeContracts();
 }
 
@@ -317,36 +318,76 @@ void ArbieSpreader::registerOrderClient() {
 
 void ArbieSpreader::runCycle(uint64_t now) {
 #ifdef ENABLE_PERF
+    uint32_t nUpdate = 0;
     auto begin = clockUtil::getCpuTicksStart();
 #endif
-    uint32_t nUpdate = 0;
+
+    // Check banned contracts
+    checkBans(now);
+
     auto last = _updatedContracts.end();
     auto size = last - _updatedContractCursor;
     _contractUpdatedFlag.reset();
     while (_updatedContractCursor < last) {
         auto contract = _updatedContracts[_updatedContractCursor++];
         if (contract->_usedInQuoting && !_contractUpdatedFlag.test(contract->_def._internalId)) {
-#ifdef IS_DEV
-            const uint64_t start = clockUtil::GetCycles();
-#endif
             updateQuotes(*contract);
-            _contractUpdatedFlag.set(contract->_def._internalId);
-#ifdef IS_DEV
-            ILOG(0, "AS {C[i1]}. updateQuotes latency {i2}", contract->name(), (clockUtil::GetCycles() - start))
-#endif
+#ifdef ENABLE_PERF
             ++nUpdate;
+#endif
+            _contractUpdatedFlag.set(contract->_def._internalId);
         }
     }
 
-    if (nUpdate) {
 #ifdef ENABLE_PERF
+    if (nUpdate) {
         auto end = clockUtil::getCpuTicksEnd();
         PerfMonitor::get()->addPerfPoint(PerfId::AS_RunCycle, PerfType::Begin, begin);
         PerfMonitor::get()->addPerfPoint(PerfId::AS_RunCycle, PerfType::End, end);
         ADD_PERF_VALUE(PerfId::AS_UpdateContractCount, nUpdate);
+    }
 #endif
-        const uint64_t latency = clockUtil::GetCycles() - now;
-        ILOG(0, "AS. CalculateQuotes Latency {i1}. {i2} updated contract(s). size={i3}", latency, nUpdate, size)
+}
+
+void ArbieSpreader::checkBans(uint64_t now) {
+    for (auto iter = _bannedContracts.begin(); iter != _bannedContracts.end();) {
+        auto contract = *iter;
+        bool updateQuote = false;
+        if (contract->_banExpiresAt[BID] && now >= contract->_banExpiresAt[BID]) {
+            contract->_banExpiresAt[BID] = 0;
+            updateQuote = true;
+            LOG(0, "AS {C[i1]}. 0 Quoting unbanned.", contract->name())
+        }
+
+        if (contract->_banExpiresAt[ASK] && now >= contract->_banExpiresAt[ASK]) {
+            contract->_banExpiresAt[ASK] = 0;
+            updateQuote = true;
+            LOG(0, "AS {C[i1]}. 1 Quoting unbanned.", contract->name())
+        }
+
+        if (updateQuote) {
+            pushUpdatedContract(contract);
+        }
+
+        if (!contract->_banExpiresAt[BID] & !contract->_banExpiresAt[ASK]) {
+            iter = _bannedContracts.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+
+    for (auto iter = _bannedPaths.begin(); iter != _bannedPaths.end();) {
+        auto path = *iter;
+        if (!path->_banExpiresAt || now >= path->_banExpiresAt) {
+            assert(path->_banExpiresAt);
+            path->_banExpiresAt = path->_otherSidePath->_banExpiresAt = 0;
+            path->_recalc = path->_otherSidePath->_recalc = true;
+            pushUpdatedContract(path->_contract);
+            LOG(0, "AS {C[i1]}. Path {i2}unbanned.", path->_contract->name(), path->_id)
+            iter = _bannedPaths.erase(iter);
+        } else {
+            ++iter;
+        }
     }
 }
 
@@ -381,24 +422,34 @@ void ArbieSpreader::pushUpdatedContract(Contract* contract) {
     _updatedContracts.publish(index);
 }
 
-void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate) {
+void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate, uint64_t banEnd) {
     if (updatedMarket->getSide() == BID) {
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<BID>();
         if (contract.updateBestMarket<BID>(updatedMarket)) {
             if (!delayPathUpdate) {
-                contract.updateAffectedPathsBestMarket<BID>(oldBestPrice);
+                contract.updateAffectedPathsBestMarket<BID>(oldBestPrice, banEnd);
             } else {
                 _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
             }
+        }
+        if (contract._usedInQuoting & banEnd) {
+            contract._banExpiresAt[ASK] = banEnd;
+            _bannedContracts.emplace(&contract);
+            LOG(0, "AS {C[i1]}. ASK Quoting is banned temporarily", contract.name())
         }
     } else {
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<ASK>();
         if (contract.updateBestMarket<ASK>(updatedMarket)) {
             if (!delayPathUpdate) {
-                contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice);
+                contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice, banEnd);
             } else {
                 _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
             }
+        }
+        if (contract._usedInQuoting & banEnd) {
+            contract._banExpiresAt[BID] = banEnd;
+            _bannedContracts.emplace(&contract);
+            LOG(0, "AS {C[i1]}. BID Quoting is banned temporarily", contract.name())
         }
     }
 }
