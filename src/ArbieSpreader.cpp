@@ -378,12 +378,13 @@ void ArbieSpreader::checkBans(uint64_t now) {
 
     for (auto iter = _bannedPaths.begin(); iter != _bannedPaths.end();) {
         auto path = *iter;
-        if (!path->_banExpiresAt || now >= path->_banExpiresAt) {
-            assert(path->_banExpiresAt);
-            path->_banExpiresAt = path->_otherSidePath->_banExpiresAt = 0;
-            path->_recalc = path->_otherSidePath->_recalc = true;
-            pushUpdatedContract(path->_contract);
-            LOG(0, "AS {C[i1]}. Path {i2}unbanned.", path->_contract->name(), path->_id)
+        if (now >= path->_banExpiresAt) {
+            if (!path->_banExpiresAt) {
+                path->_banExpiresAt = path->_otherSidePath->_banExpiresAt = 0;
+                path->_recalc = path->_otherSidePath->_recalc = true;
+                pushUpdatedContract(path->_contract);
+                LOG(0, "AS {C[i1]}. Path {i2} unbanned.", path->_contract->name(), path->_id)
+            }
             iter = _bannedPaths.erase(iter);
         } else {
             ++iter;
@@ -422,12 +423,13 @@ void ArbieSpreader::pushUpdatedContract(Contract* contract) {
     _updatedContracts.publish(index);
 }
 
-void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate, uint64_t banEnd) {
+void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate, uint64_t banEnd,
+                                      Contract* banException) {
     if (updatedMarket->getSide() == BID) {
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<BID>();
         if (contract.updateBestMarket<BID>(updatedMarket)) {
             if (!delayPathUpdate) {
-                contract.updateAffectedPathsBestMarket<BID>(oldBestPrice, banEnd);
+                contract.updateAffectedPathsBestMarket<BID>(oldBestPrice, banEnd, banException);
             } else {
                 _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
             }
@@ -441,7 +443,7 @@ void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket,
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<ASK>();
         if (contract.updateBestMarket<ASK>(updatedMarket)) {
             if (!delayPathUpdate) {
-                contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice, banEnd);
+                contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice, banEnd, banException);
             } else {
                 _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
             }
