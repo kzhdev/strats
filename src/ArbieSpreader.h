@@ -1001,7 +1001,7 @@ inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, P
             auto otherSide = GetOtherSide<Side>();
             auto now = clockUtil::GetCycles();
             auto banExpireTime = now + _contractBanPeriod;
-            contract._banExpiresAt[otherSide] = contract._banExpiresAt[Side] = banExpireTime;
+            contract._banExpiresAt[Side] = banExpireTime;
             contract._banInitiator[Side] = true;
             assert(banExpireTime);
             _bannedContracts.emplace(&contract);
