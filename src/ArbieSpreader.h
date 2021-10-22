@@ -1007,29 +1007,14 @@ inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, P
             _bannedContracts.emplace(&contract);
             LOG(0, "AS {C[i1]}. Initiate temporary bans until {i3}", contract.name(), banExpireTime)
             for (auto* p : contract._affectedPaths[Side]) {
-                int bannedSide = -1;
                 if (p != path) {
                     p->_banExpiresAt = banExpireTime;
                     p->_recalc = false;
                     p->_resort = true;
                     ArbieSpreader::get()->_bannedPaths.emplace(p);
-                } else {
-                    assert(bannedSide == -1);
-                    bannedSide = p->_otherSidePath->_side;
+                    LOG(0, "AS {C[i1]}. Path {i2} Side={i3} banned temporarily until {i4}", p->_contract->name(),
+                        p->_id, p->_side, p->_banExpiresAt)
                 }
-
-                if (p->_otherSidePath != path) {
-                    p->_otherSidePath->_banExpiresAt = banExpireTime;
-                    p->_otherSidePath->_recalc = false;
-                    p->_otherSidePath->_resort = true;
-                    ArbieSpreader::get()->_bannedPaths.emplace(p->_otherSidePath);
-                } else {
-                    assert(bannedSide == -1);
-                    bannedSide = p->_side;
-                }
-
-                LOG(0, "AS {C[i1]}. Path {i2} Side={i3} banned temporarily until {i4}", p->_contract->name(),
-                    p->_id, bannedSide, p->_otherSidePath->_banExpiresAt)
             }
 
             for (auto market : _affected_markets) {
@@ -1195,29 +1180,14 @@ inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t o
 #endif
 
         if (banEnd && path != banException) {
-            int32_t bannedSide = -1;
             if (path != banException) {
                 path->_banExpiresAt = banEnd;
                 path->_recalc = false;
                 path->_resort = true;
                 ArbieSpreader::get()->_bannedPaths.emplace(path);
-            } else {
-                assert(bannedSide == -1);
-                bannedSide = path->_otherSidePath->_side;
+                LOG(0, "AS {C[i1]}. Path {i2} Side={i3} banned temporarily until {i4}", path->_contract->name(),
+                    path->_id, path->_side, path->_banExpiresAt)
             }
-
-            if (path->_otherSidePath != banException) {
-                path->_otherSidePath->_banExpiresAt = banEnd;
-                path->_otherSidePath->_recalc = false;
-                path->_otherSidePath->_resort = true;
-                ArbieSpreader::get()->_bannedPaths.emplace(path->_otherSidePath);
-            } else {
-                assert(bannedSide == -1);
-                bannedSide = path->_side;
-            }
-
-            LOG(0, "AS {C[i1]}. Path {i2} Side={i3} banned temporarily until {i4}", path->_contract->name(),
-                path->_id, bannedSide, path->_banExpiresAt)
         }
     }
 

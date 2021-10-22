@@ -1,3 +1,6 @@
+#Version 1.54.5.0
+- Implemented AS aggressor quote throttler 
+
 #Version 1.54.4.0
 - Fix _lastPriceInPathCalculation tracking might apply to wrong side
 - Disable AS and AS quote external on sweep
