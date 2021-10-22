@@ -356,13 +356,17 @@ void ArbieSpreader::checkBans(uint64_t now) {
         if (contract->_banExpiresAt[BID] && now >= contract->_banExpiresAt[BID]) {
             contract->_banExpiresAt[BID] = 0;
             updateQuote = true;
-            LOG(0, "AS {C[i1]}. 0 Quoting unbanned.", contract->name())
+            LOG(0, "AS {C[i1]}. 0 Quoting unbanned. isInitiator={i2}. {i3}", contract->name(),
+                contract->_banInitiator[BID], now)
+            contract->_banInitiator[BID] = 0;
         }
 
         if (contract->_banExpiresAt[ASK] && now >= contract->_banExpiresAt[ASK]) {
             contract->_banExpiresAt[ASK] = 0;
             updateQuote = true;
-            LOG(0, "AS {C[i1]}. 1 Quoting unbanned.", contract->name())
+            LOG(0, "AS {C[i1]}. 1 Quoting unbanned. isInitiator={i2}. {i3}", contract->name(),
+                contract->_banInitiator[ASK], now)
+            contract->_banInitiator[ASK] = 0;
         }
 
         if (updateQuote) {
@@ -379,11 +383,12 @@ void ArbieSpreader::checkBans(uint64_t now) {
     for (auto iter = _bannedPaths.begin(); iter != _bannedPaths.end();) {
         auto path = *iter;
         if (now >= path->_banExpiresAt) {
-            if (!path->_banExpiresAt) {
-                path->_banExpiresAt = path->_otherSidePath->_banExpiresAt = 0;
-                path->_recalc = path->_otherSidePath->_recalc = true;
+            if (path->_banExpiresAt) {
+                path->_banExpiresAt = 0;
+                path->_recalc = true;
                 pushUpdatedContract(path->_contract);
-                LOG(0, "AS {C[i1]}. Path {i2} unbanned.", path->_contract->name(), path->_id)
+                LOG(0, "AS {C[i1]}. Path {i2} Side={i3} unbanned. {i4}", path->_contract->name(), path->_id,
+                    path->_side, now)
             }
             iter = _bannedPaths.erase(iter);
         } else {
@@ -424,7 +429,7 @@ void ArbieSpreader::pushUpdatedContract(Contract* contract) {
 }
 
 void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate, uint64_t banEnd,
-                                      Contract* banException) {
+                                      Path* banException) {
     if (updatedMarket->getSide() == BID) {
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<BID>();
         if (contract.updateBestMarket<BID>(updatedMarket)) {
@@ -434,10 +439,10 @@ void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket,
                 _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
             }
         }
-        if (contract._usedInQuoting & banEnd) {
+        if (banEnd && contract._usedInQuoting) {
             contract._banExpiresAt[ASK] = banEnd;
             _bannedContracts.emplace(&contract);
-            LOG(0, "AS {C[i1]}. ASK Quoting is banned temporarily", contract.name())
+            LOG(0, "AS {C[i1]}. 1 Quoting banned temporarily until {i2}", contract.name(), banEnd)
         }
     } else {
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<ASK>();
@@ -448,10 +453,10 @@ void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket,
                 _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
             }
         }
-        if (contract._usedInQuoting & banEnd) {
+        if (banEnd && contract._usedInQuoting) {
             contract._banExpiresAt[BID] = banEnd;
             _bannedContracts.emplace(&contract);
-            LOG(0, "AS {C[i1]}. BID Quoting is banned temporarily", contract.name())
+            LOG(0, "AS {C[i1]}. 0 Quoting banned temporarily until {i2}", contract.name(), banEnd)
         }
     }
 }

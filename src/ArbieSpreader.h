@@ -229,6 +229,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         Quote _lastQuoteSent[2];
         uint64_t _banExpiresAt[2] {0, 0};
         hf::batch_id_t _lastMDbid {0};
+        uint64_t _banInitiator[2] {false, false};
         bool _forceUpdate[2] {false, false};
         bool _usedInQuoting = false;
         bool _usedInPath = false;
@@ -374,7 +375,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         }
 
         template<uint32_t Side>
-        inline void updateAffectedPathsBestMarket(hf::price_t oldBestPrice, uint64_t banEnd = 0, Contract* banException = nullptr);
+        inline void updateAffectedPathsBestMarket(hf::price_t oldBestPrice, uint64_t banEnd = 0, Path* banException = nullptr);
     };
 
     static ArbieSpreader* _self;
@@ -384,7 +385,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     RingBufferQueue<Contract*> _updatedContracts;
     std::bitset<1024> _contractUpdatedFlag;
     uint64_t _updatedContractCursor {0};
-    uint64_t _contractBanPeriod {0};;
+    uint64_t _contractBanPeriod {0};
     double _edgeMultiplier = 0.;
     uint32_t _hedgeId {0};
     std::vector<ReadyOrderRequests> _lastOrderRequests;
@@ -527,7 +528,7 @@ private:
     void handleFakDone(uint32_t side, uint32_t internalId, om::strategy_order_id_t::value_type orderId);
     void handleInternalHedgeDone(const InternalHedgeDone& message);
     void handleASInternalMatchingDone(uint32_t contractId, hf::qty_t bidFills, hf::qty_t askFills);
-    void markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate = false, uint64_t banEnd = 0, Contract* banException = nullptr);
+    void markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate = false, uint64_t banEnd = 0, Path* banException = nullptr);
     void handleSTFUpdate(const STFUpdate& msg);
 
     template<uint32_t Side>
@@ -997,23 +998,42 @@ inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, P
                                                            bool quoteExternally) {
     if (quote._externalSize) {
         if (contract.addAggressiveQuoteAdjustment<Side>(path, quote, quoteExternally, _affected_markets)) {
-            contract._banExpiresAt[1 - Side] = path->_banExpiresAt;
+            auto otherSide = GetOtherSide<Side>();
+            auto now = clockUtil::GetCycles();
+            auto banExpireTime = now + _contractBanPeriod;
+            contract._banExpiresAt[otherSide] = contract._banExpiresAt[Side] = banExpireTime;
+            contract._banInitiator[Side] = true;
+            assert(banExpireTime);
             _bannedContracts.emplace(&contract);
-            LOG(0, "AS {C[i1]}. BID Quoting is banned temporarily", contract.name())
-
+            LOG(0, "AS {C[i1]}. Initiate temporary bans until {i3}", contract.name(), banExpireTime)
             for (auto* p : contract._affectedPaths[Side]) {
-                p->_banExpiresAt = path->_banExpiresAt;
-                p->_recalc = false;
-                p->_resort = true;
-                p->_otherSidePath->_banExpiresAt = path->_banExpiresAt;
-                p->_otherSidePath->_recalc = false;
-                p->_otherSidePath->_resort = true;
-                ArbieSpreader::get()->_bannedPaths.emplace(p);
-                LOG(0, "AS {C[i1]}. Path {i2} banned temporarily", p->_contract->name(), p->_id)
+                int bannedSide = -1;
+                if (p != path) {
+                    p->_banExpiresAt = banExpireTime;
+                    p->_recalc = false;
+                    p->_resort = true;
+                    ArbieSpreader::get()->_bannedPaths.emplace(p);
+                } else {
+                    assert(bannedSide == -1);
+                    bannedSide = p->_otherSidePath->_side;
+                }
+
+                if (p->_otherSidePath != path) {
+                    p->_otherSidePath->_banExpiresAt = banExpireTime;
+                    p->_otherSidePath->_recalc = false;
+                    p->_otherSidePath->_resort = true;
+                    ArbieSpreader::get()->_bannedPaths.emplace(p->_otherSidePath);
+                } else {
+                    assert(bannedSide == -1);
+                    bannedSide = p->_side;
+                }
+
+                LOG(0, "AS {C[i1]}. Path {i2} Side={i3} banned temporarily until {i4}", p->_contract->name(),
+                    p->_id, bannedSide, p->_otherSidePath->_banExpiresAt)
             }
 
             for (auto market : _affected_markets) {
-                markContractDirty(_contracts[market->getContractId()], market, false, path->_banExpiresAt, &contract);
+                markContractDirty(_contracts[market->getContractId()], market, false, banExpireTime, path);
             }
             _affected_markets.clear();
         }
@@ -1048,6 +1068,7 @@ inline bool ArbieSpreader::Contract::addAggressiveQuoteAdjustment(Path* path, co
                 auto market = *iter;
                 if (!path->_contractToPathContract[market->getContractId()]) {
                     // contract doesn't need to be banned
+                    LOG(0, "AS {C[i1]}. Path {i2} Side={i3} not banned", path->_contract->name(), path->_id, path->_side)
                     ArbieSpreader::get()->markContractDirty(*this, market);
                     iter = affected_contract.erase(iter);
                 } else {
@@ -1083,7 +1104,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
     bool quoteUpdated = false;
     auto* pBestPath = contract._paths[Side][0];
     auto& quote = contract._quote[Side];
-    if (pBestPath->_priceSize.valid() && !contract._banExpiresAt[Side]) {
+    if (pBestPath->_priceSize.valid() && (!contract._banExpiresAt[Side] || contract._banInitiator[Side])) {
         quote._leanPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, pBestPath->_commission);
         quote._internalPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, -contract._edge);
         quote._internalSize = pBestPath->_priceSize._size;
@@ -1096,7 +1117,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
             quote._externalSize = 0;
         }
 
-        if (isEnabled()) {
+        if (isEnabled() && !contract._banInitiator[Side]) {
             if (!checkMaxTicksThroughMarket<Side>(contract, quote)) {
                 LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed. Disable AS and Disable AS External Quoting. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanPrice={d3} LeanOnRV={i6} OtherSideBestPrice={d4}", contract.name(),
                     Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
@@ -1157,7 +1178,7 @@ inline bool ArbieSpreader::checkMaxTicksThroughMarket(Contract& contract, Contra
 
 template<uint32_t Side>
 inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t oldBestPrice, uint64_t banEnd,
-                                                                   Contract* banException) {
+                                                                   Path* banException) {
     auto newBestPrice = getExtCommissionAdjustedBestPrice<Side>();
     auto delta = newBestPrice - oldBestPrice;
     auto size = getBestMarket<Side>()->getAdjustedSize();
@@ -1173,15 +1194,30 @@ inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t o
         }
 #endif
 
-        if (banEnd && path->_contract != banException) {
-            path->_banExpiresAt = banEnd;
-            path->_recalc = false;
-            path->_resort = true;
-            path->_otherSidePath->_banExpiresAt = banEnd;
-            path->_otherSidePath->_recalc = false;
-            path->_otherSidePath->_resort = true;
-            ArbieSpreader::get()->_bannedPaths.emplace(path);
-            LOG(0, "AS {C[i1]}. Path {i2} banned temporarily", path->_contract->name(), path->_id)
+        if (banEnd && path != banException) {
+            int32_t bannedSide = -1;
+            if (path != banException) {
+                path->_banExpiresAt = banEnd;
+                path->_recalc = false;
+                path->_resort = true;
+                ArbieSpreader::get()->_bannedPaths.emplace(path);
+            } else {
+                assert(bannedSide == -1);
+                bannedSide = path->_otherSidePath->_side;
+            }
+
+            if (path->_otherSidePath != banException) {
+                path->_otherSidePath->_banExpiresAt = banEnd;
+                path->_otherSidePath->_recalc = false;
+                path->_otherSidePath->_resort = true;
+                ArbieSpreader::get()->_bannedPaths.emplace(path->_otherSidePath);
+            } else {
+                assert(bannedSide == -1);
+                bannedSide = path->_side;
+            }
+
+            LOG(0, "AS {C[i1]}. Path {i2} Side={i3} banned temporarily until {i4}", path->_contract->name(),
+                path->_id, bannedSide, path->_banExpiresAt)
         }
     }
 
