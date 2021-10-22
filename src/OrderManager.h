@@ -2074,8 +2074,7 @@ public:
                 return;
             }
             _topLevel = topLevel;
-            auto& gtc = getGTCs(_topLevel->_price);
-            _topLevel->updateOnlyOneLevel(size, gtc, false);
+            _topLevel->updateOnlyOneLevel(size, getGTCs(_topLevel->_price), false);
             _topLevel->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, _topLevel->_price);
 
             Level* level = _topLevel->after;

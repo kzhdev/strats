@@ -691,15 +691,15 @@ inline void LimitBook<Backtester>::submitOrder(const om::pr::SendOmsOrderNewEven
 
 template<typename Backtester>
 inline void LimitBook<Backtester>::modifyOrder(const om::pr::SendOmsOrderModifyEvent& event) {
-    auto iter = _limit_order_map.find(event.orderSnapshot.exchangeOrderId.value());
+    auto iter = _limit_order_map.find(event.orderSnapshot.exchange_order_id_.value());
     if (iter == _limit_order_map.end()) {
         Backtester::get()->template pushEvent<om::OMOrderModifyRejectedEvent>(
                 ViperMessageType::OM_OrderModifyRejected,
                 [&event](ViperMessage& viperMsg, om::OMOrderModifyRejectedEvent& rejectEvent) {
                     //TODO:
                     viperMsg._timestamp = rhone::util::getTimeStamp().time_since_epoch().count();
-                    viperMsg._venue = event.orderSnapshot.venue;
-                    switch(event.orderSnapshot.venue) {
+                    viperMsg._venue = event.orderSnapshot.venue_;
+                    switch(event.orderSnapshot.venue_) {
                         case hf::VENUE::ICE:
                             rejectEvent.reasonCodeExt = ice_rejects::TOO_LATE_TO_CANCEL;
                             break;
@@ -724,7 +724,7 @@ inline void LimitBook<Backtester>::modifyOrder(const om::pr::SendOmsOrderModifyE
             [&event](ViperMessage& viperMsg, om::OMOrderModifiedEvent& modifyEvent) {
                 // TODO:
                 viperMsg._timestamp = rhone::util::getTimeStamp().time_since_epoch().count();
-                viperMsg._venue = event.orderSnapshot.venue;
+                viperMsg._venue = event.orderSnapshot.venue_;
                 modifyEvent.strat_oid = event.strat_oid;
                 memcpy(&modifyEvent.orderSnapshot, &event.orderSnapshot, sizeof(event.orderSnapshot));
             });
@@ -746,15 +746,15 @@ inline void LimitBook<Backtester>::modifyOrder(const om::pr::SendOmsOrderModifyE
 
 template<typename Backtester>
 inline void LimitBook<Backtester>::cancelOrder(const om::pr::SendOmsOrderCancelEvent& event) {
-    auto iter = _limit_order_map.find(event.orderSnapshot.exchangeOrderId.value());
+    auto iter = _limit_order_map.find(event.orderSnapshot.exchange_order_id_.value());
     if (iter == _limit_order_map.end()) {
         Backtester::get()->template pushEvent<om::OMOrderModifyRejectedEvent>(
                 ViperMessageType::OM_OrderModifyRejected,
                 [&event](ViperMessage& viperMsg, om::OMOrderModifyRejectedEvent& rejectEvent) {
                     // TODO:
                     viperMsg._timestamp = rhone::util::getTimeStamp().time_since_epoch().count();
-                    viperMsg._venue = event.orderSnapshot.venue;
-                    switch(event.orderSnapshot.venue) {
+                    viperMsg._venue = event.orderSnapshot.venue_;
+                    switch(event.orderSnapshot.venue_) {
                         case hf::VENUE::ICE:
                             rejectEvent.reasonCodeExt = ice_rejects::TOO_LATE_TO_CANCEL;
                             break;
@@ -786,7 +786,7 @@ inline void LimitBook<Backtester>::cancelOrder(const om::pr::SendOmsOrderCancelE
             [&event](ViperMessage& viperMsg, om::OMOrderCanceledEvent& cancelEvent) {
                 //TODO:
                 viperMsg._timestamp = rhone::util::getTimeStamp().time_since_epoch().count();
-                viperMsg._venue = event.orderSnapshot.venue;
+                viperMsg._venue = event.orderSnapshot.venue_;
                 memcpy(&cancelEvent.orderSnapshot, &event.orderSnapshot, sizeof(event.orderSnapshot));
             });
 }
@@ -851,7 +851,7 @@ inline void LimitBook<Backtester>::onMDUpdate(const md::MDUpdateEvent& event, hf
                 ViperMessageType::MD_UpdateToStrategy,
                 [this, venue, &askUpdateIndices, &bidUpdateIndices](ViperMessage& viperMsg, md::MDUpdateEvent& event) {
                     //TODO:
-                    viperMsg._timestamp = hf::util::TimeUtils::clock_gettime();
+                    viperMsg._timestamp = rhone::util::getTimeStamp().time_since_epoch().count();
                     viperMsg._venue = venue;
                     if (askUpdateIndices.second) {
                         memcpy(&event.sell.top, &_lastUpdate[ASK], sizeof(md::top_t));
