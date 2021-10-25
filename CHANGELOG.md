@@ -1,3 +1,7 @@
+#Version 1.54.3.1
+- Prevent OrderManager onMDUpdate infinite loop
+- If any component is not responsive, turn on Trace level logging, wait for 10 seconds before killing viper
+
 #Version 1.54.3.0
 - Fix overfill allocation. If MM is not enabled or quote externally, the overfill will be sent to the strategy with
   the best external price.
