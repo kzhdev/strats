@@ -873,17 +873,18 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
     auto pathContract = _contractToPathContract[contract->_def._internalId];
     assert(pathContract);
     auto delta = (pathContract->_multiplier * priceDelta);
-    TLOG(0, "AS {C[i1]}. {i2} Path {i3} Side={i4} {i5}@{i6} Apply delta {i7} _sizeDetermineContract={i8}", _contract->name(),
-         Side, _id, _side, _priceSize._size, _priceSize._price, delta, (_sizeDetermineContract ? _sizeDetermineContract->_def._internalId : -1))
+    TLOG(0, "AS {C[i1]}. {i2} Path {i3} Market {C[i4]} Side={i5} Apply delta {i6}. {i7}@{i8} _sizeDetermineContract={i9}", _contract->name(),
+         _side, _id, contract->name(), Side, delta, _priceSize._size, _priceSize._price,
+         (_sizeDetermineContract ? _sizeDetermineContract->_def._internalId : -1))
     _priceSize._price += delta;
-    _dirty = priceDelta;
+    _dirty |= priceDelta;
     if (IsBetterPrice<Side>(newPrice, oldPrice)) {
         // If best path price getting better, we don't need to re-sort
-        _resort = (this != _contract->_paths[_side][0]);
+        _resort |= (this != _contract->_paths[_side][0]);
     } else {
         // If best path price getting worse, we need to re-sort.
         // If other path price getting worse, we don't need to re-sort
-        _resort = (this == _contract->_paths[_side][0]) && priceDelta;
+        _resort |= (this == _contract->_paths[_side][0]) && priceDelta;
     }
 
     if (size == 0) {
@@ -911,7 +912,6 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         _resort = true;
     } else if ((size > _priceSize._size) && (_priceSize._size < _contract->_quoteSize) &&
                (!_sizeDetermineContract || contract == _sizeDetermineContract)) {
-        TLOG(0, "AS {C[i1]}. Recalculate quote size", _contract->name())
         _priceSize._size = std::min<hf::qty_t>(size, _contract->_quoteSize);
         for (auto& pathContract : _leanContracts) {
             auto sz = pathContract.bestMarket()->getAdjustedSize();
