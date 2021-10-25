@@ -208,6 +208,22 @@ public:
             isBad |= checkInternalHeartbeat(i, now_in_cycles);
         }
         if (isBad) {
+            logging::loggingLevel() = logging::LOG_LEVEL::TRACE;
+            if (_executor->_contractInProcess) {
+                logging::GetLogger().logInfo(boost::str(boost::format("%1% ASK: ")
+                    % _executor->_contractInProcess->_contract._name));
+                for (auto& l : _executor->_contractInProcess->_books[ASK].l) {
+                    logging::GetLogger().logInfo(boost::str(boost::format("    - %1%@%2% implied_qty=%3%")
+                        % l.q % ToDollars(l.pr) % l.ext.implied.impliedQtyNotTrackedByQueuePosition));
+                }
+                logging::GetLogger().logInfo(boost::str(boost::format("%1% BID: ")
+                    % _executor->_contractInProcess->_contract._name));
+                for (auto& l : _executor->_contractInProcess->_books[ASK].l) {
+                    logging::GetLogger().logInfo(boost::str(boost::format("    - %1%@%2% implied_qty=%3%")
+                        % l.q % ToDollars(l.pr) % l.ext.implied.impliedQtyNotTrackedByQueuePosition));
+                }
+            }
+            sleep(10);
             killProcess();
         }
     }

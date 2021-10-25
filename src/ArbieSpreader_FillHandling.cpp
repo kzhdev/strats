@@ -80,8 +80,8 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
             contract._forceUpdate[fill._side] = true;
             pushUpdatedContract(&contract);
 
-            LOG(0, "AS {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3} Source={i4}", contract.name(),
-                fill._side, ToDollars(fill._price), fill._qty, toUInt(fill._source))
+            LOG(0, "AS {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3} Source={i4} Type={i5}", contract.name(),
+                fill._side, ToDollars(fill._price), fill._qty, toUInt(fill._source), toUInt(fill._type))
 
             auto sendFillToFront = [this, &fill, &contract]() {
                 sendMessageToFront<FillMessage>(

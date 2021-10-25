@@ -3,6 +3,10 @@
 - Disable AS and AS quote external on sweep
 - [rhonepubic] Handle FAK partial fill
 
+#Version 1.54.3.1
+- Prevent OrderManager onMDUpdate infinite loop
+- If any component is not responsive, turn on Trace level logging, wait for 10 seconds before killing viper
+
 #Version 1.53.2.0
 - Reset potentialOverFill when order modify rejected due to fill
 

@@ -3017,24 +3017,10 @@ public:
     }
 
     template<uint32_t Side>
-    void onMDUpdate(md::top_t& book, int8_t priceChangeIndex, int8_t qtyChangeIndex, bool log) {
+    void onMDUpdate(md::top_t& book, int8_t priceChangeIndex, int8_t qtyChangeIndex) {
         if (_topLevel == nullptr) {
             // levels have not been created yet
             return;
-        }
-
-        if (BOOST_UNLIKELY(log)) {
-            LOG(0, "OM {C[i1]}. onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4} TOB={d1} preTOb={d2} preBob={d3}", getContractName(),
-                Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex, ToDollars(book.l[0].pr), ToDollars(_preTob),
-                ToDollars(_preBob))
-
-            for (auto i = 0; i < md::top_t::LEVEL_NUM; ++i) {
-                if (book.l[i].pr == hf::NULL_PRICE) {
-                    break;
-                }
-                LOG(0, "{i1}@{d1} implied_qty={i2}", book.l[i].q, ToDollars(book.l[i].pr),
-                    book.l[i].ext.implied.impliedQtyNotTrackedByQueuePosition);
-            }
         }
 
         hf::price_t newBottom = hf::NULL_PRICE;
@@ -3044,10 +3030,6 @@ public:
                 level = GetPriorPrice<Side>(book.l[priceChangeIndex - 1].pr, _contract._tickSize);
             } else {
                 level = book.l[priceChangeIndex].pr;
-            }
-
-            if (BOOST_UNLIKELY(log)) {
-                LOG(0, "OM {C[i1]}. find new Bottom", getContractName())
             }
 
             for (uint8_t i = priceChangeIndex; i < md::top_t::LEVEL_NUM; ++i) {
@@ -3060,42 +3042,38 @@ public:
                     break;
                 }
 
-                if (BOOST_UNLIKELY(log)) {
-                    LOG(0, "OM {C[i1]}. Clean gap", getContractName())
-                }
-
                 // There might be a gap between 2 book levels, clear the qty of our levels in the gap
                 while (IsBetterPrice<Side>(level, l.pr)) {
-                    onMDUpdate<Side>(level, 0);
+                    if (BOOST_UNLIKELY((!onMDUpdate<Side, 1>(level, 0)))) {
+                        LOG(0, "OM {C[i1]}. Abort onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4} TOB={d1} preTOb={d2} preBob={d3}", getContractName(),
+                            Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex, ToDollars(book.l[0].pr), ToDollars(_preTob),
+                            ToDollars(_preBob))
+                        return;
+                    }
                     level = GetPriorPrice<Side>(level, _contract._tickSize);
-                }
-
-                if (BOOST_UNLIKELY(log)) {
-                    LOG(0, "OM {C[i1]}. Clean gap done", getContractName())
                 }
 
                 assert(_contract._venue == hf::VENUE::CME || _contract._venue == hf::VENUE::ICE ||
                        l.ext.implied.impliedQtyNotTrackedByQueuePosition == 0);
-                onMDUpdate<Side>(l.pr, l.q - l.ext.implied.impliedQtyNotTrackedByQueuePosition);
+                if (BOOST_UNLIKELY((!onMDUpdate<Side, 2>(l.pr, l.q - l.ext.implied.impliedQtyNotTrackedByQueuePosition)))) {
+                    return;
+                }
                 newBottom = l.pr;
                 level = GetPriorPrice<Side>(l.pr, _contract._tickSize);
             }
         } else if (qtyChangeIndex >= 0 && qtyChangeIndex < md::top_t::LEVEL_NUM) {
-            if (BOOST_UNLIKELY(log)) {
-                LOG(0, "OM {C[i1]}. priceChangeIndex < 0. update level {i2}", getContractName(), qtyChangeIndex)
-            }
-
             // only 1 level changed
             auto& l = book.l[qtyChangeIndex];
             if (l.pr != hf::NULL_PRICE && l.q > 0) {
                 newBottom = l.pr;
                 assert(_contract._venue == hf::VENUE::CME || _contract._venue == hf::VENUE::ICE ||
                        l.ext.implied.impliedQtyNotTrackedByQueuePosition == 0);
-                onMDUpdate<Side>(l.pr, l.q - l.ext.implied.impliedQtyNotTrackedByQueuePosition);
-            }
-
-            if (BOOST_UNLIKELY(log)) {
-                LOG(0, "OM {C[i1]}. priceChangeIndex < 0. find new bottom", getContractName())
+                if (BOOST_UNLIKELY((!onMDUpdate<Side, 3>(l.pr, l.q - l.ext.implied.impliedQtyNotTrackedByQueuePosition)))) {
+                    LOG(0, "OM {C[i1]}. Abort onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4} TOB={d1} preTOb={d2} preBob={d3}", getContractName(),
+                        Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex, ToDollars(book.l[0].pr), ToDollars(_preTob),
+                        ToDollars(_preBob))
+                    return;
+                }
             }
 
             for (auto i = qtyChangeIndex + 1; i < md::top_t::LEVEL_NUM; ++i) {
@@ -3106,13 +3084,9 @@ public:
                 newBottom = book.l[i].pr;
             }
         } else {
-            LOG(0, "OM {C[i1]}. Invalid change index. Side={i2} priceChangeIndex={i3} qtyChangeIndex={i4}", getContractName(),
+            WLOG(0, "OM {C[i1]}. Invalid change index. Side={i2} priceChangeIndex={i3} qtyChangeIndex={i4}", getContractName(),
                 Side, priceChangeIndex, qtyChangeIndex)
             return;
-        }
-
-        if (BOOST_UNLIKELY(log)) {
-            LOG(0, "OM {C[i1]}. newBottom={d1}", getContractName(), ToDollars(newBottom))
         }
 
         hf::price_t newBestPrice = book.l[0].pr;
@@ -3124,78 +3098,101 @@ public:
                     if (IsBetterPrice<Side>(_topLevel->_price, price)) {
                         price = _topLevel->_price;
                         while (IsPriceBetterOrEqual<Side>(price, _preTob)) {
-                            onMDUpdate<Side>(price, 0);
+                            if (BOOST_UNLIKELY((!onMDUpdate<Side, 4>(price, 0)))) {
+                                LOG(0, "OM {C[i1]}. Abort onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4} TOB={d1} preTOb={d2} preBob={d3} newBestPrice={d4} newBottom={d5}", getContractName(),
+                                    Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex, ToDollars(book.l[0].pr), ToDollars(_preTob),
+                                    ToDollars(_preBob), ToDollars(newBestPrice), ToDollars(newBottom))
+                                return;
+                            }
                             price = GetPriorPrice<Side>(price, _contract._tickSize);
                         }
                     } else {
                         while (IsPriceBetterOrEqual<Side>(price, _topLevel->_price)) {
-                            onMDUpdate<Side>(price, 0);
+                            if (BOOST_UNLIKELY((!onMDUpdate<Side, 5>(price, 0)))) {
+                                LOG(0, "OM {C[i1]}. Abort onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4} TOB={d1} preTOb={d2} preBob={d3} newBestPrice={d4} newBottom={d5}", getContractName(),
+                                    Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex, ToDollars(book.l[0].pr), ToDollars(_preTob),
+                                    ToDollars(_preBob), ToDollars(newBestPrice), ToDollars(newBottom))
+                                return;
+                            }
                             price = GetPriorPrice<Side>(price, _contract._tickSize);
                         }
                     }
                 }
 
                 while (_bottomLevel && IsPriceBetterOrEqual<Side>(price, _bottomLevel->_price)) {
-                    onMDUpdate<Side>(price, 0);
+                    if (BOOST_UNLIKELY((!onMDUpdate<Side, 6>(price, 0)))) {
+                        LOG(0, "OM {C[i1]}. Abort onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4} TOB={d1} preTOb={d2} preBob={d3} newBestPrice={d4} newBottom={d5}", getContractName(),
+                            Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex, ToDollars(book.l[0].pr), ToDollars(_preTob),
+                            ToDollars(_preBob), ToDollars(newBestPrice), ToDollars(newBottom))
+                        return;
+                    }
                     price = GetPriorPrice<Side>(price, _contract._tickSize);
                 }
                 while (_preBob != hf::NULL_PRICE && IsPriceBetterOrEqual<Side>(price, _preBob)) {
-                    onMDUpdate<Side>(price, 0);
+                    if (BOOST_UNLIKELY((!onMDUpdate<Side, 7>(price, 0)))) {
+                        LOG(0, "OM {C[i1]}. Abort onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4} TOB={d1} preTOb={d2} preBob={d3} newBestPrice={d4} newBottom={d5}", getContractName(),
+                            Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex, ToDollars(book.l[0].pr), ToDollars(_preTob),
+                            ToDollars(_preBob), ToDollars(newBestPrice), ToDollars(newBottom))
+                        return;
+                    }
                     price = GetPriorPrice<Side>(price, _contract._tickSize);
                 }
             }
         }
         else {
-            if (BOOST_UNLIKELY(log)) {
-                LOG(0, "OM {C[i1]}. _preTob={i1} _preBob={i2} newBestPrice={i3} newBottom={i4}. Clean top", getContractName(),
-                    _preTob, _preBob, newBestPrice, newBottom);
-            }
             if (_preTob != hf::NULL_PRICE) {
                 hf::price_t price = _preTob;
                 while (IsBetterPrice<Side>(price, newBestPrice)) {
                     // price moved away, reset market data on level between previous best and current best
-                    onMDUpdate<Side>(price, 0);
+                    if (BOOST_UNLIKELY((!onMDUpdate<Side, 8>(price, 0)))) {
+                        LOG(0, "OM {C[i1]}. Abort onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4} TOB={d1} preTOb={d2} preBob={d3} newBestPrice={d4} newBottom={d5}", getContractName(),
+                            Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex, ToDollars(book.l[0].pr), ToDollars(_preTob),
+                            ToDollars(_preBob), ToDollars(newBestPrice), ToDollars(newBottom))
+                        return;
+                    }
                     price = GetPriorPrice<Side>(price, _contract._tickSize);
                 }
             }
 
-            if (BOOST_UNLIKELY(log)) {
-                LOG(0, "OM {C[i1]}. clean bottom", getContractName());
-            }
             if (_preBob != hf::NULL_PRICE && newBottom != hf::NULL_PRICE) {
                 hf::price_t price = GetPriorPrice<Side>(newBottom, _contract._tickSize);
                 while (IsPriceBetterOrEqual<Side>(price, _preBob)) {
                     // price improved. reset market qty after the bottom level
-                    onMDUpdate<Side>(price, 0);
+                    if (BOOST_UNLIKELY((!onMDUpdate<Side, 9>(price, 0)))) {
+                        LOG(0, "OM {C[i1]}. Abort onMDUpdate side={i2} priceChangeIndex={i3} qtyChangeIndex={i4} TOB={d1} preTOb={d2} preBob={d3} newBestPrice={d4} newBottom={d5}", getContractName(),
+                            Side, (int32_t)priceChangeIndex, (int32_t)qtyChangeIndex, ToDollars(book.l[0].pr), ToDollars(_preTob),
+                            ToDollars(_preBob), ToDollars(newBestPrice), ToDollars(newBottom))
+                        return;
+                    }
                     price = GetPriorPrice<Side>(price, _contract._tickSize);
                 }
             }
         }
         _preTob = newBestPrice;
         _preBob = newBottom;
-        if (BOOST_UNLIKELY(log)) {
-            LOG(0, "OM {C[i1]}. onMDUpdate done", getContractName())
-        }
     }
 
-    template<uint32_t Side>
-    void onMDUpdate(hf::price_t price, hf::qty_t qty) {
+    template<uint32_t Side, uint64_t Source>
+    bool onMDUpdate(hf::price_t price, hf::qty_t qty) {
         Level* level = findLevel<Side>(price);
         if (!level) {
-            return;
+            LOG(0, "OM {C[i1]}. onMDUpdate Level {d1} not found Source={i2}", getContractName(), ToDollars(price), Source)
+            handleInvalidTickSize(price);
+            return false;
         }
 
-        TLOG(0, "* OM MDUpdate {C[i1]} {i2}@{d1}", getContractName(), qty, ToDollars(price))
+        TLOG(0, "* OM MDUpdate {C[i1]} {i2}@{d1} Source={i3}", getContractName(), qty, ToDollars(price), Source)
         level->_marketQty = qty;
 
         if (!_enableQuoteSprayer || !_bottomLevel || IsBetterPrice<Side>(price, _topLevel->_price) || IsBetterPrice<Side>(_bottomLevel->_price, price)) {
             // There is no stack yet or price is outside stack or no qty change
-            return;
+            return true;
         }
 
         if (_ime->canExecute()) {
             level->synchronizeOrders();
         }
+        return true;
     }
 
     template<uint32_t Side>
