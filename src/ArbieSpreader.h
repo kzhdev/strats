@@ -1111,9 +1111,6 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
 
         if (isEnabled() && !contract._banInitiator[Side]) {
             if (!checkMaxTicksThroughMarket<Side>(contract, quote)) {
-                disable();
-                handleDisabled();
-                disableQuoteExternal();
                 LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed. Disable AS and Disable AS External Quoting. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanPrice={d3} LeanOnRV={i6} OtherSideBestPrice={d4}", contract.name(),
                     Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
                     ToDollars(quote._externalPrice), quote._hedgePath, ToDollars(quote._leanPrice), pBestPath->_leanOnRV,
@@ -1122,6 +1119,9 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
                 sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=AS MaxTicksThroughMarketCheckFailed. OffendingContract=%1% Side=%2% calculatedQuote=%3% otherSideBest=%4%")
                     % contract._def._name % Side % ToDollars(quote._externalPrice)
                     % ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice())), ErrorType::Critical);
+                disable();
+                handleDisabled();
+                disableQuoteExternal();
                 return false;
             }
 

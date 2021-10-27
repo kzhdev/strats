@@ -1,5 +1,6 @@
 #Version 1.54.5.0
-- Implemented AS aggressor quote throttler 
+- Implemented AS aggressor quote throttler
+- Fix overfill allocation. If MM disabled or can't quote externally, overfill will send to the strategy with best order
 
 #Version 1.54.4.0
 - Fix _lastPriceInPathCalculation tracking might apply to wrong side
