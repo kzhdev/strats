@@ -1426,7 +1426,7 @@ public:
             if ((!mm->isEnabled() || !mm->canQuoteExternally() || !mm->isContractQuoteExternal(_internalId)) &&
                 (bestStrategy != StrategyId::MAX)) {
                 LOG(0, "IME {C[i1]}. MM cannot quote externally. Send overfill to strategy {i2}. Side={i3} Price={d1} Size={i4}", getContractName(), toUInt(bestStrategy), side, ToDollars(filledPrice), filledSize)
-                _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+                _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, bestStrategy, FillType::External, FillSource::Overfill);
                 return;
             }
             LOG(0, "IME {C[i1]}. Send overfill to MM. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
