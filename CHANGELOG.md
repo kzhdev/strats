@@ -1,3 +1,8 @@
+#Version 1.54.5.1
+- Fix AS didn't resort paths in fill handling after best market changed
+- Check MaxTicksThoughMarket during AS hedging
+- Fix extCommission parameter update
+
 #Version 1.54.5.0
 - Implemented AS aggressor quote throttler
 - Fix overfill allocation. If MM disabled or can't quote externally, overfill will send to the strategy with best order

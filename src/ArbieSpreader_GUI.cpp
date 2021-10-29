@@ -283,10 +283,10 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                 Contract& contract = _contracts[gridCell.row()];
                 auto value = ToRhonePrice(boost::lexical_cast<double>(gridCell.value()));
                 LOG(0, "AS {C[i1]}. External Commission changed. {d1}->{d2}", contract.name(),
-                    ToDollars(contract._extCommission), value)
+                    ToDollars(contract._extCommission), ToDollars(value))
 
                 if (contract._extCommission != value) {
-                    contract._extCommission = ToRhonePrice(value);
+                    contract._extCommission = value;
                     for (auto& pathsBySide : contract._affectedPaths) {
                         for (auto* path : pathsBySide) {
                             path->_recalc = true;

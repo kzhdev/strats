@@ -31,18 +31,3 @@ void ArbieSpreader::Path::log() const noexcept {
             market->getAdjustedSize(), ToDollars(market->getPrice()), ToDollars(pathContract._contract->_extCommission))
     }
 }
-
-bool ArbieSpreader::Path::canHedge(hf::qty_t size) const noexcept {
-    for (const auto& pathContract : _leanContracts) {
-        auto market = pathContract.bestMarket();
-        auto side = market->getSide();
-        auto price = market->getPrice();
-        if (price == hf::NULL_PRICE || market->getId() == MarketIds::__end__ ||
-            pathContract._lastPriceInPathCalculation == hf::NULL_PRICE ||
-            IsBetter(pathContract._lastPriceInPathCalculation, price, side) ||
-            market->getAdjustedSize() < size) {
-            return false;
-        }
-    }
-    return true;
-}
