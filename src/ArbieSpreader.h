@@ -622,6 +622,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::price_t fillPrice
                                         % ToDollars(hedgePath->_priceSize._price)), ErrorType::Critical);
             disable();
             handleDisabled();
+            ADD_PERF_POINT_END(PerfId::AS_UpdateHedge);
             return false;
         }
 
