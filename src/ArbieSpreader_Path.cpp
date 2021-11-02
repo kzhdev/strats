@@ -31,3 +31,4 @@ void ArbieSpreader::Path::log() const noexcept {
             market->getAdjustedSize(), ToDollars(market->getPrice()), ToDollars(pathContract._contract->_extCommission))
     }
 }
+
