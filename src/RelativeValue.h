@@ -1527,7 +1527,6 @@ public:
     }
 
     void onEndMDBatch(hf::batch_id_t bid) {
-        _hadExternalMarketData = true;
         for (uint32_t contractId : _mdUpdated) {
             auto& rvContract = _contracts[contractId];
             rvContract._lastMDbid = bid;
@@ -1766,6 +1765,8 @@ public:
             ask.update(askPrice, askSize);
         }
         if (bidChanged | askChanged) {
+            _hadExternalMarketData = true;
+
             _updatedContracts.emplace(internalId);
             if (contract._usedInPricing) {
                 const bool missingBook = (contract.externalMarket<BID>().getPrice() == hf::NULL_PRICE) | (contract.externalMarket<ASK>().getPrice() == hf::NULL_PRICE);
