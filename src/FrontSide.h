@@ -78,6 +78,20 @@ public:
             throw std::runtime_error("Logging configuration for frontside invalid");
         }
 
+        if (!config.exists("traders")) {
+            throw std::runtime_error("Missing traders config in FrontSide");
+        }
+        const auto& tradersConfig = config["traders"];
+
+        if (tradersConfig.getLength() == 0) {
+            throw std::runtime_error("Traders config is empty in FrontSide");
+        }
+
+        for (int i = 0; i < tradersConfig.getLength(); ++i) {
+            const libconfig::Setting& traderConfig = tradersConfig[i];
+            _viperConfig._traders.emplace_back(hf::ConfigManager::getString(traderConfig, "name"));
+        }
+
         _viperConfig._iceCancelResting = hf::ConfigManager::getBool(config, "ice_cancel_resting", true);
         _viperConfig._allowGTCs = hf::ConfigManager::getBool(config, "allowGTCs", false);
         _viperConfig._allowStatusGrid = hf::ConfigManager::getBool(config, "allowStatusGrid", false);

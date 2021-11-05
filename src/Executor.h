@@ -3460,8 +3460,9 @@ public:
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
             if (columnType == TraderSwitchColumns::Trader) {
-                Traders trader = static_cast<Traders>(atoi(gridCell.value().c_str()));
-                std::string traderName = GetTraderName(trader);
+                uint32_t trader = atoi(gridCell.value().c_str());
+                assert(trader >= 0 && trader < _viperConfig._traders.size());
+                std::string traderName = _viperConfig._traders[trader];
                 this->context().swapTrader(traderName, "");
                 _viperConfig._currentTrader = trader;
             } else if (columnType == TraderSwitchColumns::Shift) {

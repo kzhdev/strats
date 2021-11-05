@@ -1336,6 +1336,17 @@ struct ViperConfig {
         return parseBody(input, setter);
     }
 
+    bool loadTraders(std::ifstream& input) {
+        logging::GetLogger().logInfo("Loading Traders Config");
+        bool good = parseHeader(input, _relativeValueHeader, RV_CONFIGS);
+
+        if (!good) {
+            return false;
+        }
+
+        return parseVectorConfigValues(input);
+    }
+
     COLD
     bool parseHeader(std::ifstream& input, const std::vector<std::string>& expectedColumns, const std::string& expectedType, bool checkColumns = true) {
         std::string line;
@@ -2483,7 +2494,8 @@ struct ViperConfig {
     //Slow-path data structures
     std::unordered_map<std::string, int> _unallocatedPositionsFromFile[toUInt(StrategyId::MAX)];
 
-    Traders _currentTrader = Traders::Steven;
+    std::vector<std::string> _traders;
+    size_t _currentTrader = 0;
     Shifts _currentShift = Shifts::US;
 };
 

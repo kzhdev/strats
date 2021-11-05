@@ -165,7 +165,6 @@ enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ASOpen, ASClose
 enum class GlobalConfigsColumns {Value, Asia, Europe, US, Release};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
 enum class TraderSwitchColumns {Trader, Shift};
-enum class Traders {Steven, Mark};
 enum class Shifts {Asia, Europe, US, SafeMode, __current_marker__};
 enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
 enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
@@ -1289,17 +1288,6 @@ inline std::string GetGatewayRejectCodeString(uint32_t code) {
             return "MaxOrderQuantity";
         default:
             return "";
-    }
-}
-
-inline std::string GetTraderName(Traders trader) {
-    switch (trader) {
-        case Traders::Mark:
-            return "Mark";
-        case Traders::Steven:
-            return "Steven";
-        default:
-            throw std::runtime_error("unknown trader");
     }
 }
 

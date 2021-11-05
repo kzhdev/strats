@@ -391,14 +391,14 @@ public:
         ++_errorMessageNumber;
     }
 
-    void populateAuditMessage(uint32_t gridId, proto::GridUpdate& message, GridUpdate& update, Traders trader) {
+    void populateAuditMessage(uint32_t gridId, proto::GridUpdate& message, GridUpdate& update, uint32_t trader) {
         message.set_gridid(toUInt(WindowIds::Audit));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(TimeUtils::clock_gettime()));
-            setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(toUInt(trader)));
+            setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(trader));
             setCell(cells, _auditMessageNumber, AuditColumns::Grid, std::to_string(toUInt(gridId)));
             setCell(cells, _auditMessageNumber, AuditColumns::Row, getRowLabel(gridId, gridCell.row()));
             setCell(cells, _auditMessageNumber, AuditColumns::Column, getColumnLabel(gridId, gridCell.col()));
@@ -408,12 +408,12 @@ public:
         }
     }
 
-    void populateManualFilAuditMessage(proto::GridUpdate& message, uint32_t contractId, hf::qty_t size, Traders trader, StrategyId strategy) {
+    void populateManualFilAuditMessage(proto::GridUpdate& message, uint32_t contractId, hf::qty_t size, uint32_t trader, StrategyId strategy) {
         message.set_gridid(toUInt(WindowIds::Audit));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(TimeUtils::clock_gettime()));
-        setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(toUInt(trader)));
+        setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(trader));
         setCell(cells, _auditMessageNumber, AuditColumns::Grid, std::to_string(toUInt(WindowIds::ManualFillsEntry)));
         std::string value = createManualFillString(contractId, size, strategy);
         setCell(cells, _auditMessageNumber, AuditColumns::NewValue, value);
@@ -421,7 +421,7 @@ public:
     }
     
     std::string createManualFillString(uint32_t contractId, hf::qty_t size, StrategyId strategy) {
-        std::string fillType = strategy == StrategyId::MarketMaker ? "MM" : "RV";
+        std::string fillType = toString(strategy);
         auto& contract = _config->_allContracts[contractId];
         std::string value;
         value.append(contract._name).append(": ").append(std::to_string(size)).append(": ").append(fillType);
@@ -830,8 +830,10 @@ public:
     void addTradersEnum(proto::EnumDefinition* definition) {
         definition->set_name("traders");
         auto members = definition->mutable_members();
-        addEnumMember(members, "Steven", toUInt(Traders::Steven));
-        addEnumMember(members, "Mark", toUInt(Traders::Mark));
+        for (size_t i = 0; i < _config->_traders.size(); ++i) {
+            auto& trader = _config->_traders[i];
+            addEnumMember(members, trader, i);
+        }
     }
 
     void addShiftsEnum(proto::EnumDefinition* definition) {
@@ -1002,7 +1004,7 @@ public:
         addRowHeaderCell(WindowIds::TraderSwitch, rowHeader, 0, "Trader/Shift: ");
 
         auto cells = definition->mutable_cells();
-        setCell(cells, 0, TraderSwitchColumns::Trader, std::to_string(toUInt(Traders::Steven)));
+        setCell(cells, 0, TraderSwitchColumns::Trader, std::to_string(_config->_currentTrader));
         setCell(cells, 0, TraderSwitchColumns::Shift, std::to_string(toUInt(Shifts::US)));
 
         addSubmitButton(definition);
@@ -1544,8 +1546,9 @@ public:
     std::string getNewValue(uint32_t gridId, uint32_t column, const std::string& value) {
         if (gridId == toUInt(WindowIds::TraderSwitch)) {
             if (column == toUInt(TraderSwitchColumns::Trader)) {
-                Traders trader = static_cast<Traders>(atoi(value.c_str()));
-                return GetTraderName(trader);
+                uint32_t trader = atoi(value.c_str());
+                assert(trader >= 0 && trader < _config->_traders.size());
+                return _config->_traders[trader];
             } else if (column == toUInt(TraderSwitchColumns::Shift)) {
                 return to_string(static_cast<Shifts>(atoi(value.c_str())));
             }
