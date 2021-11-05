@@ -2,6 +2,7 @@
 - Fix AS didn't resort paths in fill handling after best market changed
 - Check MaxTicksThoughMarket during AS hedging
 - Fix extCommission parameter update
+- Added Traders config in Front-Side
 
 #Version 1.54.5.0
 - Implemented AS aggressor quote throttler
