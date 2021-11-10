@@ -1,3 +1,6 @@
+#Version 1.54.6.1
+- Switch to the correct trader after GUI logging in.
+
 #Version 1.54.6.0
 - Fix AS didn't resort paths in fill handling after best market changed
 - Check MaxTicksThoughMarket during AS hedging

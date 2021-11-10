@@ -1754,7 +1754,7 @@ public:
 
                 // set shift dependent values correctly
                 auto shift = toUInt(_viperConfig._currentShift);
-                sendGenericMessageToExecutor(ViperMessageType::ShiftUpdate, shift);
+                sendGenericMessageToExecutor(ViperMessageType::Login, _viperConfig._currentTrader, shift);
                 _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, shift);
                 switchGlobalConfigAndSendUpdateToGUI(shift);
                 switchPnlConfigAndSendUpdateToGUI(shift);

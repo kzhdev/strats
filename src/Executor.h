@@ -496,9 +496,11 @@ public:
                     handleDebugStatusEvents(dses);
                     break;
                 }
-                case ViperMessageType::ShiftUpdate: {
+                case ViperMessageType::Login: {
                     auto& msg = reinterpret_cast<GenericMessage&>(message._data[0]);
-                    onShiftChanged(msg._number_1);
+                    std::string traderName = _viperConfig._traders[msg._number_1];
+                    this->context().swapTrader(traderName, "");
+                    onShiftChanged(msg._number_2);
                     break;
                 }
                 default:
