@@ -316,7 +316,8 @@ namespace Python {
 
 
 TEST_F(StackerFixture, CMEInflights) {
-    StackerConfig config {"", 100, 5, true, 0, -1, false};
+    StackerConfig config {._contract="", ._quoteSize=100, ._quoteGap=1, ._maxQuote=0, ._numberOfLevels=5, ._stackSlack=0, ._maxTicksOffTopLevel=-1, ._useGtc=false, ._allowMultipleNewHedge=false, ._enableQuoteSprayer=false};
+
     _ime2->getBidStacker()->initialize(cmeContract, BID, config, _ime2, true);
     _ime2->getAskStacker()->initialize(cmeContract, ASK, config, _ime2, true);
 
@@ -679,7 +680,8 @@ TEST_F(StackerFixture, Test2) {
 TEST_F(StackerFixture, StackerTests) {
     ConfigContract contract = cmeContract;
     contract._tickSize = ToRhonePrice(0.25);
-    StackerConfig config_20_4_0 {"", 20, 4, true, 0, -1, false};
+    StackerConfig config_20_4_0 {._contract="", ._quoteSize=20, ._quoteGap=1, ._maxQuote=0, ._numberOfLevels=4, ._stackSlack=0, ._maxTicksOffTopLevel=-1, ._useGtc=false, ._allowMultipleNewHedge=false, ._enableQuoteSprayer=false};
+
     hf::qty_t topSize = 3;
     _stacker->initialize(contract, BID, config_20_4_0, _ime, true);
     hf::price_t price = ToRhonePrice(100);

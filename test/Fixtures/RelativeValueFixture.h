@@ -12,8 +12,6 @@ protected:
     void SetUp() override {
         _relativeValue = new RelativeValue();
         _relativeValue->initializeQueues(createQueue(), createQueue(), createQueue(), createQueue());
-        _relativeValue->_outToFront->resetR();
-        _relativeValue->_outToMM->resetR();
     }
 
     void TearDown() override{

@@ -9,9 +9,9 @@ using ::testing::_;
 namespace Python {
 
 TEST_F(RelativeValueFixture, FirstTest) {
-    return;
+//    return;
 
-    ViperConfig config;
+    ViperConfig& config = _relativeValue->_viperConfig;
 
     std::vector<double> v1{0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429};
     std::vector<double> v2{0.3071081615, 0.1525477584, 0.0403440801, -0.0504728978, -0.1097721465, -0.1557739562, -0.1839809996};
@@ -29,13 +29,13 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._pricingMatrix.push_back({"v6", v6});
     config._pricingMatrix.push_back({"v7", v7});
 
-    config._vectorConfigs.push_back({"v1", 4, 5, false, 1, false, 60.7757900596071});
-    config._vectorConfigs.push_back({"v2", 0.3, 35, false, 1, false, 0.3367518955604});
-    config._vectorConfigs.push_back({"v3", 0.08, 250, false, 1, false, -0.0618898373361});
-    config._vectorConfigs.push_back({"v4", 0.07, 450, false, 1, false, 0.0513954478860});
-    config._vectorConfigs.push_back({"v5", 0.05, 850, false, 1, false, -0.0280686708930});
-    config._vectorConfigs.push_back({"v6", 0.03, 1500, false, 1, false, -0.0174555549046});
-    config._vectorConfigs.push_back({"v7", 0.025, 2000, false, 1, false, -0.0084076816648});
+    config._vectorConfigs.push_back({"v1", 4, 5, false, 1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(),false, 60.7757900596071});
+    config._vectorConfigs.push_back({"v2", 0.3, 35, false, 1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(),false, 0.3367518955604});
+    config._vectorConfigs.push_back({"v3", 0.08, 250, false, 1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(),false, -0.0618898373361});
+    config._vectorConfigs.push_back({"v4", 0.07, 450, false, 1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(),false, 0.0513954478860});
+    config._vectorConfigs.push_back({"v5", 0.05, 850, false, 1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(),false, -0.0280686708930});
+    config._vectorConfigs.push_back({"v6", 0.03, 1500, false, 1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(),false, -0.0174555549046});
+    config._vectorConfigs.push_back({"v7", 0.025, 2000, false, 1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(),false, -0.0084076816648});
 
     config._pricingConfigs.push_back({"G18", 1, true, 100});
     config._pricingConfigs.push_back({"H18", 0, true, 100});
@@ -144,7 +144,7 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._relativeValueConfigs.push_back({"K18Q18", true, 0.5, 0.0008, 0});
     config._relativeValueConfigs.push_back({"G18Q18", true, 0.5, 0.0008, 0});
 
-    _relativeValue->initializeModel(config);
+    _relativeValue->initializeModel();
 
 
 

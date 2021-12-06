@@ -746,6 +746,7 @@ void StackerFixture::ice_mo_smp_diff_level(ice_mo_smp_test_mode mode) {
         }
             break;
         case ice_mo_smp_test_mode::NOTHING:
+        case ice_mo_smp_test_mode::NO:
             break;
     }
 }
@@ -804,6 +805,7 @@ void StackerFixture::ice_mo_smp_same_level(StackerFixture::ice_mo_smp_test_mode 
         }
             break;
         case ice_mo_smp_test_mode::NOTHING:
+        case ice_mo_smp_test_mode::NO:
             break;
     }
 }

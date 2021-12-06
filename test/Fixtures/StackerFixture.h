@@ -61,7 +61,7 @@ struct Executor {
         order->pr = price;
         order->qty = size;
         order->oid = ++_orderId;
-        order->ot = om::ORDER_TYPE::LMT;
+        order->ot = orderType;
         order->venue = _venue;
         order->leavesQty = size;
         order->executedQty = 0;
@@ -273,7 +273,7 @@ public:
         int count = 0;
         for(auto* currentLevel = *levels; currentLevel != nullptr; currentLevel=currentLevel->after) {
             for(const auto& order : currentLevel->_orders) {
-                if(order->debug.i[STACKER_ORDER_FLAGS]) {
+                if(IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_DECREMENT_FAILED)) {
                     ++count;
                 }
             }
@@ -355,6 +355,7 @@ public:
     void onOrderReplaced(StackerType* stacker, hf::qty_t size, const om::order_t& order) {
         om::OMOrderModifiedEvent modifyAck;
         modifyAck.acceptedQty = size;
+        const_cast<om::order_t&>(order).leavesQty = std::max<hf::qty_t>(size - order.executedQty, 0);
         stacker->onOrderReplaced(modifyAck, order);
     }
 
@@ -362,6 +363,7 @@ public:
     void onOrderReplaced(StackerType* stacker, hf::price_t price, hf::qty_t size, const om::order_t& order) {
         om::order_t& mutableOrder = const_cast<om::order_t&>(order);
         mutableOrder.pr = price;
+        mutableOrder.leavesQty = std::max<hf::qty_t>(size - mutableOrder.executedQty, 0);
         onOrderReplaced(stacker, size, order);
     }
 
@@ -387,10 +389,10 @@ public:
         event.filledPrice = price;
         event.filledQty = size;
         event.totalExecutedQty = order.executedQty + size;
-        om::order_t& mutableOrder = const_cast<om::order_t&>(order);
+        auto& mutableOrder = const_cast<om::order_t&>(order);
         mutableOrder.action_flags.is_active = active;
         mutableOrder.executedQty = mutableOrder.executedQty + size;
-        stacker->onOrderExecution(event, order);
+        stacker->onOrderExecution(event.filledPrice, event.filledQty, event.totalExecutedQty, order, false);
     }
 
     void onOrderRejected(const om::order_t& order, uint32_t reasonCodeExt) {

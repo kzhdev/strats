@@ -20,7 +20,7 @@ namespace Python {
         orders = std::unordered_map<om::order_id_t, om::order_t*>{};
 
         //TODO -- The commented out asserts appear we don't mark a level as free until we get the ack.  We could though!  Maybe?
-        StackerConfig config_60_2_2 {"", 60, 2, true, 2, -1, false};
+        StackerConfig config_60_2_2 {._contract="", ._quoteSize=60, ._quoteGap=1, ._maxQuote=0, ._numberOfLevels=2, ._stackSlack=2, ._maxTicksOffTopLevel=-1, ._useGtc=false, ._allowMultipleNewHedge=false, ._enableQuoteSprayer=false};
 
         hf::price_t tickSize = iceContract._tickSize;
         uint32_t nLevels = config_60_2_2._numberOfLevels;

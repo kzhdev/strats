@@ -33,18 +33,20 @@ namespace Python {
         //Create and modify down shouldn't be blocked
         //void assertLevelState(Level* level, hf::price_t price, hf::qty_t target, hf::qty_t acked, hf::qty_t flight, hf::qty_t traded, int flightout = 0, int overfill = INT_MIN) {
         stacker->quote<BID>(bidPrice, quoteQty+2, goThroughAllLevels);
-        assertLevelState(levels, ToRhonePrice(.29), quoteQty+2, 40, 2, 0, 0, 0);
+        // add order 4 qty=2
+        assertLevelState(levels, ToRhonePrice(.29), quoteQty+2, 40, 2, 0, 0, 0, {3,4});
 
         //We might have an order in flight, but we have an acked order of qty=40 to decrement from so this shouldn't block
+        // modify order 3 qty from 40 to 36
         stacker->quote<BID>(bidPrice, quoteQty-2, goThroughAllLevels);
-        assertLevelState(levels, ToRhonePrice(.29), quoteQty-2, 40, -2, 0, 0, 0);
+        assertLevelState(levels, ToRhonePrice(.29), quoteQty-2, 40, -2, 0, 0, 0, {3,4});
         ASSERT_EQ(findLevel(levels, ToRhonePrice(.29))->_orders.size(), 2u);
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
-        //Now we're going to quote with qty=1.  This should block because we can't mod from 2 to 1 without the ack
+        //Now we're going to quote with qty=1.  Order 3 will be canceled. This should block because we can't mod Order 4 from 2 to 1 without the ack
         stacker->quote<BID>(bidPrice, 1, goThroughAllLevels);
 
-        assertLevelState(levels, ToRhonePrice(.29), 1, 40, -38, 0, 0, 0);
+        assertLevelState(levels, ToRhonePrice(.29), 1, 40, -38, 0, 0, 0, {3, 4});
         ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Now we're going to quote at .30, which should try to slack but can't
@@ -59,7 +61,7 @@ namespace Python {
         //Let's ack the new that blocked the decrement.  We should be all good on blockers after that.  This will generate 2 new orders
         onOrderAccepted(stacker, 2, *getOrder(stacker, 4));
         assertLevelState(levels, ToRhonePrice(.30), 40, 0, 40, 0, 0, 0, {6});  //New order, oid=6
-        assertLevelState(levels, ToRhonePrice(.29), 60, 42, 18, 0, 0, 0, {3,4,5}); //New order, oid=5 -- still a mod/cancel in flight
+        assertLevelState(levels, ToRhonePrice(.29), 60, 42, 18, 0, 0, 0, {3,4,5}); //New order, oid=5 qty=58 -- still a mod/cancel in flight
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.27), 60,60, 0, 0, 0, 0,{2});
         ASSERT_EQ(0, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
