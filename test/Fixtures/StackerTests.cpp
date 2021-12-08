@@ -688,7 +688,7 @@ TEST_F(StackerFixture, StackerTests) {
     _stacker->quote<BID>(price, topSize, goThroughAllLevels);
 
     // 99.75, 99.5, 99.25, 99, 98.75 - 0
-    // 100 - 4
+    // 100 - 3
     // 100.25, 100.5, 100.75, 101 - 20
     // 101.25, 101.5, 101.75, 102, 102.25 - 0
 
@@ -906,7 +906,7 @@ TEST_F(StackerFixture, StackerTests) {
     ASSERT_EQ(-20, level->_flight);
     ASSERT_EQ(20, level->_acknowledged);
 
-    onOrderAccepted(2, *topLevel->_orders[0]);
+    onOrderReplaced(2, *topLevel->_orders[0]);
 
     ASSERT_EQ(price, topLevel->_price);
     ASSERT_EQ(topSize, topLevel->_target[0]);
@@ -961,7 +961,7 @@ TEST_F(StackerFixture, StackerTests) {
     }
 
     ASSERT_EQ(price, topLevel->_price);
-    ASSERT_EQ(topSize, topLevel->_target[0]);
+    ASSERT_EQ(topSize - 2, topLevel->_target[0]);
     ASSERT_EQ(0, topLevel->_flight);
     ASSERT_EQ(3, topLevel->_acknowledged);
     ASSERT_EQ(1, topLevel->_orders.size());
@@ -999,7 +999,7 @@ TEST_F(StackerFixture, StackerTests) {
     }
 
     ASSERT_EQ(price, topLevel->_price);
-    ASSERT_EQ(topSize, topLevel->_target[0]);
+    ASSERT_EQ(topSize - 1, topLevel->_target[0]);
     ASSERT_EQ(6, topLevel->_flight);
     ASSERT_EQ(1, topLevel->_acknowledged);
     ASSERT_EQ(2, topLevel->_orders.size());

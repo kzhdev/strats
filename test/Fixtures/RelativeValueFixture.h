@@ -2,6 +2,7 @@
 #define RELATIVE_VALUE_FIXTURE_H
 
 #include "RelativeValue.h"
+#include <md/queue/MDQueueResource.h>
 
 namespace Python {
 
@@ -11,19 +12,9 @@ protected:
 
     void SetUp() override {
         _relativeValue = new RelativeValue();
-        _relativeValue->initializeQueues(createQueue(), createQueue(), createQueue(), createQueue());
     }
 
     void TearDown() override{
-    }
-
-    md::queue::MDQueueResource* createQueue() {
-        auto pool = new md::pool::MDPool();
-        pool->createPool("unit_test_pool", 10000000); // 10000000 in ViperPool
-        md::queue::MDQueueResource* qr = new md::queue::MDQueueResource();
-        qr->createQueue("unit_test_queue", 1000000);  //10000000 in ViperQueue
-        qr->setPool(*pool);
-        return qr;
     }
 
     ConfigContract createContract(const std::string& name, uint32_t gid, uint32_t sid) {
@@ -53,46 +44,46 @@ protected:
     void populateExternalMarket(uint32_t contractIndex, double bidPrice, hf::qty_t bidQty, double askPrice, hf::qty_t askQty) {
         std::vector<RvContract>& contracts = _relativeValue->_contracts;
         RvContract& c1 = contracts[contractIndex];
-        Market& bid = c1._externalMarket[BID];
+        Market& bid = c1._markets[Market::External][BID];
         if (std::isnan(bidPrice)) {
-            bid.update<BID>(hf::NULL_PRICE, 0);
+            bid.update(hf::NULL_PRICE, 0);
         } else {
-            bid.update<BID>(ToRhonePrice(bidPrice), bidQty);
+            bid.update(ToRhonePrice(bidPrice), bidQty);
         }
-        Market& ask = c1._externalMarket[ASK];
+        Market& ask = c1._markets[Market::External][ASK];
         if (std::isnan(askPrice)) {
-            ask.update<ASK>(hf::NULL_PRICE, 0);
+            ask.update(hf::NULL_PRICE, 0);
         } else {
-            ask.update<ASK>(ToRhonePrice(askPrice), askQty);
+            ask.update(ToRhonePrice(askPrice), askQty);
         }
     }
 
     void retrieveMessagesFromRvToMM() {
-        while (true) {
-            uint64_t idx = _relativeValue->_outToMM->getNext();
-
-            if (BOOST_UNLIKELY(idx == 0))
-                break;
-
-            _relativeValue->_outToMM->freeNext();
-
-            auto& message = *static_cast<ViperMessage *>(_relativeValue->_outToMM->getPoolP()->getData(idx));
-
-            switch (message._type) {
-                case ViperMessageType::HedgeOrder: {
-                    HedgeOrderMessage* hedge = &reinterpret_cast<HedgeOrderMessage&> (message._data[0]);
-                   _hedges.push_back(hedge);
-                    break;
-                }
-                case ViperMessageType::QuoteOrder: {
-                    QuoteOrderMessage* quote = &reinterpret_cast<QuoteOrderMessage&> (message._data[0]);
-                    _quotes.push_back(quote);
-                    break;
-                }
-                default:
-                    break;
-            }
-        }
+//        while (true) {
+//            uint64_t idx = _relativeValue->_outToMM->getNext();
+//
+//            if (BOOST_UNLIKELY(idx == 0))
+//                break;
+//
+//            _relativeValue->_outToMM->freeNext();
+//
+//            auto& message = *static_cast<ViperMessage *>(_relativeValue->_outToMM->getPoolP()->getData(idx));
+//
+//            switch (message._type) {
+//                case ViperMessageType::HedgeOrder: {
+//                    HedgeOrderMessage* hedge = &reinterpret_cast<HedgeOrderMessage&> (message._data[0]);
+//                   _hedges.push_back(hedge);
+//                    break;
+//                }
+//                case ViperMessageType::QuoteOrder: {
+//                    QuoteOrderMessage* quote = &reinterpret_cast<QuoteOrderMessage&> (message._data[0]);
+//                    _quotes.push_back(quote);
+//                    break;
+//                }
+//                default:
+//                    break;
+//            }
+//        }
     }
 
     void flushMessges() {
@@ -100,8 +91,8 @@ protected:
         _quotes.clear();
     }
 
-    std::vector<HedgeOrderMessage*> _hedges;
-    std::vector<QuoteOrderMessage*> _quotes;
+    std::vector<ViperMessage*> _hedges;
+    std::vector<ViperMessage*> _quotes;
 
     RelativeValue* _relativeValue;
 };

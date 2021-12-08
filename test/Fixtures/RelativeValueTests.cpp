@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "TestStrategy.h"
+//#include "TestStrategy.h"
 #include "RelativeValueFixture.h"
 #include "ViperConfig.h"
 
@@ -9,8 +9,6 @@ using ::testing::_;
 namespace Python {
 
 TEST_F(RelativeValueFixture, FirstTest) {
-//    return;
-
     ViperConfig& config = _relativeValue->_viperConfig;
 
     std::vector<double> v1{0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429, 0.1428571429};
@@ -87,39 +85,33 @@ TEST_F(RelativeValueFixture, FirstTest) {
     for (uint32_t contractIndex = 0; contractIndex < config._allContracts.size(); ++contractIndex) {
         ConfigContract& contract = config._allContracts[contractIndex];
         contract._tickSize = ToRhonePrice(0.01);
-        std::vector<int> values;
-        for (uint32_t outRightIndex = 0; outRightIndex < config._numberOfPricingContracts; ++outRightIndex) {
-            int value = 0;
-            if (contract._legs.size() > 0) {
-                for (uint32_t legIndex = 0; legIndex < contract._legs.size(); ++legIndex) {
-                    ConfigLeg& leg = contract._legs[legIndex];
-                    if (legIndex == outRightIndex) {
-                        value = leg._ratio;
-                    }
-                }
-            } else {
-                if (contractIndex == outRightIndex) {
-                    value = 1;
-                }
-            }
-            values.push_back(value);
-        }
-
-        //Might be wrong, used to be "_pricingDefinitions"
-        config._leanMatrix.push_back({"c", values});
+//        std::vector<int> values;
+//        for (uint32_t outRightIndex = 0; outRightIndex < config._numberOfPricingContracts; ++outRightIndex) {
+//            int value = 0;
+//            if (contract._legs.size() > 0) {
+//                for (uint32_t legIndex = 0; legIndex < contract._legs.size(); ++legIndex) {
+//                    ConfigLeg& leg = contract._legs[legIndex];
+//                    if (legIndex == outRightIndex) {
+//                        value = leg._ratio;
+//                    }
+//                }
+//            } else {
+//                if (contractIndex == outRightIndex) {
+//                    value = 1;
+//                }
+//            }
+//            values.push_back(value);
+//        }
+//
+//        //Might be wrong, used to be "_pricingDefinitions"
+//        config._leanMatrix.push_back({contract._name, values});
     }
 
     std::vector<std::string> spreadNames = {"G18", "H18", "J18", "K18", "M18", "N18", "Q18", "G18H18", "H18J18", "J18K18", "K18M18", "M18N18", "N18Q18", "G18J18", "H18K18", "J18M18", "K18N18", "M18Q18", "G18K18", "K18Q18", "G18Q18"};
     for (uint32_t row = 0; row < spreadNames.size(); ++row) {
-        std::vector<int> leans;
-        for (uint32_t col = 0; col < spreadNames.size(); ++col) {
-            uint32_t value = 1;
-            if (row == col) {
-                value = 0;
-            }
-            leans.push_back(value);
-        }
-        config._leanMatrix.push_back({spreadNames[row], leans});
+        config._leanMatrix.push_back({spreadNames[row]});
+        config._leanMatrix.back()._values.resize(spreadNames.size(), 1);
+        config._leanMatrix.back()._values[row] = 0;
     }
 
     config._relativeValueConfigs.push_back({"G18", true, 0.5, 0.0004, 0});
@@ -143,10 +135,9 @@ TEST_F(RelativeValueFixture, FirstTest) {
     config._relativeValueConfigs.push_back({"G18K18", true, 0.5, 0.0008, 0});
     config._relativeValueConfigs.push_back({"K18Q18", true, 0.5, 0.0008, 0});
     config._relativeValueConfigs.push_back({"G18Q18", true, 0.5, 0.0008, 0});
+    config._globalConfigs.push_back({"RVWidthMultiplier", "1", {"1", "1", "1", "1"}});
 
     _relativeValue->initializeModel();
-
-
 
     Matrix& risk =  _relativeValue->_riskMatrix;
 
@@ -340,14 +331,14 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     _relativeValue->calculateShortTermFairs();
 
-    Vector<hf::price_t>& shortTermFairs = _relativeValue->_shortTermFairsForContracts;
+    auto& shortTermFairs = _relativeValue->_shortTermFairsForContracts;
 
     std::vector<double> expectedFairs = {61.255, 61.05541863, 60.88379683, 60.77141548, 60.66021326, 60.50090372, 60.3037825, 0.19958137, 0.171621801, 0.112381347, 0.111202223, 0.159309542, 0.197121212,
                                          0.371203171, 0.284003148, 0.223583571, 0.270511766, 0.356430754, 0.483584519, 0.467632978, 0.951217496};
 
     for (uint32_t rowIndex = 0; rowIndex < numberOfAllContracts; ++rowIndex) {
         double expected = expectedFairs[rowIndex];
-        double has = ToDollars(shortTermFairs.getValue(rowIndex));
+        double has = ToDollars(shortTermFairs.getValue(rowIndex)._fair);
         ASSERT_NEAR(expected, has, 0.000001);
     }
 
@@ -525,11 +516,11 @@ TEST_F(RelativeValueFixture, FirstTest) {
 
     ASSERT_EQ(1, _hedges.size());
 
-    HedgeOrderMessage* hedge = _hedges[0];
+//    HedgeOrderMessage* hedge = _hedges[0];
 
-    ASSERT_EQ(3, hedge->_size);
-    ASSERT_EQ(ASK, hedge->_side);
-    ASSERT_EQ(1, hedge->_instrumentIndex);
+//    ASSERT_EQ(3, hedge->_size);
+//    ASSERT_EQ(ASK, hedge->_side);
+//    ASSERT_EQ(1, hedge->_instrumentIndex);
 
     flushMessges();
 

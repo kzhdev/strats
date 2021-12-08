@@ -157,7 +157,9 @@ namespace Python {
 
         //Increase Stack size to generate new orders, then decrease to below original quantity forcing it to modify down . . . if it could but it can't.
         stacker->updateQuoteSize(100);
+        stacker->updateMaxQuote(100);   // to trigger update
         stacker->updateQuoteSize(20);
+        stacker->updateMaxQuote(20);   // to trigger update
         assertLevelState(levels, ToRhonePrice(.29), 40, 40, 0, 0, 0, 0, {3});
         assertLevelState(levels, ToRhonePrice(.28), 20, 60, -20, 0, 0, 0, {1, 4});
         assertLevelState(levels, ToRhonePrice(.27), 20,60, -20, 0, 0, 0, {2, 5});
@@ -223,10 +225,10 @@ namespace Python {
         //The plan is target qty to 50, 60, 70.  Then we will walk it back to 5 which should make 3 orders blocking, *HOWEVER* only one will be marked as blocking
         //(intentionally).  After every ack we'd expect the order to be cancelled, but another order to be made blocking.  Then after the final ack we get a
         //final cancel and a new order.
-        stacker->quote<BID>(29000000, 50, false);
-        stacker->quote<BID>(29000000, 60, false);
-        stacker->quote<BID>(29000000, 70, false);
-        stacker->quote<BID>(29000000, 5, false);
+        stacker->quote<BID>(29000000, 50, false);   // add order 4
+        stacker->quote<BID>(29000000, 60, false);   // add order 5
+        stacker->quote<BID>(29000000, 70, false);   // add order 6
+        stacker->quote<BID>(29000000, 5, false);    // cancel order 3
 
         assertLevelState(levels, ToRhonePrice(.29), 5, 40, -10, 0, 0, 0, {3,4,5,6});
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
@@ -239,8 +241,7 @@ namespace Python {
         ASSERT_FALSE(getActionFlags(stacker, 4)->is_acked);
         ASSERT_FALSE(getActionFlags(stacker, 5)->is_acked);
         ASSERT_FALSE(getActionFlags(stacker, 6)->is_acked);
-        //And only 1 order is marked as blocking even though three technically are
-        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+        ASSERT_EQ(3, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Ack the first one
         onOrderAccepted(stacker, 10, *getOrder(stacker, 4));
@@ -248,7 +249,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.27), 60, 60, 0, 0, 0, 0, {2});
         ASSERT_TRUE(getActionFlags(stacker, 4)->is_cancelling);
-        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+        ASSERT_EQ(2, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Ack the second one
         onOrderAccepted(stacker, 10, *getOrder(stacker, 5));
@@ -304,8 +305,7 @@ namespace Python {
         ASSERT_FALSE(getActionFlags(stacker, 4)->is_acked);
         ASSERT_FALSE(getActionFlags(stacker, 5)->is_acked);
         ASSERT_FALSE(getActionFlags(stacker, 6)->is_acked);
-        //And only 1 order is marked as blocking even though three technically are
-        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+        ASSERT_EQ(3, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Ack the first one
         onOrderAccepted(stacker, 10, *getOrder(stacker, 4));
@@ -313,7 +313,7 @@ namespace Python {
         assertLevelState(levels, ToRhonePrice(.28), 60, 60, 0, 0, 0, 0, {1});
         assertLevelState(levels, ToRhonePrice(.27), 60, 60, 0, 0, 0, 0, {2});
         ASSERT_FALSE(getActionFlags(stacker, 4)->is_cancelling);
-        ASSERT_EQ(1, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
+        ASSERT_EQ(2, getAndAssertNumOrdersBlockingDecrement(stacker, levels));
 
         //Ack the second one
         onOrderAccepted(stacker, 10, *getOrder(stacker, 5));

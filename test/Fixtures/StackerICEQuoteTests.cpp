@@ -81,7 +81,7 @@ namespace Python {
 
         //Partial Fill
         onOrderExecuted(stacker, order, ToRhonePrice(.35), 3, true);
-        assertState(l35, ToRhonePrice(0.35), 10, 10, 0, 3, 0);
+        assertState(l35, ToRhonePrice(0.35), 7, 10, 0, 3, 0);
 
         //Modify
         stacker->quote<BID>(ToRhonePrice(0.34), 9, false);
@@ -393,11 +393,11 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_CO_PartialThenFullInFlightWithIntermedia
 
     //Full fill
     onOrderExecuted(stacker, order, ToRhonePrice(.35), 4, false);
-    assertState(l35, ToRhonePrice(0.35), 9, 4, 9, 4);
+    assertState(l35, ToRhonePrice(0.35), 5, 4, 9, 4);
 
     //Cancel Reject
     onOrderCancelRejected(stacker, order, rejectCode);
-    assertState(l35, ToRhonePrice(0.35), 9, 4, 9, 4);  //Will net out on next quote
+    assertState(l35, ToRhonePrice(0.35), 5, 4, 9, 4);  //Will net out on next quote
 }
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_CO_FullFillInFlight) {
@@ -527,11 +527,11 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_PartialFill_SameLeve
 
     //Partial Fill In Flight that overfill
     onOrderExecuted(stacker, order, ToRhonePrice(.35), 8, true);
-    assertState(l35, ToRhonePrice(0.35), 7, 10, -3, 8, 0, 1);
+    assertState(l35, ToRhonePrice(0.35), 0, 10, -3, 8, 0, 1);
 
     //Cancel due to overfill
     onOrderCanceled(stacker, order);
-    assertState(l35, ToRhonePrice(0.35), 7, 8, 0, 8, 0);
+    assertState(l35, ToRhonePrice(0.35), 0, 8, 0, 8, 0);
 }
 
 TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_FullFill_SameLevel) {
@@ -559,11 +559,11 @@ TEST_F(StackerFixture, ICEQuoteTests_NO_MO_OverfillInFlight_FullFill_SameLevel) 
 
     //Full Fill In Flight that overfill
     onOrderExecuted(stacker, order, ToRhonePrice(.35), 10, false);
-    assertState(l35, ToRhonePrice(0.35), 7, 10, 0, 10, 0);
+    assertState(l35, ToRhonePrice(0.35), 0, 10, 0, 10, 0);
 
     //Modify Reject
     onOrderReplaceRejected(stacker, order, rejectCode);
-    assertState(l35, ToRhonePrice(0.35), 7, 10, 0, 10, 0);
+    assertState(l35, ToRhonePrice(0.35), 0, 10, 0, 10, 0);
 }
 
 TEST_F(StackerFixture, ICE_NO_SMP) {
@@ -699,7 +699,7 @@ void StackerFixture::ice_mo_smp_diff_level(ice_mo_smp_test_mode mode) {
 
     //A fill just to make this test more interesting
     onOrderExecuted(stacker, order, ToRhonePrice(.35), 2, true);
-    assertState(l35, ToRhonePrice(0.35), 10, 10, 0, 2);
+    assertState(l35, ToRhonePrice(0.35), 8, 10, 0, 2);
 
     //Modify
     stacker->quote<BID>(ToRhonePrice(0.34), 9, false);
@@ -741,8 +741,9 @@ void StackerFixture::ice_mo_smp_diff_level(ice_mo_smp_test_mode mode) {
             assertState(l35, ToRhonePrice(0.35), 0, 8, -8, 0, 0);
             //But the cancel is going to be rejected.  Not sure what we want to do, we probably don't want to cancel
             //again right away if it was a halt.
+            ASSERT_TRUE(order.action_flags.is_cancelling);
             onOrderCancelRejected(stacker, order, -1);
-            ASSERT_TRUE(order.action_flags.is_cancelling);  //It's expected to fail this test right now
+            ASSERT_TRUE(!order.action_flags.is_cancelling);
         }
             break;
         case ice_mo_smp_test_mode::NOTHING:
@@ -775,11 +776,11 @@ void StackerFixture::ice_mo_smp_same_level(StackerFixture::ice_mo_smp_test_mode 
 
     //A fill just to make this test more interesting
     onOrderExecuted(stacker, order, ToRhonePrice(.35), 2, true);
-    assertState(l35, ToRhonePrice(0.35), 7, 10, -3, 2);
+    assertState(l35, ToRhonePrice(0.35), 5, 10, -3, 2);
 
     //SMP Reject
     onOrderReplaceRejected(stacker, order, -1, "Trade not allowed - Counterparty is from your company or your own order. Offending Orders : 12345678");
-    assertState(l35, ToRhonePrice(0.35), 7, 10, 0, 2);
+    assertState(l35, ToRhonePrice(0.35), 5, 10, 0, 2);
 
     //Then . . .
 

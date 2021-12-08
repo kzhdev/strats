@@ -865,7 +865,9 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     //Lots more changes here to get to the same destination
     stacker->quote<BID>(ToRhonePrice(0.26), 100, goThroughAllLevels);
     stacker->updateQuoteSize(61);
+    stacker->updateMaxQuote(61);    // to trigger update
     stacker->updateQuoteSize(66);
+    stacker->updateMaxQuote(66);        // to trigger update
 
     //The next call will create oid={8: 2@0.26;
     stacker->quote<BID>(ToRhonePrice(0.26), 102, goThroughAllLevels);  //.26=level[5]
@@ -873,9 +875,12 @@ TEST_F(StackerFixture, SMPRejectOnModifyComplexPath) {
     stacker->quote<BID>(ToRhonePrice(0.23), 100, goThroughAllLevels);
 
     stacker->updateQuoteSize(40);
+    stacker->updateMaxQuote(40);
     stacker->updateQuoteSize(39);
+    stacker->updateMaxQuote(39);
     stacker->quote<BID>(ToRhonePrice(0.20), 100, goThroughAllLevels);
     stacker->updateQuoteSize(60);
+    stacker->updateMaxQuote(60);
 
     onOrderReplaced(stacker, 40, *orders[2]); //oid=2
     onOrderReplaced(stacker, ToRhonePrice(.28), 60, *orders[1]); //oid1
@@ -1026,7 +1031,7 @@ TEST_F(StackerFixture, CancelRejectDueToFullFillOnDiffLevel) {
     ASSERT_FALSE(askSideThinksLevelIsUsed(level[4])); //px=.27
 
     onOrderReplaceRejected(stacker, *orders[2], 2045);
-    onOrderReplaceRejected(stacker, *orders[2], 2045);
+    //onOrderReplaceRejected(stacker, *orders[2], 2045);
     onOrderCancelRejected(stacker, *orders[2], 2045);
 
     assertState(level[1], ToRhonePrice(0.30), 0, 38, 0, 38, 0);
@@ -1222,7 +1227,7 @@ TEST_F(StackerFixture, FillAndQuoteWithNegativeWorkingQuantityAndTraded) {
 
     //We are now going to generate a fill at this level
     onOrderExecuted(stacker, *orders[2], ToRhonePrice(.30), 17, true);
-    assertState(level[1], ToRhonePrice(.30), 2, 39, -20, 17, 21);
+    assertState(level[1], ToRhonePrice(.30), 0, 39, -20, 17, 21);
 
     //And in response the IME is going to say to quote 0
     //TODO: For ICE, it should cancel the order here
@@ -1269,7 +1274,7 @@ TEST_F(StackerFixture, FillAndQuoteWithNegativeWorkingQuantityAndTraded_FillInFl
 
     //We are now going to generate a fill at this level
     onOrderExecuted(stacker, *orders[2], ToRhonePrice(.30), 17, true);
-    assertState(level[1], ToRhonePrice(.30), 2, 39, -20, 17, 21);
+    assertState(level[1], ToRhonePrice(.30), 0, 39, -20, 17, 21);
 
     //And in response the IME is going to say to quote 0
     //TODO: For ICE, it should cancel the order here

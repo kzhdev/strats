@@ -859,7 +859,8 @@ public:
                 }
             }
 
-            //There is quantity left, we're going to tag one order that is preventing the decrement.
+            // We used to only mark the first blocking order, but there are some cases that when a blocking order
+            // unblocked, we are not re-quote because the order is not marked
             LOG(0, "OM {C[i1]}. Quantity left after reduceSize; looking for order preventing decrement blockingOrders.size={i2}", getContractName(), _blockingOrders.size());
             bool allCancelling = !_blockingOrders.empty();
             bool blockingOrderFound = false;
@@ -1154,7 +1155,8 @@ public:
                 modifyWorkingQuantityInChain(mutableOrder, filledQty);
                 auto* targetLevel = getTargetLevel(order);
                 // add potentialOverfill only when the order modify down on same level
-                if (targetLevel == this) {
+                // TODO: When fromMDFeed = true, set overfill on different level might cause candidate < 0 issue latter on
+//                if (targetLevel == this) {
                     hf::qty_t potentialOverfillQty = -(getTargetQuantity(order) - order.executedQty);
                     if (potentialOverfillQty > 0) {
                         if (!mutableOrder.leavesQty) { //If full fill, we won't get the MO/CO so we're in a terminal state
@@ -1166,7 +1168,7 @@ public:
                             SetQuantity(order, potentialOverfillQty, POTENTIAL_OVERFILL_QTY);
                         }
                     }
-                }
+//                }
 
                 LOG(0, "OM {C[i1]}. Order TargetLevel. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} Leaves={i7} PotentialOverfill={i8} NumFlightout={i9}", getContractName(),
                     targetLevel->_dollar, targetLevel->_target[0], targetLevel->_target[1], targetLevel->_acknowledged,
@@ -1660,7 +1662,10 @@ public:
             // request, the cancel request will be rejected. We set is_cancelling to false in onOrderCanceled so that we won't double
             // adjust the _flight value here
             if (order.action_flags.is_cancelling) {
-                _flight += getLeavesQty(order);
+                // if order.action_flags.is_acked = false, the order was rejected. We don't need to adjust _flight
+                if (order.action_flags.is_acked & order.action_flags.is_active) {
+                    _flight += getLeavesQty(order);
+                }
                 const_cast<om::order_t &>(order).action_flags.is_cancelling = false;
             }
 

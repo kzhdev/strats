@@ -391,7 +391,8 @@ public:
         event.totalExecutedQty = order.executedQty + size;
         auto& mutableOrder = const_cast<om::order_t&>(order);
         mutableOrder.action_flags.is_active = active;
-        mutableOrder.executedQty = mutableOrder.executedQty + size;
+        mutableOrder.executedQty = event.totalExecutedQty;
+        mutableOrder.leavesQty = std::max<hf::qty_t>(mutableOrder.leavesQty - size, 0);
         stacker->onOrderExecution(event.filledPrice, event.filledQty, event.totalExecutedQty, order, false);
     }
 

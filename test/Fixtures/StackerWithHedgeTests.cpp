@@ -467,9 +467,9 @@ namespace Python {
         //We need two modifies in flight.  The way we're going to get this is mod the third order down, then mod
         //s.t. order#3 gets cancels and order#2 modifies down, then mod down s.t. order#2 get cancelled and order#1 modifies down
 
-        stacker->quote<BID>(ToRhonePrice(.30), 51, false); // Mod to qty=1
-        stacker->quote<BID>(ToRhonePrice(.30), 32, false); // Mod to qty=2
-        stacker->quote<BID>(ToRhonePrice(.30), 3, false); // Mod to qty=3
+        stacker->quote<BID>(ToRhonePrice(.30), 51, false); // Mod 3 to qty=1
+        stacker->quote<BID>(ToRhonePrice(.30), 32, false); // Cancel 3, Mod 2 to qty=2
+        stacker->quote<BID>(ToRhonePrice(.30), 3, false); // Cancel 2, Mod 1 to qty=3
 
         auto isCancellingAndModifying = [&stacker, this](om::order_id_t oid) -> bool {
             const auto& order_flags = *getActionFlags(stacker, oid);
@@ -485,23 +485,26 @@ namespace Python {
 
         //Overfill orders#3
         onOrderExecuted(stacker, *getOrder(stacker, 3), ToRhonePrice(.30), 5, true);
-        assertLevelState(levels, ToRhonePrice(.30), 3, 60, -(60 - 3 - 5), 5, 0, /*Potential Overfill Qty=*/4);
+        assertLevelState(levels, ToRhonePrice(.30), 0, 60, -(60 - 3 - 5), 5, 0, /*Potential Overfill Qty=*/4);
 
         //The bug was here, it was replacing PO instead of increment_marketBooksing it
         onOrderExecuted(stacker, *getOrder(stacker, 2), ToRhonePrice(.30), 5, true);
-        assertLevelState(levels, ToRhonePrice(.30), 3, 60, -(60 - 3 - 5 - 5), 10, 0, /*Potential Overfill Qty=*/4 + 3);
+        assertLevelState(levels, ToRhonePrice(.30), 0, 60, -(60 - 3 - 5 - 5), 10, 0, /*Potential Overfill Qty=*/4 + 3);
 
         //Unsolicited Cancel for oid=3
         onOrderCanceled(stacker, *getOrder(stacker, 3));
-        assertLevelState(levels, ToRhonePrice(.30), 3, 55, -42, 10, 0, /*Potential Overfill Qty=*/3, {1, 2});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 55, -42, 10, 0, /*Potential Overfill Qty=*/3, {1, 2});
 
         //Unsolicited Cancel for oid=2
         onOrderCanceled(stacker, *getOrder(stacker, 2));
-        assertLevelState(levels, ToRhonePrice(.30), 3, 40, -27, 10, 0, /*Potential Overfill Qty=*/0, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 40, -27, 10, 0, /*Potential Overfill Qty=*/0, {1});
 
         //Ack for oid=1
         onOrderReplaced(stacker, 3, *getOrder(stacker, 1));
-        assertLevelState(levels, ToRhonePrice(.30), 3, 13, 0, 10, 0, /*Potential Overfill Qty=*/0, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 13, -3, 10, 0, /*Potential Overfill Qty=*/0, {1});
+
+        onOrderCanceled(stacker, *getOrder(stacker, 1));
+        assertLevelState(levels, ToRhonePrice(.30), 0, 10, 0, 10, 0, /*Potential Overfill Qty=*/0, {});
 
         //std::cout << to_string(levels) << std::endl;
     }
@@ -548,29 +551,32 @@ namespace Python {
 
         //Overfill orders#3
         onOrderExecuted(stacker, *getOrder(stacker, 3), ToRhonePrice(.30), 5, true);
-        assertLevelState(levels, ToRhonePrice(.30), 3, 60, -(60 - 3 - 5), 5, 0, /*Potential Overfill Qty=*/4);
+        assertLevelState(levels, ToRhonePrice(.30), 0, 60, -(60 - 3 - 5), 5, 0, /*Potential Overfill Qty=*/4);
 
         //The bug was here, it was replacing PO instead of increment_marketBooksing it
         onOrderExecuted(stacker, *getOrder(stacker, 2), ToRhonePrice(.30), 5, true);
-        assertLevelState(levels, ToRhonePrice(.30), 3, 60, -(60 - 3 - 5 - 5), 10, 0, /*Potential Overfill Qty=*/4 + 3);
+        assertLevelState(levels, ToRhonePrice(.30), 0, 60, -(60 - 3 - 5 - 5), 10, 0, /*Potential Overfill Qty=*/4 + 3);
 
         //Then completely fill #3
         onOrderExecuted(stacker, *getOrder(stacker, 3), ToRhonePrice(.30), 5, false);
-        assertLevelState(levels, ToRhonePrice(.30), 3, 60, -(60 - 3 - 5 - 5 - 5), 15, 0, 4 + 3 - 4);
+        assertLevelState(levels, ToRhonePrice(.30), 0, 60, -(60 - 3 - 5 - 5 - 5), 15, 0, 4 + 3 - 4);
 
         //Modify reject for #3
         onOrderReplaceRejected(stacker, *getOrder(stacker, 3), 2045);
-        assertLevelState(levels, ToRhonePrice(.30), 3, 60, -(60 - 3 - 5 - 5 - 5), 15, 0, 4 + 3 - 4);
+        assertLevelState(levels, ToRhonePrice(.30), 0, 60, -(60 - 3 - 5 - 5 - 5), 15, 0, 4 + 3 - 4);
 
         //Unsolicited Cancel for oid=2
         onOrderCanceled(stacker, *getOrder(stacker, 2));
-        assertLevelState(levels, ToRhonePrice(.30), 3, 45, -27, 15, 0, /*Potential Overfill Qty=*/0, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 45, -27, 15, 0, /*Potential Overfill Qty=*/0, {1});
 
         //Ack for oid=1
         onOrderReplaced(stacker, 3, *getOrder(stacker, 1));
-        assertLevelState(levels, ToRhonePrice(.30), 3, 18, 0, 15, 0, /*Potential Overfill Qty=*/0, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 18, -3, 15, 0, /*Potential Overfill Qty=*/0, {1});
 
-        //std::cout << to_string(levels) << std::endl;
+        onOrderCanceled(stacker, *getOrder(stacker, 1));
+        assertLevelState(levels, ToRhonePrice(.30), 0, 15, 0, 15, 0, /*Potential Overfill Qty=*/0, {});
+
+    //std::cout << to_string(levels) << std::endl;
     }
 
     //We're going to modify to a different level and then overfill
@@ -679,9 +685,9 @@ namespace Python {
         //again, asserts are just for reference.  Ideally this would transition through _po to resend the order asap, although in thise case
         //we likely would on the next quote since traded < target.
         onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 25, true);
-        assertLevelState(levels, ToRhonePrice(.30), 30, 30, 0, 25, 5, 0, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 5, 30, 0, 25, 5, 0, {1});
         onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
-        assertLevelState(levels, ToRhonePrice(.30), 30, 30, 0, 26, 4, 0, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 4, 30, 0, 26, 4, 0, {1});
 
         //This is an unsolicited cancel due to overfill
         onOrderCanceled(stacker, *getOrder(stacker, 1));
@@ -689,11 +695,11 @@ namespace Python {
         //The following asserts, however, should be correct even after a refactor
         /////////////////////////////////////////////////////////////////////////
 
-        assertLevelState(levels, ToRhonePrice(.30), 30, 26, 0, 26, 0, 0, {});
+        assertLevelState(levels, ToRhonePrice(.30), 4, 26, 0, 26, 0, 0, {});
 
         //Modify reject for the 2nd modify
         onOrderReplaceRejected(stacker, *getOrder(stacker, 1), 2045);
-        assertLevelState(levels, ToRhonePrice(.30), 30, 26, 0, 26, 0, 0, {});
+        assertLevelState(levels, ToRhonePrice(.30), 4, 26, 0, 26, 0, 0, {});
 
         //std::cout << to_string(levels) << std::endl;
     }
@@ -719,9 +725,9 @@ namespace Python {
         //again, asserts are just for reference, since this code might need to play around with this to satisfy the previous two cases
         //where _po is technically incorrect even though all the math works, especially if we requote
         onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 25, true);
-        assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 25, 5, 5, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 30, -10, 25, 5, 5, {1});
         onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
-        assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 26, 4, 6, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 30, -10, 26, 4, 6, {1});
 
         //Modify ack, note that ordinarly we'd be changing the target after the onOrderExecuted calls, which is why the replace it putting an order back into the market.  Next test will be more realistic
         onOrderReplaced(stacker, ToRhonePrice(0.31), 35, *getOrder(stacker, 1));
@@ -733,7 +739,7 @@ namespace Python {
         /////////////////////////////////////////////////////////////////////////
 
         //See note about the Modify Ack above as to why we have an order here
-        assertLevelState(levels, ToRhonePrice(.30), 20, 26, 20, 26, 0, 0, {2});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 26, 0, 26, 0, 0, {});
         //std::cout << to_string(levels) << std::endl;
     }
 
@@ -759,9 +765,9 @@ namespace Python {
         //again, asserts are just for reference, since this code might need to play around with this to satisfy the previous two cases
         //where _po is technically incorrect even though all the math works, especially if we requote
         onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 25, true);
-        assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 25, 5, 5, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 30, -10, 25, 5, 5, {1});
         onOrderExecuted(stacker, *getOrder(stacker, 1), ToRhonePrice(.30), 1, true);
-        assertLevelState(levels, ToRhonePrice(.30), 20, 30, -10, 26, 4, 6, {1});
+        assertLevelState(levels, ToRhonePrice(.30), 0, 30, -10, 26, 4, 6, {1});
 
         //We're overfilled, we'd expct the IME to change the target here
         stacker->quote<BID>(ToRhonePrice(.30), 0, false);

@@ -372,6 +372,9 @@ public:
         : _updateSelector(*this)
         , _orderRequestMgr(OrderRequestManager::get())
     {
+#ifdef VIPER_UNIT_TEST
+        _msgQueue.init(DEFAULT_QUEUE_SIZE);
+#endif
     }
 
     ResourceId id() const noexcept override { return ResourceId::RelativeValue; }
@@ -3071,17 +3074,6 @@ private:
     Matrix _normalizationMatrix; // row, col - outrights, 3
     // *************************************************** //
 
-#ifdef VIPER_UNIT_TEST
-template<typename... T>
-void initializeQueues(T&&... t) {}
-//TODO: Fix unit tests
-//    void initializeQueues(md::queue::MDQueueResource* inFromFront, md::queue::MDQueueResource* outToFront, md::queue::MDQueueResource* inFromMM, md::queue::MDQueueResource* outToMM) {
-//        _inFromFront = inFromFront;
-//        _outToFront = outToFront;
-//        _inFromMM = inFromMM;
-//        _outToMM = outToMM;
-//    }
-#endif
 };
 
 #undef NumberOfMarkets
