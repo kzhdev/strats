@@ -1,3 +1,10 @@
+#Version 1.54.7.0
+- Allow multiple connections
+- Set shift only when the first client connected
+- Send Viper version in ClientAccepted response
+- Send ClientLogin accepted responses to the connected client only
+- Added TraderChanged protobuf message; When trader switched, send trader name to GUI
+
 #Version 1.54.6.1
 - Switch to the correct trader after GUI logging in.
 

@@ -7,7 +7,8 @@ void ArbieSpreader::handleViperMessage(const ViperMessage& message) {
         case ViperMessageType::GridUpdate: {
             const auto& gridChange = reinterpret_cast<const GridUpdateMessage&>(message._data[0]);
             processGridChange(*gridChange._gridUpdate);
-            sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid());
+            sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid(),
+                                      gridChange._connectionId);
             break;
         }
 

@@ -77,25 +77,36 @@ public:
     void runIteration();
 
     void sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted);
-    void sendGridChangeReply(proto::GridUpdate& message);
-    void sendGridUpdate(proto::GridUpdate& data);
+    void sendGridChangeReply(proto::GridUpdate& message, int32_t connectioinId = -1);
+    void sendGridUpdate(proto::GridUpdate& data, int32_t connectionId = -1);
     void sendChartDataPoints(proto::DataSeriesPointSet& set);
     void sendGuiHeartbeat(uint64_t utc_ts_in_nanos);
     void sendPlaySound(uint32_t id);
-    void handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds);
-    void handleLoginRejected();
-    void handleLoggedOut();
+    void sendTraderUpdate(const char* trader);
+    void handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds, int32_t connectionId, const char* trader);
+    void handleLoginRejected(int32_t connectionId);
+    void handleLoggedOut(int32_t connectionId);
     void doHeartBeats();
     void checkConnectionHealth();
+    const char* const getConnectionUserName(int32_t connectionId) const noexcept;
+    uint32_t getNumberConnection() const noexcept;
 
 private:
     int createMonitorSocket();
-    void onDecodeMessageError(ClientConnection& traderConnection, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID);
-    void removeTraderConnection(ClientConnection& traderConnection);
-    void onConnectionError(ClientConnection& traderConnection);
-    void sendOtherRequest(ViperMessageType mt, uint32_t messageID);
+    void onDecodeMessageError(std::map<int, std::shared_ptr<ClientConnection>>::iterator& traderConnection, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID);
+    void removeTraderConnection(std::map<int, std::shared_ptr<ClientConnection>>::iterator& traderConnection);
+    void onConnectionError(std::map<int, std::shared_ptr<ClientConnection>>::iterator& traderConnection);
+    void sendOtherRequest(ViperMessageType mt, uint32_t messageID, int32_t connection_id);
     void sendHeartBeat(ClientConnection& conn);
     bool hasConnection() const noexcept;
+
+    template<typename SendFunc>
+    void sendMessageToAllConnection(SendFunc&& send) {
+        for (auto& kvp : m_monitor.m_traderConnections) {
+            ClientConnection* connection = kvp.second.get();
+            send(connection);
+        }
+    }
 
     struct epoll_event events[100]{};
 

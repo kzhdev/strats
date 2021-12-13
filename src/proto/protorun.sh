@@ -9,7 +9,7 @@
 #$LS $LS_FLAGS $HOME
 
 SRC_DIR="."
-DST_DIR="."
+DST_DIR="../messages/"
 
 #ls $SRC_DIR
 

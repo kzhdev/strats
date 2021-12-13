@@ -298,32 +298,34 @@ public:
                 storeLtfs();
                 _nextLtfStoreTime = now + _ltfStoreInterval;
             }
-            if (_loginTime > 0 && (now - _loginTime) >= _versionSendingTime) {
-                sendViperVersion();
-                for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
-                    for(const auto& position : _viperConfig._unallocatedPositionsFromFile[i]) {
-                        sendErrorMessage("Unallocated " + std::string(toString((StrategyId)i)) +
-                            " position loaded from file.  Contract=" + position.first + " Position=" + std::to_string(position.second), ErrorType::Critical);
-                    }
-                }
 
-                for (auto& economicNumber : _executor->_economicNumbers) {
-                    sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% MMDuration=%4%Sec RVDuration=%5%Sec ASDuration=%6%Sec")
-                        % to_string(economicNumber->_color) % economicNumber->_datetimeString % economicNumber->_id
-                        % economicNumber->_mmDuration % economicNumber->_rvDuration % economicNumber->_asDuration),
-                        ErrorType::Normal);
+            for (auto iter = _newLogins.begin(); iter != _newLogins.end();) {
+                auto& login = *iter;
+                if ((now - login._loginTime) >= _versionSendingTime) {
+                    for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
+                        for(const auto& position : _viperConfig._unallocatedPositionsFromFile[i]) {
+                            sendErrorMessage("Unallocated " + std::string(toString((StrategyId)i)) +
+                                             " position loaded from file.  Contract=" + position.first + " Position=" +
+                                             std::to_string(position.second), ErrorType::Critical,
+                                             login._connectionId);
+                        }
+                    }
+
+                    for (auto& economicNumber : _executor->_economicNumbers) {
+                        sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% MMDuration=%4%Sec RVDuration=%5%Sec ASDuration=%6%Sec")
+                                                    % to_string(economicNumber->_color) % economicNumber->_datetimeString % economicNumber->_id
+                                                    % economicNumber->_mmDuration % economicNumber->_rvDuration % economicNumber->_asDuration),
+                                         ErrorType::Normal, login._connectionId);
+                    }
+                    if (_executor->_economicNumbers.empty()) {
+                        sendErrorMessage("No economic number expected in the next 24 hours", ErrorType::Normal);
+                    }
+                    iter = _newLogins.erase(iter);
+                } else {
+                    ++iter;
                 }
-                if (_executor->_economicNumbers.empty()) {
-                    sendErrorMessage("No economic number expected in the next 24 hours", ErrorType::Normal);
-                }
-                _loginTime = 0;
             }
         }
-    }
-
-    void sendViperVersion() {
-        boost::format versionString{"ViperVersion=%1% ViperGitHash=%2% RhonePublicGitHash=%3% ICECancelResting=%4%"};
-        sendErrorMessage(boost::str(versionString % Python::ViperVersion % Python::ViperGitHash % Python::RhonePublicGitHash % _viperConfig._iceCancelResting), ErrorType::Normal);
     }
 
     void storeLtfs() {
@@ -491,7 +493,7 @@ public:
                 }
                 case ViperMessageType::GridUpdateAccepted: {
                     auto& reply = reinterpret_cast<GenericMessage&> (message._data[0]);
-                    onGridUpdateAccepted(reply._number_1);
+                    onGridUpdateAccepted(reply._number_1, reply._number_2);
                     break;
                 }
                 case ViperMessageType::ErrorMessage: {
@@ -554,6 +556,9 @@ public:
                     GatewayStatusMessage& status = reinterpret_cast<GatewayStatusMessage &> (message._data[0]);
 
                     std::string m = status._message;
+                    if (m.empty()) {
+                        return;
+                    }
                     ErrorMessage em;
                     memcpy(em._message, m.c_str(), m.size());
                     em._size = m.size();
@@ -683,7 +688,7 @@ public:
         cell->set_col(1);
         cell->set_value(std::to_string(toUInt(_viperConfig._currentShift)));
         gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
-        _clientAcceptor->sendGridChangeReply(gu._update);
+        _clientAcceptor->sendGridChangeReply(gu._update, -1);
     }
 
     void notifyEconomicNumberStartToGUI(uint32_t contractId) {
@@ -1249,23 +1254,23 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
-    void sendErrorMessage(ErrorMessage& m) {
+    void sendErrorMessage(ErrorMessage& m, int32_t connectionId = -1) {
         proto::GridUpdate message;
         _guiThings.populateErrorMessage(message, m);
-        _clientAcceptor->sendGridUpdate(message);
+        _clientAcceptor->sendGridUpdate(message, connectionId);
     }
 
-    void sendErrorMessage(const std::string& message, ErrorType type) {
+    void sendErrorMessage(const std::string& message, ErrorType type, int32_t connectionId = -1) {
         BOOST_ASSERT(message.size() < CRITICAL_MESSAGE_MAX_SIZE);
         ErrorMessage em;
         auto strlen = std::min<decltype(CRITICAL_MESSAGE_MAX_SIZE)>(message.size(), CRITICAL_MESSAGE_MAX_SIZE);
         memcpy(em._message, message.c_str(), strlen);
         em._size = strlen;
         em._type = type;
-        sendErrorMessage(em);
+        sendErrorMessage(em, connectionId);
     }
 
-    void onGridUpdate(proto::GridUpdate& update) {
+    void onGridUpdate(proto::GridUpdate& update, int32_t connectionId) {
         auto it = _gridUpdates.find(update.gridid());
         if (it != _gridUpdates.end()) {
             GridUpdate& gridUpdate = it->second;
@@ -1274,44 +1279,44 @@ public:
                 const WindowIds windowId = static_cast<WindowIds>(update.gridid());
                 if (windowId == WindowIds::PNL) {
                     _pnlLimitsChecker.handlePnlLimitChange(gridUpdate, _viperConfig._currentShift);
-                    onGridUpdateAccepted(toUInt(WindowIds::PNL));
+                    onGridUpdateAccepted(toUInt(WindowIds::PNL), connectionId);
                     checkAndActOnPnl(true);
                 } else if (windowId == WindowIds::GlobalConfigs) {
-                    handleGlobalConfigChange(gridUpdate);
+                    handleGlobalConfigChange(gridUpdate, connectionId);
                 } else if (windowId == WindowIds::ManualFillsEntry) {
                     for (auto strategy : _strategies) {
-                        strategy->sendGridUpdate(gridUpdate);
+                        strategy->sendGridUpdate(gridUpdate, connectionId);
                     }
                 }
                 else if(windowId == WindowIds::TraderSwitch) {
                     verifyAndApplyShiftChange(gridUpdate);
-                    sendGridUpdateToExecutor(gridUpdate);
+                    sendGridUpdateToExecutor(gridUpdate, connectionId);
                 }
                 else if(windowId == WindowIds::GTCManagement ||
                         windowId == WindowIds::StackerParameters ||
                         windowId == WindowIds::EconomicNumbers)
                 {
-                    sendGridUpdateToExecutor(gridUpdate);
+                    sendGridUpdateToExecutor(gridUpdate, connectionId);
                 }
                 else if(windowId == WindowIds::StatusDebug) {
                     sendStatusDebugUpdates(gridUpdate);
-                    onGridUpdateAccepted(gridUpdate._update.gridid());
+                    onGridUpdateAccepted(gridUpdate._update.gridid(), connectionId);
                 }
                 else if (windowId == WindowIds::LoggingLevel) {
                     onLoggingLevelChange(gridUpdate);
-                    onGridUpdateAccepted(gridUpdate._update.gridid());
+                    onGridUpdateAccepted(gridUpdate._update.gridid(), connectionId);
                 }
                 else if (windowId == WindowIds::NegativeScalpChecker) {
                     handleNegativeScalpCheckerConfigUpdate(gridUpdate);
-                    onGridUpdateAccepted(toUInt(WindowIds::NegativeScalpChecker));
+                    onGridUpdateAccepted(toUInt(WindowIds::NegativeScalpChecker), connectionId);
                 }
                 else if (windowId == WindowIds::PricingConfig) {
-                    sendGridUpdateToExecutor(gridUpdate);
-                    _strategies[toUInt(StrategyId::RelativeValue)]->sendGridUpdate(gridUpdate);
-                    _strategies[toUInt(StrategyId::ArbieSpreader)]->sendGridUpdate(gridUpdate);
+                    sendGridUpdateToExecutor(gridUpdate, connectionId);
+                    _strategies[toUInt(StrategyId::RelativeValue)]->sendGridUpdate(gridUpdate, connectionId);
+                    _strategies[toUInt(StrategyId::ArbieSpreader)]->sendGridUpdate(gridUpdate, connectionId);
                 }
                 else {
-                    _strategies[toUInt(getUpdateStrategy(windowId))]->sendGridUpdate(gridUpdate);
+                    _strategies[toUInt(getUpdateStrategy(windowId))]->sendGridUpdate(gridUpdate, connectionId);
                 }
             } else {
                 logging::GetLogger().logError("received grid update but another already in flight");
@@ -1409,7 +1414,7 @@ public:
         }
     }
 
-    void handleGlobalConfigChange(GridUpdate& update) {
+    void handleGlobalConfigChange(GridUpdate& update, int32_t connectionId) {
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             auto& config = _viperConfig._globalConfigs[gridCell.row()];
@@ -1420,7 +1425,7 @@ public:
                     _globalNegativeScalpChecker.updateCountLimit(clips);
                 }
                 LOG(0, "Negative Scalper Checkers. Updated count limit. Value={i1} Shift={i2}", clips, toUInt(shift))
-                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs), connectionId);
             }
             else if (config._key == NEGATIVE_SCALP_DOLLARS) {
                 uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
@@ -1429,7 +1434,7 @@ public:
                     _globalNegativeScalpChecker.updatePnlLimit(ToRhonePrice(value));
                 }
                 LOG(0, "Negative Scalper Checkers. Updated dollar limit. Value={i1} Shift={i2}", value, toUInt(shift))
-                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs), connectionId);
             }
             else if (config._key == NEGATIVE_SCALP_PERIOD) {
                 uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
@@ -1439,7 +1444,7 @@ public:
                     _globalNegativeScalpChecker.updatePeriodInCycles(periodInCycles);
                 }
                 LOG(0, "Negative Scalper Checkers. Updated period. Period={i1} Shift={i2}", period, toUInt(shift))
-                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs), connectionId);
             }
             else if(config._key == FILL_RATE_CLIPS) {
                 uint32_t clips = boost::lexical_cast<uint32_t>(gridCell.value());
@@ -1448,7 +1453,7 @@ public:
                     _fillRateChecker.changeMaxClips(clips, clockUtil::GetCycles());
                 }
                 LOG(0, "Fill Rate Checker.  Update max clips={i1} Shift={i1}", clips, toUInt(shift));
-                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs), connectionId);
             }
             else if(config._key == FILL_RATE_SUM_TOTAL) {
                 hf::qty_t fillRateSumTotal = boost::lexical_cast<hf::qty_t>(gridCell.value());
@@ -1457,7 +1462,7 @@ public:
                     _fillRateChecker.changeSumTotal(fillRateSumTotal, clockUtil::GetCycles());
                 }
                 LOG(0, "Fill Rate Checker.  Update sumTotal={i1} Shift={i2}", fillRateSumTotal, toUInt(shift));
-                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs), connectionId);
             }
             else if(config._key == FILL_RATE_PERIOD) {
                 uint32_t period = boost::lexical_cast<uint32_t>(gridCell.value());
@@ -1467,13 +1472,13 @@ public:
                     _fillRateChecker.changeThrottleWindowSize(periodInCycles, clockUtil::GetCycles());
                 }
                 LOG(0, "Fill Rate Checker.  Updated window size={i1}ms ({i2} cycles) Shift={i3}", period, periodInCycles, toUInt(shift));
-                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs));
+                onGridUpdateAccepted(toUInt(WindowIds::GlobalConfigs), connectionId);
             }
             else if (config._key == RV_WIDTH_MULTIPLIER) {
-                _strategies[toUInt(StrategyId::RelativeValue)]->sendGridUpdate(update);
+                _strategies[toUInt(StrategyId::RelativeValue)]->sendGridUpdate(update, connectionId);
             }
             else if (config._key == AS_EDGE_MULTIPLIER) {
-                _strategies[toUInt(StrategyId::ArbieSpreader)]->sendGridUpdate(update);
+                _strategies[toUInt(StrategyId::ArbieSpreader)]->sendGridUpdate(update, connectionId);
             }
             else if (config._key == QUOTE_BANNER_PERIOD || config._key == FILL_BANNER_PERIOD ||
                      config._key == HEDGE_BANNER_MICS || config._key == PERCENT_MSG_HEDGES ||
@@ -1482,7 +1487,7 @@ public:
                      config._key == ORDER_RATE_CLIPS || config._key == ORDER_RATE_SUM_TOTAL ||
                      config._key == ORDER_RATE_PERIOD || config._key == AUTO_SHUTDOWN_TIME ||
                      config._key == AUTO_RV_DISABLE_TIME || config._key == AUTO_MM_DISABLE_TIME) {
-                sendGridUpdateToExecutor(update);
+                sendGridUpdateToExecutor(update, connectionId);
             }
         }
     }
@@ -1534,17 +1539,19 @@ public:
         }
     }
 
-    void sendGridUpdateToExecutor(GridUpdate& update) {
+    void sendGridUpdateToExecutor(GridUpdate& update, int32_t connectionId) {
         sendMessageToExecutor<GridUpdateMessage>(
                 ViperMessageType::GridUpdate,
-                [&](GridUpdateMessage& message) {
+                [&update, connectionId](GridUpdateMessage& message) {
                     message._gridUpdate = &update;
+                    message._connectionId = connectionId;
                 });
     }
 
-    void sendChangeToAudit(uint32_t gridId, GridUpdate& gu) {
+    void sendChangeToAudit(uint32_t gridId, GridUpdate& gu, int32_t connectionId = -2) {
         proto::GridUpdate message;
-        _guiThings.populateAuditMessage(gridId, message, gu, _viperConfig._currentTrader);
+        auto user = connectionId == -2 ? "Internal" : _clientAcceptor->getConnectionUserName(connectionId);
+        _guiThings.populateAuditMessage(gridId, message, gu, _viperConfig._currentTrader, user);
         _clientAcceptor->sendGridUpdate(message);
     }
 
@@ -1554,7 +1561,7 @@ public:
         _clientAcceptor->sendGridUpdate(message);
     }
 
-    void onGridUpdateAccepted(uint32_t gridId) {
+    void onGridUpdateAccepted(uint32_t gridId, int32_t connectionId) {
         //Note that even if the update was rejected, there is zero checking here.  We rely on the GridUpdate itself being modified
         //to what is going to be persisted
         auto it = _gridUpdates.find(gridId);
@@ -1562,7 +1569,7 @@ public:
             GridUpdate& gu = it->second;
             _viperConfig.applyGridUpdate(gu);
             if (gridId != toUInt(WindowIds::ManualFillsEntry)) {
-                sendChangeToAudit(gridId, gu);
+                sendChangeToAudit(gridId, gu, connectionId);
                 if (gridId == toUInt(WindowIds::TraderSwitch)) {
                     onTraderSwitchUpdate(gu);
                 } else if (gridId == toUInt(WindowIds::GlobalConfigs)) {
@@ -1590,11 +1597,16 @@ public:
         for (int i = 0; i < update._update.cells_size(); ++i) {
             const proto::GridCell& gridCell = update._update.cells(i);
             TraderSwitchColumns columnType = static_cast<TraderSwitchColumns>(gridCell.col());
+            if (columnType == TraderSwitchColumns::Trader) {
+                _clientAcceptor->sendTraderUpdate(_viperConfig._traders[_viperConfig._currentTrader].c_str());
+                continue;
+            }
+
             if (columnType == TraderSwitchColumns::Shift) {
                 auto shift = atoi(gridCell.value().c_str());
                 switchGlobalConfigAndSendUpdateToGUI(shift);
                 switchPnlConfigAndSendUpdateToGUI(shift);
-                break;
+                continue;
             }
         }
     }
@@ -1622,7 +1634,7 @@ public:
         _clientAcceptor->sendGridChangeReply(gu._update);
     }
 
-    void switchGlobalConfigAndSendUpdateToGUI(uint32_t shift) {
+    void switchGlobalConfigAndSendUpdateToGUI(uint32_t shift, int32_t connectionId = -1) {
         GridUpdate gu;
         gu._update.set_gridid(toUInt(WindowIds::GlobalConfigs));
         gu._update.set_updatetype(proto::GridUpdateType::CellsType);
@@ -1667,12 +1679,12 @@ public:
             cell->set_col(0);
             cell->set_value(config._value);
         }
-        sendChangeToAudit(toUInt(WindowIds::GlobalConfigs), gu);
+        sendChangeToAudit(toUInt(WindowIds::GlobalConfigs), gu, connectionId);
         gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
-        _clientAcceptor->sendGridChangeReply(gu._update);
+        _clientAcceptor->sendGridChangeReply(gu._update, connectionId);
     }
 
-    void switchPnlConfigAndSendUpdateToGUI(uint32_t shift) {
+    void switchPnlConfigAndSendUpdateToGUI(uint32_t shift, int32_t connectionId = -1) {
         GridUpdate gu;
         gu._update.set_gridid(toUInt(WindowIds::PNL));
         gu._update.set_updatetype(proto::GridUpdateType::CellsType);
@@ -1693,9 +1705,9 @@ public:
                 cell->set_value(std::to_string(pnlConfig._drawdown));
             }
         }
-        sendChangeToAudit(toUInt(WindowIds::PNL), gu);
+        sendChangeToAudit(toUInt(WindowIds::PNL), gu, connectionId);
         gu._update.set_messageid(proto::GUI_MESSAGE_TYPE_GRID_CHANGE);
-        _clientAcceptor->sendGridChangeReply(gu._update);
+        _clientAcceptor->sendGridChangeReply(gu._update, connectionId);
     }
 
     void sendPnlLimitToGUI() {
@@ -1743,21 +1755,28 @@ public:
         _clientAcceptor->sendGridChangeReply(gu._update);
     }
 
-    void onOtherRequest(ViperMessageType mt)  {
+    void onOtherRequest(ViperMessageType mt, int32_t connectionId)  {
         switch (mt) {
             case ViperMessageType::Login: {
                 onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
                 proto::GUIInitialization m;
                 _guiThings.populateGUIInitialization(m, _strategies, _executor);
-                _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency));
-                _loginTime = clockUtil::GetCycles();
+                _clientAcceptor->handleLoginAccepted(m,
+                                                     GetMillisFromCycles(_guiHeartbeatInterval, _frequency),
+                                                     connectionId, _viperConfig._traders[_viperConfig._currentTrader].c_str());
+                _newLogins.emplace_back(clockUtil::GetCycles(), connectionId);
 
                 // set shift dependent values correctly
                 auto shift = toUInt(_viperConfig._currentShift);
-                sendGenericMessageToExecutor(ViperMessageType::Login, _viperConfig._currentTrader, shift);
-                _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, shift);
-                switchGlobalConfigAndSendUpdateToGUI(shift);
-                switchPnlConfigAndSendUpdateToGUI(shift);
+                if (_firstLogin) {
+                    if (_clientAcceptor->getNumberConnection() == 1) {
+                        sendGenericMessageToExecutor(ViperMessageType::Login, _viperConfig._currentTrader, shift);
+                        _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, shift);
+                    }
+                    _firstLogin = false;
+                }
+                switchGlobalConfigAndSendUpdateToGUI(shift, connectionId);
+                switchPnlConfigAndSendUpdateToGUI(shift, connectionId);
                 break;
             }
             case ViperMessageType::Logout: {
@@ -1765,7 +1784,7 @@ public:
                 break;
             }
             case ViperMessageType::ClientDown: {
-                logging::GetLogger().logError("Client down - doing hard shutdown");
+                logging::GetLogger().logError("All Client down - doing hard shutdown");
                 onSystemStateChange(SystemState::HardShutdown, "GUI Requested");
                 break;
             }
@@ -1819,7 +1838,7 @@ public:
         }
     }
 
-    void onSwitchChange(proto::SwitchChange& change) {
+    void onSwitchChange(proto::SwitchChange& change, const std::string& user) {
         auto& cell = change.cell();
 
         MainControlAction action = static_cast<MainControlAction>(cell.col());
@@ -1843,7 +1862,7 @@ public:
                 sendErrorMessage(boost::str(boost::format("Refusing to enable Strategy=%1% -- %2%pnl currently breached") % toString(strategy->strategyId()) % (strategyPnlBreached ? "" : "Total ")), ErrorType::Critical);
             }
             else {
-                onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),"GUI requested",toString(strategy->strategyId()));
+                onStrategySystemStateChange(state, strategy->_state, s_systemState.strategyEnableBlocked(strategy->strategyId()),"GUI requested. user=" + user,toString(strategy->strategyId()));
             }
         } else if (row < toUInt(StrategyId::MAX) * 2) {
             auto strategy = _strategies[row - toUInt(StrategyId::MAX)];
@@ -1957,10 +1976,18 @@ public:
     uint64_t _guiHeartbeatInterval;
     uint64_t _guiHeartbeatTime = 0;
 
-    uint64_t _loginTime = 0;
+    struct LoginInfo {
+        uint64_t _loginTime = 0;
+        int32_t _connectionId = 0;
+
+        LoginInfo() = default;
+        LoginInfo(uint64_t time, int32_t connectionId) : _loginTime(time), _connectionId(connectionId) {}
+    };
+    std::vector<LoginInfo> _newLogins;
     uint64_t _versionSendingTime;
 
     bool _canSendPnl = false;
+    bool _firstLogin = true;
 
     std::unordered_map<uint32_t, uint32_t> _internalIdToMarketMakerConfigOffset;
 

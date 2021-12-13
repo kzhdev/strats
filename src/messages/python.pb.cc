@@ -27,6 +27,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* ClientLogin_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   ClientLogin_reflection_ = NULL;
+const ::google::protobuf::Descriptor* TraderChanged_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  TraderChanged_reflection_ = NULL;
 const ::google::protobuf::Descriptor* ErrorMessage_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   ErrorMessage_reflection_ = NULL;
@@ -151,7 +154,22 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ClientLogin));
-  ErrorMessage_descriptor_ = file->message_type(2);
+  TraderChanged_descriptor_ = file->message_type(2);
+  static const int TraderChanged_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(TraderChanged, trader_),
+  };
+  TraderChanged_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      TraderChanged_descriptor_,
+      TraderChanged::default_instance_,
+      TraderChanged_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(TraderChanged, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(TraderChanged, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(TraderChanged));
+  ErrorMessage_descriptor_ = file->message_type(3);
   static const int ErrorMessage_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ErrorMessage, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ErrorMessage, error_),
@@ -167,11 +185,12 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ErrorMessage));
-  ClientConnected_descriptor_ = file->message_type(3);
-  static const int ClientConnected_offsets_[3] = {
+  ClientConnected_descriptor_ = file->message_type(4);
+  static const int ClientConnected_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, version_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, heartbeatinterval_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientConnected, trader_),
   };
   ClientConnected_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -184,7 +203,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ClientConnected));
-  ClientClosed_descriptor_ = file->message_type(4);
+  ClientClosed_descriptor_ = file->message_type(5);
   static const int ClientClosed_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientClosed, messageid_),
   };
@@ -199,7 +218,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ClientClosed));
-  GridCell_descriptor_ = file->message_type(5);
+  GridCell_descriptor_ = file->message_type(6);
   static const int GridCell_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridCell, row_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridCell, col_),
@@ -217,7 +236,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GridCell));
-  GridUpdate_descriptor_ = file->message_type(6);
+  GridUpdate_descriptor_ = file->message_type(7);
   static const int GridUpdate_offsets_[6] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridUpdate, gridid_),
@@ -237,7 +256,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GridUpdate));
-  CellButton_descriptor_ = file->message_type(7);
+  CellButton_descriptor_ = file->message_type(8);
   static const int CellButton_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CellButton, row_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CellButton, col_),
@@ -253,7 +272,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(CellButton));
-  RowHeaderCell_descriptor_ = file->message_type(8);
+  RowHeaderCell_descriptor_ = file->message_type(9);
   static const int RowHeaderCell_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(RowHeaderCell, label_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(RowHeaderCell, id_),
@@ -269,7 +288,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(RowHeaderCell));
-  ColumnHeaderCell_descriptor_ = file->message_type(9);
+  ColumnHeaderCell_descriptor_ = file->message_type(10);
   static const int ColumnHeaderCell_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, label_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, id_),
@@ -288,7 +307,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ColumnHeaderCell));
-  GridDefinition_descriptor_ = file->message_type(10);
+  GridDefinition_descriptor_ = file->message_type(11);
   static const int GridDefinition_offsets_[7] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, gridid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GridDefinition, type_),
@@ -309,7 +328,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GridDefinition));
-  GUIInitialization_descriptor_ = file->message_type(11);
+  GUIInitialization_descriptor_ = file->message_type(12);
   static const int GUIInitialization_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GUIInitialization, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GUIInitialization, definitions_),
@@ -328,7 +347,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GUIInitialization));
-  SystemStateChange_descriptor_ = file->message_type(12);
+  SystemStateChange_descriptor_ = file->message_type(13);
   static const int SystemStateChange_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SystemStateChange, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SystemStateChange, newstate_),
@@ -344,7 +363,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(SystemStateChange));
-  SwitchChange_descriptor_ = file->message_type(13);
+  SwitchChange_descriptor_ = file->message_type(14);
   static const int SwitchChange_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SwitchChange, messageid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SwitchChange, cell_),
@@ -361,7 +380,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(SwitchChange));
-  EmptyMessage_descriptor_ = file->message_type(14);
+  EmptyMessage_descriptor_ = file->message_type(15);
   static const int EmptyMessage_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EmptyMessage, messageid_),
   };
@@ -376,7 +395,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(EmptyMessage));
-  HeartBeatMessage_descriptor_ = file->message_type(15);
+  HeartBeatMessage_descriptor_ = file->message_type(16);
   static const int HeartBeatMessage_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(HeartBeatMessage, timestamp_),
   };
@@ -391,7 +410,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(HeartBeatMessage));
-  EnumMember_descriptor_ = file->message_type(16);
+  EnumMember_descriptor_ = file->message_type(17);
   static const int EnumMember_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumMember, display_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumMember, id_),
@@ -407,7 +426,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(EnumMember));
-  EnumDefinition_descriptor_ = file->message_type(17);
+  EnumDefinition_descriptor_ = file->message_type(18);
   static const int EnumDefinition_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumDefinition, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(EnumDefinition, members_),
@@ -423,7 +442,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(EnumDefinition));
-  Chart_descriptor_ = file->message_type(18);
+  Chart_descriptor_ = file->message_type(19);
   static const int Chart_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Chart, id_),
@@ -441,7 +460,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Chart));
-  DataSeries_descriptor_ = file->message_type(19);
+  DataSeries_descriptor_ = file->message_type(20);
   static const int DataSeries_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeries, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeries, id_),
@@ -458,7 +477,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeries));
-  DataSeriesPoint_descriptor_ = file->message_type(20);
+  DataSeriesPoint_descriptor_ = file->message_type(21);
   static const int DataSeriesPoint_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, chartid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, dataseriesid_),
@@ -476,7 +495,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeriesPoint));
-  DataSeriesPointSet_descriptor_ = file->message_type(21);
+  DataSeriesPointSet_descriptor_ = file->message_type(22);
   static const int DataSeriesPointSet_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPointSet, points_),
   };
@@ -491,7 +510,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeriesPointSet));
-  PlaySound_descriptor_ = file->message_type(22);
+  PlaySound_descriptor_ = file->message_type(23);
   static const int PlaySound_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlaySound, id_),
   };
@@ -506,7 +525,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(PlaySound));
-  Button_descriptor_ = file->message_type(23);
+  Button_descriptor_ = file->message_type(24);
   static const int Button_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Button, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Button, id_),
@@ -525,7 +544,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Button));
-  ColorDefinition_descriptor_ = file->message_type(24);
+  ColorDefinition_descriptor_ = file->message_type(25);
   static const int ColorDefinition_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColorDefinition, id_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColorDefinition, argb_),
@@ -568,6 +587,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
     Error_descriptor_, &Error::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     ClientLogin_descriptor_, &ClientLogin::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    TraderChanged_descriptor_, &TraderChanged::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     ErrorMessage_descriptor_, &ErrorMessage::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
@@ -623,6 +644,8 @@ void protobuf_ShutdownFile_python_2eproto() {
   delete Error_reflection_;
   delete ClientLogin::default_instance_;
   delete ClientLogin_reflection_;
+  delete TraderChanged::default_instance_;
+  delete TraderChanged_reflection_;
   delete ErrorMessage::default_instance_;
   delete ErrorMessage_reflection_;
   delete ClientConnected::default_instance_;
@@ -682,118 +705,121 @@ void protobuf_AddDesc_python_2eproto() {
     "\terrorCode\030\001 \001(\0162\030.Python.proto.ERROR_CO"
     "DE\022\021\n\terrorText\030\002 \001(\t\"^\n\013ClientLogin\022\021\n\t"
     "messageID\030\001 \002(\r\022\020\n\010userName\030\002 \002(\t\022\017\n\007ver"
-    "sion\030\003 \001(\t\022\031\n\021heartbeatInterval\030\004 \002(\r\"E\n"
-    "\014ErrorMessage\022\021\n\tmessageID\030\001 \002(\r\022\"\n\005erro"
-    "r\030\002 \002(\0132\023.Python.proto.Error\"P\n\017ClientCo"
-    "nnected\022\021\n\tmessageID\030\001 \002(\r\022\017\n\007version\030\002 "
-    "\002(\t\022\031\n\021heartbeatInterval\030\003 \002(\r\"!\n\014Client"
-    "Closed\022\021\n\tmessageID\030\001 \002(\r\"D\n\010GridCell\022\013\n"
-    "\003row\030\001 \002(\r\022\013\n\003col\030\002 \002(\r\022\r\n\005value\030\003 \002(\t\022\017"
-    "\n\007colorId\030\004 \001(\r\"\312\001\n\nGridUpdate\022\021\n\tmessag"
-    "eID\030\001 \002(\r\022\016\n\006gridId\030\002 \002(\r\0220\n\nupdateType\030"
-    "\003 \002(\0162\034.Python.proto.GridUpdateType\022%\n\005c"
-    "ells\030\004 \003(\0132\026.Python.proto.GridCell\022\022\n\ngr"
-    "idButton\030\005 \001(\r\022,\n\ncellButton\030\006 \001(\0132\030.Pyt"
-    "hon.proto.CellButton\"&\n\nCellButton\022\013\n\003ro"
-    "w\030\001 \002(\r\022\013\n\003col\030\002 \002(\r\"*\n\rRowHeaderCell\022\r\n"
-    "\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"~\n\020ColumnHeader"
-    "Cell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022$\n\004type\030"
-    "\003 \002(\0162\026.Python.proto.DataType\022\027\n\017enumera"
-    "tionName\030\004 \001(\t\022\020\n\010readOnly\030\005 \002(\010\"\210\002\n\016Gri"
-    "dDefinition\022\016\n\006gridId\030\001 \002(\r\022$\n\004type\030\002 \002("
-    "\0162\026.Python.proto.GridType\022\014\n\004name\030\003 \002(\t\022"
-    "4\n\014columnHeader\030\004 \003(\0132\036.Python.proto.Col"
-    "umnHeaderCell\022.\n\trowHeader\030\005 \003(\0132\033.Pytho"
-    "n.proto.RowHeaderCell\022%\n\005cells\030\006 \003(\0132\026.P"
-    "ython.proto.GridCell\022%\n\007buttons\030\007 \003(\0132\024."
-    "Python.proto.Button\"\344\001\n\021GUIInitializatio"
-    "n\022\021\n\tmessageID\030\001 \002(\r\0221\n\013definitions\030\002 \003("
-    "\0132\034.Python.proto.GridDefinition\0225\n\017enumD"
-    "efinitions\030\003 \003(\0132\034.Python.proto.EnumDefi"
-    "nition\022#\n\006charts\030\004 \003(\0132\023.Python.proto.Ch"
-    "art\022-\n\006colors\030\005 \003(\0132\035.Python.proto.Color"
-    "Definition\"S\n\021SystemStateChange\022\021\n\tmessa"
-    "geID\030\001 \002(\r\022+\n\010newState\030\002 \002(\0162\031.Python.pr"
-    "oto.SystemState\"W\n\014SwitchChange\022\021\n\tmessa"
-    "geID\030\001 \002(\r\022$\n\004cell\030\002 \002(\0132\026.Python.proto."
-    "GridCell\022\016\n\006gridId\030\003 \002(\r\"!\n\014EmptyMessage"
-    "\022\021\n\tmessageID\030\001 \002(\r\"%\n\020HeartBeatMessage\022"
-    "\021\n\ttimestamp\030\001 \002(\004\")\n\nEnumMember\022\017\n\007disp"
-    "lay\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016EnumDefinition\022"
-    "\014\n\004name\030\001 \002(\t\022)\n\007members\030\002 \003(\0132\030.Python."
-    "proto.EnumMember\"j\n\005Chart\022\014\n\004name\030\001 \002(\t\022"
-    "\n\n\002id\030\002 \002(\r\022\035\n\025numberOfDecimalPlaces\030\003 \002"
-    "(\r\022(\n\006series\030\004 \003(\0132\030.Python.proto.DataSe"
-    "ries\"7\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002"
-    " \002(\r\022\017\n\007colorId\030\003 \001(\r\"U\n\017DataSeriesPoint"
-    "\022\017\n\007chartId\030\001 \002(\r\022\024\n\014dataSeriesId\030\002 \002(\r\022"
-    "\014\n\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\"C\n\022DataSeri"
-    "esPointSet\022-\n\006points\030\001 \003(\0132\035.Python.prot"
-    "o.DataSeriesPoint\"\027\n\tPlaySound\022\n\n\002id\030\001 \002"
-    "(\r\"\232\001\n\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022"
-    "0\n\005front\030\003 \002(\0162!.Python.proto.ButtonFron"
-    "tBehavior\022.\n\004back\030\004 \002(\0162 .Python.proto.B"
-    "uttonBackBehavior\022\024\n\014confirmation\030\005 \002(\010\""
-    "+\n\017ColorDefinition\022\n\n\002id\030\001 \002(\r\022\014\n\004argb\030\002"
-    " \002(\t*\037\n\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n"
-    "\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001"
-    "\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI"
-    "_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT"
-    "_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGO"
-    "UT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036"
-    "\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_ME"
-    "SSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED\020\005"
-    "\0220\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION_"
-    "REJECTED\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_ST"
-    "ATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_"
-    "CHANGE\020\010*\314\005\n\023SERVER_MESSAGE_TYPE\022(\n$SERV"
-    "ER_MESSAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SE"
-    "RVER_MESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!S"
-    "ERVER_MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SE"
-    "RVER_MESSAGE_TYPE_CLIENT_CLOSE_REJECTED\020"
-    "!\022!\n\035SERVER_MESSAGE_TYPE_HEARTBEAT\020\"\0220\n,"
-    "SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLE"
-    "DGED\020#\022*\n&SERVER_MESSAGE_TYPE_GUI_INITIA"
-    "LIZATION\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_S"
-    "TATE_CHANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWI"
-    "TCH_CHANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_"
-    "TYPE_SWITCH_CHANGE_REJECTED\020(\0224\n0SERVER_"
-    "MESSAGE_TYPE_SYSTEM_STATE_CHANGE_ACCEPTE"
-    "D\020)\0224\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE_"
-    "CHANGE_REJECTED\020*\022$\n SERVER_MESSAGE_TYPE"
-    "_FORMAT_ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_P"
-    "LAY_SOUND\020,\022&\n\"SERVER_MESSAGE_TYPE_DATA_"
-    "POINT_SET\020-\022\"\n\036SERVER_MESSAGE_TYPE_DATA_"
-    "POINT\020.*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DEC"
-    "ODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CO"
-    "DE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&"
-    "ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375"
-    "\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNA"
-    "ME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NO"
-    "T_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GAT"
-    "EWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADE"
-    "R_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*G\n\016Gri"
-    "dUpdateType\022\r\n\tCellsType\020\001\022\022\n\016GridButton"
-    "Type\020\002\022\022\n\016CellButtonType\020\003*L\n\010GridType\022\t"
-    "\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013MainC"
-    "ontrol\020\004\022\016\n\nEntryTable\020\005*[\n\013SystemState\022"
-    "\033\n\027SystemStateHardShutdown\020\000\022\026\n\022SystemSt"
-    "ateEnabled\020\001\022\027\n\023SystemStateDisabled\020\002*\233\001"
-    "\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\runsigned_"
-    "type\020\001\022\017\n\013double_type\020\002\022\017\n\013string_type\020\003"
-    "\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbool"
-    "_type\020\006\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010*\233\001\n\023"
-    "ButtonFrontBehavior\022\036\n\032ButtonFrontBehavi"
-    "or_Revert\020\001\022$\n ButtonFrontBehavior_Commi"
-    "tValues\020\002\022\037\n\033ButtonFrontBehavior_Nothing"
-    "\020\003\022\035\n\031ButtonFrontBehavior_Clear\020\004*r\n\022But"
-    "tonBackBehavior\022\033\n\027ButtonBackBehavior_Se"
-    "nd\020\001\022\036\n\032ButtonBackBehavior_Nothing\020\002\022\037\n\033"
-    "ButtonBackBehavior_SubmitId\020\003", 4469);
+    "sion\030\003 \001(\t\022\031\n\021heartbeatInterval\030\004 \002(\r\"\037\n"
+    "\rTraderChanged\022\016\n\006trader\030\001 \002(\t\"E\n\014ErrorM"
+    "essage\022\021\n\tmessageID\030\001 \002(\r\022\"\n\005error\030\002 \002(\013"
+    "2\023.Python.proto.Error\"`\n\017ClientConnected"
+    "\022\021\n\tmessageID\030\001 \002(\r\022\017\n\007version\030\002 \002(\t\022\031\n\021"
+    "heartbeatInterval\030\003 \002(\r\022\016\n\006trader\030\004 \001(\t\""
+    "!\n\014ClientClosed\022\021\n\tmessageID\030\001 \002(\r\"D\n\010Gr"
+    "idCell\022\013\n\003row\030\001 \002(\r\022\013\n\003col\030\002 \002(\r\022\r\n\005valu"
+    "e\030\003 \002(\t\022\017\n\007colorId\030\004 \001(\r\"\312\001\n\nGridUpdate\022"
+    "\021\n\tmessageID\030\001 \002(\r\022\016\n\006gridId\030\002 \002(\r\0220\n\nup"
+    "dateType\030\003 \002(\0162\034.Python.proto.GridUpdate"
+    "Type\022%\n\005cells\030\004 \003(\0132\026.Python.proto.GridC"
+    "ell\022\022\n\ngridButton\030\005 \001(\r\022,\n\ncellButton\030\006 "
+    "\001(\0132\030.Python.proto.CellButton\"&\n\nCellBut"
+    "ton\022\013\n\003row\030\001 \002(\r\022\013\n\003col\030\002 \002(\r\"*\n\rRowHead"
+    "erCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"~\n\020Col"
+    "umnHeaderCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r"
+    "\022$\n\004type\030\003 \002(\0162\026.Python.proto.DataType\022\027"
+    "\n\017enumerationName\030\004 \001(\t\022\020\n\010readOnly\030\005 \002("
+    "\010\"\210\002\n\016GridDefinition\022\016\n\006gridId\030\001 \002(\r\022$\n\004"
+    "type\030\002 \002(\0162\026.Python.proto.GridType\022\014\n\004na"
+    "me\030\003 \002(\t\0224\n\014columnHeader\030\004 \003(\0132\036.Python."
+    "proto.ColumnHeaderCell\022.\n\trowHeader\030\005 \003("
+    "\0132\033.Python.proto.RowHeaderCell\022%\n\005cells\030"
+    "\006 \003(\0132\026.Python.proto.GridCell\022%\n\007buttons"
+    "\030\007 \003(\0132\024.Python.proto.Button\"\344\001\n\021GUIInit"
+    "ialization\022\021\n\tmessageID\030\001 \002(\r\0221\n\013definit"
+    "ions\030\002 \003(\0132\034.Python.proto.GridDefinition"
+    "\0225\n\017enumDefinitions\030\003 \003(\0132\034.Python.proto"
+    ".EnumDefinition\022#\n\006charts\030\004 \003(\0132\023.Python"
+    ".proto.Chart\022-\n\006colors\030\005 \003(\0132\035.Python.pr"
+    "oto.ColorDefinition\"S\n\021SystemStateChange"
+    "\022\021\n\tmessageID\030\001 \002(\r\022+\n\010newState\030\002 \002(\0162\031."
+    "Python.proto.SystemState\"W\n\014SwitchChange"
+    "\022\021\n\tmessageID\030\001 \002(\r\022$\n\004cell\030\002 \002(\0132\026.Pyth"
+    "on.proto.GridCell\022\016\n\006gridId\030\003 \002(\r\"!\n\014Emp"
+    "tyMessage\022\021\n\tmessageID\030\001 \002(\r\"%\n\020HeartBea"
+    "tMessage\022\021\n\ttimestamp\030\001 \002(\004\")\n\nEnumMembe"
+    "r\022\017\n\007display\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"I\n\016EnumDe"
+    "finition\022\014\n\004name\030\001 \002(\t\022)\n\007members\030\002 \003(\0132"
+    "\030.Python.proto.EnumMember\"j\n\005Chart\022\014\n\004na"
+    "me\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\022\035\n\025numberOfDecimalP"
+    "laces\030\003 \002(\r\022(\n\006series\030\004 \003(\0132\030.Python.pro"
+    "to.DataSeries\"7\n\nDataSeries\022\014\n\004name\030\001 \002("
+    "\t\022\n\n\002id\030\002 \002(\r\022\017\n\007colorId\030\003 \001(\r\"U\n\017DataSe"
+    "riesPoint\022\017\n\007chartId\030\001 \002(\r\022\024\n\014dataSeries"
+    "Id\030\002 \002(\r\022\014\n\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\"C\n"
+    "\022DataSeriesPointSet\022-\n\006points\030\001 \003(\0132\035.Py"
+    "thon.proto.DataSeriesPoint\"\027\n\tPlaySound\022"
+    "\n\n\002id\030\001 \002(\r\"\232\001\n\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002"
+    "id\030\002 \002(\r\0220\n\005front\030\003 \002(\0162!.Python.proto.B"
+    "uttonFrontBehavior\022.\n\004back\030\004 \002(\0162 .Pytho"
+    "n.proto.ButtonBackBehavior\022\024\n\014confirmati"
+    "on\030\005 \002(\010\"+\n\017ColorDefinition\022\n\n\002id\030\001 \002(\r\022"
+    "\014\n\004argb\030\002 \002(\t*\037\n\020PROTOCOL_VERSION\022\013\n\007VER"
+    "SION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVE"
+    "NUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020"
+    "\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TY"
+    "PE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CL"
+    "IENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_C"
+    "HANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\022"
+    "0\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION_A"
+    "CCEPTED\020\005\0220\n,GUI_MESSAGE_TYPE_GUI_INITIA"
+    "LIZATION_REJECTED\020\006\022(\n$GUI_MESSAGE_TYPE_"
+    "SYSTEM_STATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYP"
+    "E_SWITCH_CHANGE\020\010*\364\005\n\023SERVER_MESSAGE_TYP"
+    "E\022(\n$SERVER_MESSAGE_TYPE_CLIENT_CONNECTE"
+    "D\020\036\022\'\n#SERVER_MESSAGE_TYPE_CLIENT_REJECT"
+    "ED\020\037\022%\n!SERVER_MESSAGE_TYPE_CLIENT_CLOSE"
+    "D\020 \022-\n)SERVER_MESSAGE_TYPE_CLIENT_CLOSE_"
+    "REJECTED\020!\022!\n\035SERVER_MESSAGE_TYPE_HEARTB"
+    "EAT\020\"\0220\n,SERVER_MESSAGE_TYPE_GRID_CHANGE"
+    "_ACKNOWLEDGED\020#\022*\n&SERVER_MESSAGE_TYPE_G"
+    "UI_INITIALIZATION\020%\022)\n%SERVER_MESSAGE_TY"
+    "PE_GRID_STATE_CHANGE\020&\022.\n*SERVER_MESSAGE"
+    "_TYPE_SWITCH_CHANGE_ACCEPTED\020\'\022.\n*SERVER"
+    "_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED\020(\0224"
+    "\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANG"
+    "E_ACCEPTED\020)\0224\n0SERVER_MESSAGE_TYPE_SYST"
+    "EM_STATE_CHANGE_REJECTED\020*\022$\n SERVER_MES"
+    "SAGE_TYPE_FORMAT_ERROR\020+\022\"\n\036SERVER_MESSA"
+    "GE_TYPE_PLAY_SOUND\020,\022&\n\"SERVER_MESSAGE_T"
+    "YPE_DATA_POINT_SET\020-\022\"\n\036SERVER_MESSAGE_T"
+    "YPE_DATA_POINT\020.\022&\n\"SERVER_MESSAGE_TYPE_"
+    "TRADER_CHANGED\020/*\327\002\n\nERROR_CODE\022,\n\037ERROR"
+    "_CODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n"
+    "!ERROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377"
+    "\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY_LO"
+    "GGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRE"
+    "CT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLI"
+    "ENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR"
+    "_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_C"
+    "ODE_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377"
+    "\377\001*G\n\016GridUpdateType\022\r\n\tCellsType\020\001\022\022\n\016G"
+    "ridButtonType\020\002\022\022\n\016CellButtonType\020\003*L\n\010G"
+    "ridType\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003"
+    "\022\017\n\013MainControl\020\004\022\016\n\nEntryTable\020\005*[\n\013Sys"
+    "temState\022\033\n\027SystemStateHardShutdown\020\000\022\026\n"
+    "\022SystemStateEnabled\020\001\022\027\n\023SystemStateDisa"
+    "bled\020\002*\233\001\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\r"
+    "unsigned_type\020\001\022\017\n\013double_type\020\002\022\017\n\013stri"
+    "ng_type\020\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020"
+    "\005\022\r\n\tbool_type\020\006\022\n\n\006button\020\007\022\016\n\nrhone_ti"
+    "me\020\010*\233\001\n\023ButtonFrontBehavior\022\036\n\032ButtonFr"
+    "ontBehavior_Revert\020\001\022$\n ButtonFrontBehav"
+    "ior_CommitValues\020\002\022\037\n\033ButtonFrontBehavio"
+    "r_Nothing\020\003\022\035\n\031ButtonFrontBehavior_Clear"
+    "\020\004*r\n\022ButtonBackBehavior\022\033\n\027ButtonBackBe"
+    "havior_Send\020\001\022\036\n\032ButtonBackBehavior_Noth"
+    "ing\020\002\022\037\n\033ButtonBackBehavior_SubmitId\020\003", 4558);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "python.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
   ClientLogin::default_instance_ = new ClientLogin();
+  TraderChanged::default_instance_ = new TraderChanged();
   ErrorMessage::default_instance_ = new ErrorMessage();
   ClientConnected::default_instance_ = new ClientConnected();
   ClientClosed::default_instance_ = new ClientClosed();
@@ -819,6 +845,7 @@ void protobuf_AddDesc_python_2eproto() {
   ColorDefinition::default_instance_ = new ColorDefinition();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
+  TraderChanged::default_instance_->InitAsDefaultInstance();
   ErrorMessage::default_instance_->InitAsDefaultInstance();
   ClientConnected::default_instance_->InitAsDefaultInstance();
   ClientClosed::default_instance_->InitAsDefaultInstance();
@@ -922,6 +949,7 @@ bool SERVER_MESSAGE_TYPE_IsValid(int value) {
     case 44:
     case 45:
     case 46:
+    case 47:
       return true;
     default:
       return false;
@@ -1684,6 +1712,232 @@ void ClientLogin::Swap(ClientLogin* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int TraderChanged::kTraderFieldNumber;
+#endif  // !_MSC_VER
+
+TraderChanged::TraderChanged()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void TraderChanged::InitAsDefaultInstance() {
+}
+
+TraderChanged::TraderChanged(const TraderChanged& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void TraderChanged::SharedCtor() {
+  _cached_size_ = 0;
+  trader_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+TraderChanged::~TraderChanged() {
+  SharedDtor();
+}
+
+void TraderChanged::SharedDtor() {
+  if (trader_ != &::google::protobuf::internal::kEmptyString) {
+    delete trader_;
+  }
+  if (this != default_instance_) {
+  }
+}
+
+void TraderChanged::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* TraderChanged::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return TraderChanged_descriptor_;
+}
+
+const TraderChanged& TraderChanged::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_python_2eproto();
+  return *default_instance_;
+}
+
+TraderChanged* TraderChanged::default_instance_ = NULL;
+
+TraderChanged* TraderChanged::New() const {
+  return new TraderChanged;
+}
+
+void TraderChanged::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (has_trader()) {
+      if (trader_ != &::google::protobuf::internal::kEmptyString) {
+        trader_->clear();
+      }
+    }
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool TraderChanged::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required string trader = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_trader()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->trader().data(), this->trader().length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void TraderChanged::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required string trader = 1;
+  if (has_trader()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->trader().data(), this->trader().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      1, this->trader(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* TraderChanged::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required string trader = 1;
+  if (has_trader()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->trader().data(), this->trader().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->trader(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int TraderChanged::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required string trader = 1;
+    if (has_trader()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->trader());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void TraderChanged::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const TraderChanged* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const TraderChanged*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void TraderChanged::MergeFrom(const TraderChanged& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_trader()) {
+      set_trader(from.trader());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void TraderChanged::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void TraderChanged::CopyFrom(const TraderChanged& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool TraderChanged::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+
+  return true;
+}
+
+void TraderChanged::Swap(TraderChanged* other) {
+  if (other != this) {
+    std::swap(trader_, other->trader_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata TraderChanged::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = TraderChanged_descriptor_;
+  metadata.reflection = TraderChanged_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
 const int ErrorMessage::kMessageIDFieldNumber;
 const int ErrorMessage::kErrorFieldNumber;
 #endif  // !_MSC_VER
@@ -1941,6 +2195,7 @@ void ErrorMessage::Swap(ErrorMessage* other) {
 const int ClientConnected::kMessageIDFieldNumber;
 const int ClientConnected::kVersionFieldNumber;
 const int ClientConnected::kHeartbeatIntervalFieldNumber;
+const int ClientConnected::kTraderFieldNumber;
 #endif  // !_MSC_VER
 
 ClientConnected::ClientConnected()
@@ -1962,6 +2217,7 @@ void ClientConnected::SharedCtor() {
   messageid_ = 0u;
   version_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   heartbeatinterval_ = 0u;
+  trader_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -1972,6 +2228,9 @@ ClientConnected::~ClientConnected() {
 void ClientConnected::SharedDtor() {
   if (version_ != &::google::protobuf::internal::kEmptyString) {
     delete version_;
+  }
+  if (trader_ != &::google::protobuf::internal::kEmptyString) {
+    delete trader_;
   }
   if (this != default_instance_) {
   }
@@ -2007,6 +2266,11 @@ void ClientConnected::Clear() {
       }
     }
     heartbeatinterval_ = 0u;
+    if (has_trader()) {
+      if (trader_ != &::google::protobuf::internal::kEmptyString) {
+        trader_->clear();
+      }
+    }
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -2062,6 +2326,23 @@ bool ClientConnected::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(34)) goto parse_trader;
+        break;
+      }
+
+      // optional string trader = 4;
+      case 4: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_trader:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_trader()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->trader().data(), this->trader().length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -2103,6 +2384,15 @@ void ClientConnected::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(3, this->heartbeatinterval(), output);
   }
 
+  // optional string trader = 4;
+  if (has_trader()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->trader().data(), this->trader().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      4, this->trader(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -2129,6 +2419,16 @@ void ClientConnected::SerializeWithCachedSizes(
   // required uint32 heartbeatInterval = 3;
   if (has_heartbeatinterval()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(3, this->heartbeatinterval(), target);
+  }
+
+  // optional string trader = 4;
+  if (has_trader()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->trader().data(), this->trader().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        4, this->trader(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -2161,6 +2461,13 @@ int ClientConnected::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt32Size(
           this->heartbeatinterval());
+    }
+
+    // optional string trader = 4;
+    if (has_trader()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->trader());
     }
 
   }
@@ -2199,6 +2506,9 @@ void ClientConnected::MergeFrom(const ClientConnected& from) {
     if (from.has_heartbeatinterval()) {
       set_heartbeatinterval(from.heartbeatinterval());
     }
+    if (from.has_trader()) {
+      set_trader(from.trader());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -2226,6 +2536,7 @@ void ClientConnected::Swap(ClientConnected* other) {
     std::swap(messageid_, other->messageid_);
     std::swap(version_, other->version_);
     std::swap(heartbeatinterval_, other->heartbeatinterval_);
+    std::swap(trader_, other->trader_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

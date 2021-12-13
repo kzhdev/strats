@@ -166,7 +166,7 @@ enum class GlobalConfigsColumns {Value, Asia, Europe, US, Release};
 enum class MessageCountsColumns {Inserts, Modifies, Cancels, CancelRejects, ModifyRejects, Fills, FillsRatio};
 enum class TraderSwitchColumns {Trader, Shift};
 enum class Shifts {Asia, Europe, US, SafeMode, __current_marker__};
-enum class AuditColumns {Time, Trader, Grid, Row, Column, OldValue, NewValue};
+enum class AuditColumns {Time, User, Trader, Grid, Row, Column, OldValue, NewValue};
 enum class GTCManagementColumns {PreOpenBid, PreOpenAsk, IOP,  NumBid, NumOffer, NumTotal, CancelAllBid, Cancel_2_Bid, Cancel_1_Bid, TicksThroughBid, isCrossedBid, isCrossedAsk, TicksThroughAsk, Cancel_1_Ask, Cancel_2_Ask, CancelAllAsk, CancelAll};
 enum class StatusDebugColumns { Contract, StatusEvent };
 enum class LoggingLevelColumns {LoggingLevel};
@@ -1440,6 +1440,7 @@ struct ViperMessage {
 
 struct GridUpdateMessage {
     GridUpdate* _gridUpdate;
+    uint32_t _connectionId;
 };
 
 struct GenericMessage {

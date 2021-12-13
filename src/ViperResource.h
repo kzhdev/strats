@@ -81,20 +81,22 @@ public:
         _sendMessage<MsgT>(*_executorQueue, type, std::forward<MsgPopulateFunc>(msgPopulateFunc), msgDataSize);
     }
 
-    void sendGridUpdateToExecutor(GridUpdate& update) const {
+    void sendGridUpdateToExecutor(GridUpdate& update, int32_t connectionId) const {
         _sendMessage<GridUpdateMessage>(
                 *_executorQueue,
                 ViperMessageType::GridUpdate,
-                [&](GridUpdateMessage& message) {
+                [&update, connectionId](GridUpdateMessage& message) {
                     message._gridUpdate = &update;
+                    message._connectionId = connectionId;
                 });
     }
 
-    void sendGridUpdate(GridUpdate& update) const {
+    void sendGridUpdate(GridUpdate& update, int32_t connectionId) const {
         sendMessage<GridUpdateMessage>(
                 ViperMessageType::GridUpdate,
-                [&](GridUpdateMessage& message) {
+                [&update, connectionId](GridUpdateMessage& message) {
                     message._gridUpdate = &update;
+                    message._connectionId = connectionId;
                 });
     }
 

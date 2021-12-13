@@ -391,13 +391,15 @@ public:
         ++_errorMessageNumber;
     }
 
-    void populateAuditMessage(uint32_t gridId, proto::GridUpdate& message, GridUpdate& update, uint32_t trader) {
+    void populateAuditMessage(uint32_t gridId, proto::GridUpdate& message, GridUpdate& update, uint32_t trader,
+                              const char* const user) {
         message.set_gridid(toUInt(WindowIds::Audit));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
             setCell(cells, _auditMessageNumber, AuditColumns::Time, std::to_string(TimeUtils::clock_gettime()));
+            setCell(cells, _auditMessageNumber, AuditColumns::User, user ? user : "unknown");
             setCell(cells, _auditMessageNumber, AuditColumns::Trader, std::to_string(trader));
             setCell(cells, _auditMessageNumber, AuditColumns::Grid, std::to_string(toUInt(gridId)));
             setCell(cells, _auditMessageNumber, AuditColumns::Row, getRowLabel(gridId, gridCell.row()));
@@ -633,7 +635,8 @@ public:
     }
 
     template<typename ExecutorT>
-    void populateGUIInitialization(proto::GUIInitialization& message, std::vector<ViperStrategyBase*>& strategies, ExecutorT* executor) {
+    void populateGUIInitialization(proto::GUIInitialization& message, std::vector<ViperStrategyBase*>& strategies,
+                                   ExecutorT* executor) {
         auto definitions = message.mutable_definitions();
         populateMainControl(definitions->Add(), executor);
         populateErrors(definitions->Add());
@@ -982,6 +985,7 @@ public:
         definition->set_type(proto::GridType::List);
         auto columnHeader = definition->mutable_columnheader();
         addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::Time, "Time", true, proto::DataType::rhone_time);
+        addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::User, "User", true, proto::DataType::string_type);
         addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::Trader, "Trader", true, proto::DataType::enum_type, "traders");
         addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::Grid, "Grid", true, proto::DataType::enum_type, "grids");
         addColumnHeaderCell(WindowIds::Audit, columnHeader, AuditColumns::Row, "Row", true, proto::DataType::string_type);

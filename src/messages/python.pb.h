@@ -37,6 +37,7 @@ void protobuf_ShutdownFile_python_2eproto();
 
 class Error;
 class ClientLogin;
+class TraderChanged;
 class ErrorMessage;
 class ClientConnected;
 class ClientClosed;
@@ -141,11 +142,12 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_FORMAT_ERROR = 43,
   SERVER_MESSAGE_TYPE_PLAY_SOUND = 44,
   SERVER_MESSAGE_TYPE_DATA_POINT_SET = 45,
-  SERVER_MESSAGE_TYPE_DATA_POINT = 46
+  SERVER_MESSAGE_TYPE_DATA_POINT = 46,
+  SERVER_MESSAGE_TYPE_TRADER_CHANGED = 47
 };
 bool SERVER_MESSAGE_TYPE_IsValid(int value);
 const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MIN = SERVER_MESSAGE_TYPE_CLIENT_CONNECTED;
-const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_DATA_POINT;
+const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_TRADER_CHANGED;
 const int SERVER_MESSAGE_TYPE_ARRAYSIZE = SERVER_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor();
@@ -532,6 +534,93 @@ class ClientLogin : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
+class TraderChanged : public ::google::protobuf::Message {
+ public:
+  TraderChanged();
+  virtual ~TraderChanged();
+
+  TraderChanged(const TraderChanged& from);
+
+  inline TraderChanged& operator=(const TraderChanged& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const TraderChanged& default_instance();
+
+  void Swap(TraderChanged* other);
+
+  // implements Message ----------------------------------------------
+
+  TraderChanged* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const TraderChanged& from);
+  void MergeFrom(const TraderChanged& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string trader = 1;
+  inline bool has_trader() const;
+  inline void clear_trader();
+  static const int kTraderFieldNumber = 1;
+  inline const ::std::string& trader() const;
+  inline void set_trader(const ::std::string& value);
+  inline void set_trader(const char* value);
+  inline void set_trader(const char* value, size_t size);
+  inline ::std::string* mutable_trader();
+  inline ::std::string* release_trader();
+  inline void set_allocated_trader(::std::string* trader);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.TraderChanged)
+ private:
+  inline void set_has_trader();
+  inline void clear_has_trader();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* trader_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_python_2eproto();
+  friend void protobuf_AssignDesc_python_2eproto();
+  friend void protobuf_ShutdownFile_python_2eproto();
+
+  void InitAsDefaultInstance();
+  static TraderChanged* default_instance_;
+};
+// -------------------------------------------------------------------
+
 class ErrorMessage : public ::google::protobuf::Message {
  public:
   ErrorMessage();
@@ -706,6 +795,18 @@ class ClientConnected : public ::google::protobuf::Message {
   inline ::google::protobuf::uint32 heartbeatinterval() const;
   inline void set_heartbeatinterval(::google::protobuf::uint32 value);
 
+  // optional string trader = 4;
+  inline bool has_trader() const;
+  inline void clear_trader();
+  static const int kTraderFieldNumber = 4;
+  inline const ::std::string& trader() const;
+  inline void set_trader(const ::std::string& value);
+  inline void set_trader(const char* value);
+  inline void set_trader(const char* value, size_t size);
+  inline ::std::string* mutable_trader();
+  inline ::std::string* release_trader();
+  inline void set_allocated_trader(::std::string* trader);
+
   // @@protoc_insertion_point(class_scope:Python.proto.ClientConnected)
  private:
   inline void set_has_messageid();
@@ -714,15 +815,18 @@ class ClientConnected : public ::google::protobuf::Message {
   inline void clear_has_version();
   inline void set_has_heartbeatinterval();
   inline void clear_has_heartbeatinterval();
+  inline void set_has_trader();
+  inline void clear_has_trader();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::std::string* version_;
   ::google::protobuf::uint32 messageid_;
   ::google::protobuf::uint32 heartbeatinterval_;
+  ::std::string* trader_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
 
   friend void  protobuf_AddDesc_python_2eproto();
   friend void protobuf_AssignDesc_python_2eproto();
@@ -3258,6 +3362,80 @@ inline void ClientLogin::set_heartbeatinterval(::google::protobuf::uint32 value)
 
 // -------------------------------------------------------------------
 
+// TraderChanged
+
+// required string trader = 1;
+inline bool TraderChanged::has_trader() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void TraderChanged::set_has_trader() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void TraderChanged::clear_has_trader() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void TraderChanged::clear_trader() {
+  if (trader_ != &::google::protobuf::internal::kEmptyString) {
+    trader_->clear();
+  }
+  clear_has_trader();
+}
+inline const ::std::string& TraderChanged::trader() const {
+  return *trader_;
+}
+inline void TraderChanged::set_trader(const ::std::string& value) {
+  set_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    trader_ = new ::std::string;
+  }
+  trader_->assign(value);
+}
+inline void TraderChanged::set_trader(const char* value) {
+  set_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    trader_ = new ::std::string;
+  }
+  trader_->assign(value);
+}
+inline void TraderChanged::set_trader(const char* value, size_t size) {
+  set_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    trader_ = new ::std::string;
+  }
+  trader_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* TraderChanged::mutable_trader() {
+  set_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    trader_ = new ::std::string;
+  }
+  return trader_;
+}
+inline ::std::string* TraderChanged::release_trader() {
+  clear_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = trader_;
+    trader_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void TraderChanged::set_allocated_trader(::std::string* trader) {
+  if (trader_ != &::google::protobuf::internal::kEmptyString) {
+    delete trader_;
+  }
+  if (trader) {
+    set_has_trader();
+    trader_ = trader;
+  } else {
+    clear_has_trader();
+    trader_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// -------------------------------------------------------------------
+
 // ErrorMessage
 
 // required uint32 messageID = 1;
@@ -3436,6 +3614,76 @@ inline ::google::protobuf::uint32 ClientConnected::heartbeatinterval() const {
 inline void ClientConnected::set_heartbeatinterval(::google::protobuf::uint32 value) {
   set_has_heartbeatinterval();
   heartbeatinterval_ = value;
+}
+
+// optional string trader = 4;
+inline bool ClientConnected::has_trader() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void ClientConnected::set_has_trader() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void ClientConnected::clear_has_trader() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void ClientConnected::clear_trader() {
+  if (trader_ != &::google::protobuf::internal::kEmptyString) {
+    trader_->clear();
+  }
+  clear_has_trader();
+}
+inline const ::std::string& ClientConnected::trader() const {
+  return *trader_;
+}
+inline void ClientConnected::set_trader(const ::std::string& value) {
+  set_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    trader_ = new ::std::string;
+  }
+  trader_->assign(value);
+}
+inline void ClientConnected::set_trader(const char* value) {
+  set_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    trader_ = new ::std::string;
+  }
+  trader_->assign(value);
+}
+inline void ClientConnected::set_trader(const char* value, size_t size) {
+  set_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    trader_ = new ::std::string;
+  }
+  trader_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* ClientConnected::mutable_trader() {
+  set_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    trader_ = new ::std::string;
+  }
+  return trader_;
+}
+inline ::std::string* ClientConnected::release_trader() {
+  clear_has_trader();
+  if (trader_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = trader_;
+    trader_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void ClientConnected::set_allocated_trader(::std::string* trader) {
+  if (trader_ != &::google::protobuf::internal::kEmptyString) {
+    delete trader_;
+  }
+  if (trader) {
+    set_has_trader();
+    trader_ = trader;
+  } else {
+    clear_has_trader();
+    trader_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
 }
 
 // -------------------------------------------------------------------

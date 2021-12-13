@@ -484,7 +484,7 @@ public:
                 case ViperMessageType::GridUpdate: {
                     auto& gridChange = reinterpret_cast<GridUpdateMessage &>(message._data[0]);
                     processGridChange(*gridChange._gridUpdate);
-                    sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid());
+                    sendGenericMessageToFront(ViperMessageType::GridUpdateAccepted, gridChange._gridUpdate->_update.gridid(), gridChange._connectionId);
                     break;
                 }
                 case ViperMessageType::GuiInitialized: {

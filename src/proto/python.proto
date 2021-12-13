@@ -40,6 +40,7 @@ enum SERVER_MESSAGE_TYPE {
     SERVER_MESSAGE_TYPE_PLAY_SOUND = 44;
     SERVER_MESSAGE_TYPE_DATA_POINT_SET = 45;
     SERVER_MESSAGE_TYPE_DATA_POINT = 46;
+    SERVER_MESSAGE_TYPE_TRADER_CHANGED = 47;
 }
 
 enum ERROR_CODE {
@@ -64,6 +65,10 @@ message ClientLogin {
     required uint32 heartbeatInterval = 4;
 }
 
+message TraderChanged {
+    required string trader = 1;
+}
+
 message ErrorMessage {
     required uint32 messageID = 1;
     required Error error = 2;
@@ -73,6 +78,7 @@ message ClientConnected {
     required uint32 messageID = 1;
     required string version = 2;
     required uint32 heartbeatInterval = 3;
+    optional string trader = 4;
 }
 
 message ClientClosed {
