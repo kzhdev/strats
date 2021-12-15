@@ -30,6 +30,15 @@ public:
     static constexpr const char* const NAME = "FrontSide";
 
     FrontSide() : _guiThings(GUIThings::get()) {
+        _dataPoints.reserve(65535);
+        _dataPoints.resize(1);
+    }
+
+    ~FrontSide() {
+        if (_chartHistories.is_open()) {
+            _chartHistories.flush();
+            _chartHistories.close();
+        }
     }
 
     ResourceId id() const noexcept override { return ResourceId::FrontSide; }
@@ -191,6 +200,27 @@ public:
             const auto& sym = _viperConfig._marketMakerConfigs[i]._contract;
             _internalIdToMarketMakerConfigOffset[_viperConfig._symbolToInterId[sym]] = i;
         }
+
+        loadChartHistories();
+    }
+
+    void loadChartHistories() {
+        // get the trading day
+        std::time_t t = std::time(nullptr);
+        auto tm = std::localtime(&t);
+        if (tm->tm_hour >= 17) {
+            t += 86400;
+        }
+        auto trading_day = hf::util::TimeUtils::strftime("%Y%m%d ", t * 1000000000);
+        _chartHistories.open("./chart_histories", std::ios::in | std::ios::app);
+        if (!_chartHistories.is_open()) {
+            logging::GetLogger().logError("Failed to open chart_histories file");
+        }
+
+        std::string line;
+        while (std::getline(_chartHistories, line)) {
+            cacheDataPointSets(line);
+        }
     }
 
     bool isPnlWithinLimits(uint32_t id) {
@@ -213,6 +243,11 @@ public:
             uint64_t heartbeatTimestamp = clockUtil::GetCycles();
             checkInternalHeartbeats(heartbeatTimestamp);
             sendGUIHeartbeat(heartbeatTimestamp);
+        }
+
+        if (_chartHistories.is_open()) {
+            _chartHistories.flush();
+            _chartHistories.close();
         }
     }
 
@@ -320,6 +355,7 @@ public:
                     if (_executor->_economicNumbers.empty()) {
                         sendErrorMessage("No economic number expected in the next 24 hours", ErrorType::Normal);
                     }
+                    sendChartHistories(login._connectionId);
                     iter = _newLogins.erase(iter);
                 } else {
                     ++iter;
@@ -470,7 +506,33 @@ public:
         if (relativeValue->_hasDataForCharts) {
             proto::DataSeriesPointSet pointsSet;
             _guiThings.populateChartDataPoints(pointsSet, relativeValue);
-            _clientAcceptor->sendChartDataPoints(pointsSet);
+
+            std::ostringstream oss;
+            _clientAcceptor->sendChartDataPoints(pointsSet, oss);
+
+            if (!oss.str().empty()) {
+                cacheDataPointSets(oss.str());
+                saveDataPointSets(oss.str());
+            }
+        }
+    }
+
+    void cacheDataPointSets(const std::string& data) {
+        if (_currentDataReplaySize + data.size() >= 1'048'576) {
+            _dataPoints.resize(_dataPoints.size() + 1);
+            _currentDataReplaySize = 0;
+        }
+        auto points = _dataPoints.back().mutable_sets();
+        auto* sets = points->Add();
+        sets->assign(data);
+
+        _currentDataReplaySize += sets->size();
+    }
+
+    void saveDataPointSets(const std::string& data) {
+        if (_chartHistories.is_open()) {
+            assert(data.find('\n') == std::string::npos);
+            _chartHistories << data << "\n";
         }
     }
 
@@ -1777,6 +1839,7 @@ public:
                 }
                 switchGlobalConfigAndSendUpdateToGUI(shift, connectionId);
                 switchPnlConfigAndSendUpdateToGUI(shift, connectionId);
+                sendChartHistories(connectionId);
                 break;
             }
             case ViperMessageType::Logout: {
@@ -1929,14 +1992,20 @@ public:
         _clientAcceptor->sendGridUpdate(gu._update);
     }
 
+    void sendChartHistories(int32_t connectionId) {
+        for (auto& replay : _dataPoints) {
+            _clientAcceptor->sendChartHistories(replay, connectionId);
+        }
+    }
+
 #ifdef IS_DEV
-        std::string getContractName(uint32_t id) const {
-            return _viperConfig._allContracts[id]._name;
-        }
+    std::string getContractName(uint32_t id) const {
+        return _viperConfig._allContracts[id]._name;
+    }
 #else
-        uint32_t getContractName(uint32_t id) const {
-            return id;
-        }
+    uint32_t getContractName(uint32_t id) const {
+        return id;
+    }
 #endif
 
     private:
@@ -1994,6 +2063,10 @@ public:
     //For KDB logging
     om::container_id_t _cid;
     om::instance_id_t _iid;
+
+    std::vector<proto::DataSeriesReplay> _dataPoints;
+    uint32_t _currentDataReplaySize = 0;
+    std::fstream _chartHistories;
 };
 
 }

@@ -273,6 +273,7 @@ void ClientsAcceptor::runIteration() {
                             connection._beatToReceive._nextTime = connection._beatToReceive._interval + clockUtil::GetCycles();
                             sendOtherRequest(ViperMessageType::Login, messageID, connection.m_fd);
                             connection.loginComplete();
+                            sendClientCount();
                         }
                     }
                     break;
@@ -390,6 +391,7 @@ void ClientsAcceptor::removeTraderConnection(std::map<int, std::shared_ptr<Clien
     iter = m_monitor.m_traderConnections.erase(iter);
     ::close(fd);
     LOG_INFO(boost::format("Socket %1% erased") % fd);
+    sendClientCount();
 }
 
 void ClientsAcceptor::onDecodeMessageError(std::map<int, std::shared_ptr<ClientConnection>>::iterator& it, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID) {
@@ -424,14 +426,23 @@ void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data, int32_t connection
     }
 }
 
-void ClientsAcceptor::sendChartDataPoints(proto::DataSeriesPointSet& data) {
+void ClientsAcceptor::sendChartDataPoints(proto::DataSeriesPointSet& data, std::ostringstream& streamMessage) {
     if (hasConnection()) {
-        sendMessageToAllConnection([&data](ClientConnection* connection) {
+        sendMessageToAllConnection([&data, &streamMessage](ClientConnection* connection) {
             ServerClientMessenger::instance()->sendMessageToClient(*connection,
-                                                                   proto::SERVER_MESSAGE_TYPE_DATA_POINT_SET, data);
+                                                                   proto::SERVER_MESSAGE_TYPE_DATA_POINT_SET,
+                                                                   data, streamMessage);
         });
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send ChartDataPoint but do not have connection. %1%") % data.ShortDebugString()));
+    }
+}
+
+void ClientsAcceptor::sendChartHistories(proto::DataSeriesReplay& data, int32_t connectionId) {
+    auto iter = m_monitor.m_traderConnections.find(connectionId);
+    if (BOOST_LIKELY(iter != m_monitor.m_traderConnections.end())) {
+        ClientConnection* connection = iter->second.get();
+        ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY, data);
     }
 }
 
@@ -534,6 +545,17 @@ void ClientsAcceptor::sendTraderUpdate(const char* trader) {
         });
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send PlaySound but do not have connection. ")));
+    }
+}
+
+void ClientsAcceptor::sendClientCount() {
+    if (hasConnection()) {
+        proto::ClientCount message;
+        message.set_count(m_monitor.m_traderConnections.size());
+        sendMessageToAllConnection([&message](ClientConnection* connection) {
+            ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_CLIENT_COUNT,
+                                                                   message);
+        });
     }
 }
 

@@ -90,6 +90,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* DataSeriesPointSet_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   DataSeriesPointSet_reflection_ = NULL;
+const ::google::protobuf::Descriptor* DataSeriesReplay_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  DataSeriesReplay_reflection_ = NULL;
 const ::google::protobuf::Descriptor* PlaySound_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   PlaySound_reflection_ = NULL;
@@ -99,6 +102,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* ColorDefinition_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   ColorDefinition_reflection_ = NULL;
+const ::google::protobuf::Descriptor* ClientCount_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  ClientCount_reflection_ = NULL;
 const ::google::protobuf::EnumDescriptor* PROTOCOL_VERSION_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* VENUE_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor_ = NULL;
@@ -510,7 +516,22 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeriesPointSet));
-  PlaySound_descriptor_ = file->message_type(23);
+  DataSeriesReplay_descriptor_ = file->message_type(23);
+  static const int DataSeriesReplay_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesReplay, sets_),
+  };
+  DataSeriesReplay_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      DataSeriesReplay_descriptor_,
+      DataSeriesReplay::default_instance_,
+      DataSeriesReplay_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesReplay, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesReplay, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(DataSeriesReplay));
+  PlaySound_descriptor_ = file->message_type(24);
   static const int PlaySound_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlaySound, id_),
   };
@@ -525,7 +546,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(PlaySound));
-  Button_descriptor_ = file->message_type(24);
+  Button_descriptor_ = file->message_type(25);
   static const int Button_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Button, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Button, id_),
@@ -544,7 +565,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Button));
-  ColorDefinition_descriptor_ = file->message_type(25);
+  ColorDefinition_descriptor_ = file->message_type(26);
   static const int ColorDefinition_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColorDefinition, id_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColorDefinition, argb_),
@@ -560,6 +581,21 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ColorDefinition));
+  ClientCount_descriptor_ = file->message_type(27);
+  static const int ClientCount_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientCount, count_),
+  };
+  ClientCount_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      ClientCount_descriptor_,
+      ClientCount::default_instance_,
+      ClientCount_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientCount, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ClientCount, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(ClientCount));
   PROTOCOL_VERSION_descriptor_ = file->enum_type(0);
   VENUE_descriptor_ = file->enum_type(1);
   GUI_MESSAGE_TYPE_descriptor_ = file->enum_type(2);
@@ -630,11 +666,15 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     DataSeriesPointSet_descriptor_, &DataSeriesPointSet::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    DataSeriesReplay_descriptor_, &DataSeriesReplay::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     PlaySound_descriptor_, &PlaySound::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     Button_descriptor_, &Button::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     ColorDefinition_descriptor_, &ColorDefinition::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    ClientCount_descriptor_, &ClientCount::default_instance());
 }
 
 }  // namespace
@@ -686,12 +726,16 @@ void protobuf_ShutdownFile_python_2eproto() {
   delete DataSeriesPoint_reflection_;
   delete DataSeriesPointSet::default_instance_;
   delete DataSeriesPointSet_reflection_;
+  delete DataSeriesReplay::default_instance_;
+  delete DataSeriesReplay_reflection_;
   delete PlaySound::default_instance_;
   delete PlaySound_reflection_;
   delete Button::default_instance_;
   delete Button_reflection_;
   delete ColorDefinition::default_instance_;
   delete ColorDefinition_reflection_;
+  delete ClientCount::default_instance_;
+  delete ClientCount_reflection_;
 }
 
 void protobuf_AddDesc_python_2eproto() {
@@ -753,68 +797,72 @@ void protobuf_AddDesc_python_2eproto() {
     "riesPoint\022\017\n\007chartId\030\001 \002(\r\022\024\n\014dataSeries"
     "Id\030\002 \002(\r\022\014\n\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\"C\n"
     "\022DataSeriesPointSet\022-\n\006points\030\001 \003(\0132\035.Py"
-    "thon.proto.DataSeriesPoint\"\027\n\tPlaySound\022"
-    "\n\n\002id\030\001 \002(\r\"\232\001\n\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002"
-    "id\030\002 \002(\r\0220\n\005front\030\003 \002(\0162!.Python.proto.B"
-    "uttonFrontBehavior\022.\n\004back\030\004 \002(\0162 .Pytho"
-    "n.proto.ButtonBackBehavior\022\024\n\014confirmati"
-    "on\030\005 \002(\010\"+\n\017ColorDefinition\022\n\n\002id\030\001 \002(\r\022"
-    "\014\n\004argb\030\002 \002(\t*\037\n\020PROTOCOL_VERSION\022\013\n\007VER"
-    "SION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVE"
-    "NUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_EUREX\020"
-    "\003*\315\002\n\020GUI_MESSAGE_TYPE\022!\n\035GUI_MESSAGE_TY"
-    "PE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESSAGE_TYPE_CL"
-    "IENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_TYPE_GRID_C"
-    "HANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_HEARTBEAT\020\004\022"
-    "0\n,GUI_MESSAGE_TYPE_GUI_INITIALIZATION_A"
-    "CCEPTED\020\005\0220\n,GUI_MESSAGE_TYPE_GUI_INITIA"
-    "LIZATION_REJECTED\020\006\022(\n$GUI_MESSAGE_TYPE_"
-    "SYSTEM_STATE_CHANGE\020\007\022\"\n\036GUI_MESSAGE_TYP"
-    "E_SWITCH_CHANGE\020\010*\364\005\n\023SERVER_MESSAGE_TYP"
-    "E\022(\n$SERVER_MESSAGE_TYPE_CLIENT_CONNECTE"
-    "D\020\036\022\'\n#SERVER_MESSAGE_TYPE_CLIENT_REJECT"
-    "ED\020\037\022%\n!SERVER_MESSAGE_TYPE_CLIENT_CLOSE"
-    "D\020 \022-\n)SERVER_MESSAGE_TYPE_CLIENT_CLOSE_"
-    "REJECTED\020!\022!\n\035SERVER_MESSAGE_TYPE_HEARTB"
-    "EAT\020\"\0220\n,SERVER_MESSAGE_TYPE_GRID_CHANGE"
-    "_ACKNOWLEDGED\020#\022*\n&SERVER_MESSAGE_TYPE_G"
-    "UI_INITIALIZATION\020%\022)\n%SERVER_MESSAGE_TY"
-    "PE_GRID_STATE_CHANGE\020&\022.\n*SERVER_MESSAGE"
-    "_TYPE_SWITCH_CHANGE_ACCEPTED\020\'\022.\n*SERVER"
-    "_MESSAGE_TYPE_SWITCH_CHANGE_REJECTED\020(\0224"
-    "\n0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANG"
-    "E_ACCEPTED\020)\0224\n0SERVER_MESSAGE_TYPE_SYST"
-    "EM_STATE_CHANGE_REJECTED\020*\022$\n SERVER_MES"
-    "SAGE_TYPE_FORMAT_ERROR\020+\022\"\n\036SERVER_MESSA"
-    "GE_TYPE_PLAY_SOUND\020,\022&\n\"SERVER_MESSAGE_T"
-    "YPE_DATA_POINT_SET\020-\022\"\n\036SERVER_MESSAGE_T"
-    "YPE_DATA_POINT\020.\022&\n\"SERVER_MESSAGE_TYPE_"
-    "TRADER_CHANGED\020/*\327\002\n\nERROR_CODE\022,\n\037ERROR"
-    "_CODE_DECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n"
-    "!ERROR_CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377"
-    "\377\377\377\377\001\0223\n&ERROR_CODE_CLIENT_IS_ALREADY_LO"
-    "GGED_IN\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRE"
-    "CT_USERNAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLI"
-    "ENT_IS_NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR"
-    "_CODE_GATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_C"
-    "ODE_TRADER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377"
-    "\377\001*G\n\016GridUpdateType\022\r\n\tCellsType\020\001\022\022\n\016G"
-    "ridButtonType\020\002\022\022\n\016CellButtonType\020\003*L\n\010G"
-    "ridType\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003"
-    "\022\017\n\013MainControl\020\004\022\016\n\nEntryTable\020\005*[\n\013Sys"
-    "temState\022\033\n\027SystemStateHardShutdown\020\000\022\026\n"
-    "\022SystemStateEnabled\020\001\022\027\n\023SystemStateDisa"
-    "bled\020\002*\233\001\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\r"
-    "unsigned_type\020\001\022\017\n\013double_type\020\002\022\017\n\013stri"
-    "ng_type\020\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020"
-    "\005\022\r\n\tbool_type\020\006\022\n\n\006button\020\007\022\016\n\nrhone_ti"
-    "me\020\010*\233\001\n\023ButtonFrontBehavior\022\036\n\032ButtonFr"
-    "ontBehavior_Revert\020\001\022$\n ButtonFrontBehav"
-    "ior_CommitValues\020\002\022\037\n\033ButtonFrontBehavio"
-    "r_Nothing\020\003\022\035\n\031ButtonFrontBehavior_Clear"
-    "\020\004*r\n\022ButtonBackBehavior\022\033\n\027ButtonBackBe"
-    "havior_Send\020\001\022\036\n\032ButtonBackBehavior_Noth"
-    "ing\020\002\022\037\n\033ButtonBackBehavior_SubmitId\020\003", 4558);
+    "thon.proto.DataSeriesPoint\" \n\020DataSeries"
+    "Replay\022\014\n\004sets\030\001 \003(\t\"\027\n\tPlaySound\022\n\n\002id\030"
+    "\001 \002(\r\"\232\001\n\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002"
+    "(\r\0220\n\005front\030\003 \002(\0162!.Python.proto.ButtonF"
+    "rontBehavior\022.\n\004back\030\004 \002(\0162 .Python.prot"
+    "o.ButtonBackBehavior\022\024\n\014confirmation\030\005 \002"
+    "(\010\"+\n\017ColorDefinition\022\n\n\002id\030\001 \002(\r\022\014\n\004arg"
+    "b\030\002 \002(\t\"\034\n\013ClientCount\022\r\n\005count\030\001 \002(\r*\037\n"
+    "\020PROTOCOL_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022"
+    "\021\n\rVENUE_UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVEN"
+    "UE_ICE\020\002\022\017\n\013VENUE_EUREX\020\003*\315\002\n\020GUI_MESSAG"
+    "E_TYPE\022!\n\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020"
+    "\001\022\"\n\036GUI_MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n"
+    "\034GUI_MESSAGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_M"
+    "ESSAGE_TYPE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_T"
+    "YPE_GUI_INITIALIZATION_ACCEPTED\020\005\0220\n,GUI"
+    "_MESSAGE_TYPE_GUI_INITIALIZATION_REJECTE"
+    "D\020\006\022(\n$GUI_MESSAGE_TYPE_SYSTEM_STATE_CHA"
+    "NGE\020\007\022\"\n\036GUI_MESSAGE_TYPE_SWITCH_CHANGE\020"
+    "\010*\305\006\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MESS"
+    "AGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_ME"
+    "SSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_M"
+    "ESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_ME"
+    "SSAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SE"
+    "RVER_MESSAGE_TYPE_HEARTBEAT\020\"\0220\n,SERVER_"
+    "MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED\020#\022"
+    "*\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZATIO"
+    "N\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_CH"
+    "ANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHA"
+    "NGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SW"
+    "ITCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAGE"
+    "_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0"
+    "SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_"
+    "REJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT"
+    "_ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SOU"
+    "ND\020,\022&\n\"SERVER_MESSAGE_TYPE_DATA_POINT_S"
+    "ET\020-\022\"\n\036SERVER_MESSAGE_TYPE_DATA_POINT\020."
+    "\022&\n\"SERVER_MESSAGE_TYPE_TRADER_CHANGED\020/"
+    "\022)\n%SERVER_MESSAGE_TYPE_DATA_POINT_REPLA"
+    "Y\0200\022$\n SERVER_MESSAGE_TYPE_CLIENT_COUNT\020"
+    "1*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_ME"
+    "SSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRO"
+    "NG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_"
+    "CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377"
+    "\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374\377\377"
+    "\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGG"
+    "ED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_D"
+    "OWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_C"
+    "LOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*G\n\016GridUpdat"
+    "eType\022\r\n\tCellsType\020\001\022\022\n\016GridButtonType\020\002"
+    "\022\022\n\016CellButtonType\020\003*L\n\010GridType\022\t\n\005Tabl"
+    "e\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013MainControl"
+    "\020\004\022\016\n\nEntryTable\020\005*[\n\013SystemState\022\033\n\027Sys"
+    "temStateHardShutdown\020\000\022\026\n\022SystemStateEna"
+    "bled\020\001\022\027\n\023SystemStateDisabled\020\002*\233\001\n\010Data"
+    "Type\022\017\n\013signed_type\020\000\022\021\n\runsigned_type\020\001"
+    "\022\017\n\013double_type\020\002\022\017\n\013string_type\020\003\022\r\n\ten"
+    "um_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbool_type\020"
+    "\006\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010*\233\001\n\023Button"
+    "FrontBehavior\022\036\n\032ButtonFrontBehavior_Rev"
+    "ert\020\001\022$\n ButtonFrontBehavior_CommitValue"
+    "s\020\002\022\037\n\033ButtonFrontBehavior_Nothing\020\003\022\035\n\031"
+    "ButtonFrontBehavior_Clear\020\004*r\n\022ButtonBac"
+    "kBehavior\022\033\n\027ButtonBackBehavior_Send\020\001\022\036"
+    "\n\032ButtonBackBehavior_Nothing\020\002\022\037\n\033Button"
+    "BackBehavior_SubmitId\020\003", 4703);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "python.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -840,9 +888,11 @@ void protobuf_AddDesc_python_2eproto() {
   DataSeries::default_instance_ = new DataSeries();
   DataSeriesPoint::default_instance_ = new DataSeriesPoint();
   DataSeriesPointSet::default_instance_ = new DataSeriesPointSet();
+  DataSeriesReplay::default_instance_ = new DataSeriesReplay();
   PlaySound::default_instance_ = new PlaySound();
   Button::default_instance_ = new Button();
   ColorDefinition::default_instance_ = new ColorDefinition();
+  ClientCount::default_instance_ = new ClientCount();
   Error::default_instance_->InitAsDefaultInstance();
   ClientLogin::default_instance_->InitAsDefaultInstance();
   TraderChanged::default_instance_->InitAsDefaultInstance();
@@ -866,9 +916,11 @@ void protobuf_AddDesc_python_2eproto() {
   DataSeries::default_instance_->InitAsDefaultInstance();
   DataSeriesPoint::default_instance_->InitAsDefaultInstance();
   DataSeriesPointSet::default_instance_->InitAsDefaultInstance();
+  DataSeriesReplay::default_instance_->InitAsDefaultInstance();
   PlaySound::default_instance_->InitAsDefaultInstance();
   Button::default_instance_->InitAsDefaultInstance();
   ColorDefinition::default_instance_->InitAsDefaultInstance();
+  ClientCount::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_python_2eproto);
 }
 
@@ -950,6 +1002,8 @@ bool SERVER_MESSAGE_TYPE_IsValid(int value) {
     case 45:
     case 46:
     case 47:
+    case 48:
+    case 49:
       return true;
     default:
       return false;
@@ -8016,6 +8070,217 @@ void DataSeriesPointSet::Swap(DataSeriesPointSet* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int DataSeriesReplay::kSetsFieldNumber;
+#endif  // !_MSC_VER
+
+DataSeriesReplay::DataSeriesReplay()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void DataSeriesReplay::InitAsDefaultInstance() {
+}
+
+DataSeriesReplay::DataSeriesReplay(const DataSeriesReplay& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void DataSeriesReplay::SharedCtor() {
+  _cached_size_ = 0;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+DataSeriesReplay::~DataSeriesReplay() {
+  SharedDtor();
+}
+
+void DataSeriesReplay::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void DataSeriesReplay::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* DataSeriesReplay::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return DataSeriesReplay_descriptor_;
+}
+
+const DataSeriesReplay& DataSeriesReplay::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_python_2eproto();
+  return *default_instance_;
+}
+
+DataSeriesReplay* DataSeriesReplay::default_instance_ = NULL;
+
+DataSeriesReplay* DataSeriesReplay::New() const {
+  return new DataSeriesReplay;
+}
+
+void DataSeriesReplay::Clear() {
+  sets_.Clear();
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool DataSeriesReplay::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // repeated string sets = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_sets:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->add_sets()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->sets(this->sets_size() - 1).data(),
+            this->sets(this->sets_size() - 1).length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(10)) goto parse_sets;
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void DataSeriesReplay::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // repeated string sets = 1;
+  for (int i = 0; i < this->sets_size(); i++) {
+  ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+    this->sets(i).data(), this->sets(i).length(),
+    ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      1, this->sets(i), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* DataSeriesReplay::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // repeated string sets = 1;
+  for (int i = 0; i < this->sets_size(); i++) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->sets(i).data(), this->sets(i).length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteStringToArray(1, this->sets(i), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int DataSeriesReplay::ByteSize() const {
+  int total_size = 0;
+
+  // repeated string sets = 1;
+  total_size += 1 * this->sets_size();
+  for (int i = 0; i < this->sets_size(); i++) {
+    total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
+      this->sets(i));
+  }
+
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void DataSeriesReplay::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const DataSeriesReplay* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const DataSeriesReplay*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void DataSeriesReplay::MergeFrom(const DataSeriesReplay& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  sets_.MergeFrom(from.sets_);
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void DataSeriesReplay::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void DataSeriesReplay::CopyFrom(const DataSeriesReplay& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool DataSeriesReplay::IsInitialized() const {
+
+  return true;
+}
+
+void DataSeriesReplay::Swap(DataSeriesReplay* other) {
+  if (other != this) {
+    sets_.Swap(&other->sets_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata DataSeriesReplay::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = DataSeriesReplay_descriptor_;
+  metadata.reflection = DataSeriesReplay_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
 const int PlaySound::kIdFieldNumber;
 #endif  // !_MSC_VER
 
@@ -8880,6 +9145,215 @@ void ColorDefinition::Swap(ColorDefinition* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = ColorDefinition_descriptor_;
   metadata.reflection = ColorDefinition_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int ClientCount::kCountFieldNumber;
+#endif  // !_MSC_VER
+
+ClientCount::ClientCount()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void ClientCount::InitAsDefaultInstance() {
+}
+
+ClientCount::ClientCount(const ClientCount& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void ClientCount::SharedCtor() {
+  _cached_size_ = 0;
+  count_ = 0u;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+ClientCount::~ClientCount() {
+  SharedDtor();
+}
+
+void ClientCount::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void ClientCount::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* ClientCount::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return ClientCount_descriptor_;
+}
+
+const ClientCount& ClientCount::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_python_2eproto();
+  return *default_instance_;
+}
+
+ClientCount* ClientCount::default_instance_ = NULL;
+
+ClientCount* ClientCount::New() const {
+  return new ClientCount;
+}
+
+void ClientCount::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    count_ = 0u;
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool ClientCount::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required uint32 count = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &count_)));
+          set_has_count();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void ClientCount::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required uint32 count = 1;
+  if (has_count()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->count(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* ClientCount::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required uint32 count = 1;
+  if (has_count()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->count(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int ClientCount::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required uint32 count = 1;
+    if (has_count()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->count());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void ClientCount::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const ClientCount* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const ClientCount*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void ClientCount::MergeFrom(const ClientCount& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_count()) {
+      set_count(from.count());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void ClientCount::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void ClientCount::CopyFrom(const ClientCount& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool ClientCount::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+
+  return true;
+}
+
+void ClientCount::Swap(ClientCount* other) {
+  if (other != this) {
+    std::swap(count_, other->count_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata ClientCount::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = ClientCount_descriptor_;
+  metadata.reflection = ClientCount_reflection_;
   return metadata;
 }
 

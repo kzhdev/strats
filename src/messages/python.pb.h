@@ -58,9 +58,11 @@ class Chart;
 class DataSeries;
 class DataSeriesPoint;
 class DataSeriesPointSet;
+class DataSeriesReplay;
 class PlaySound;
 class Button;
 class ColorDefinition;
+class ClientCount;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -143,11 +145,13 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_PLAY_SOUND = 44,
   SERVER_MESSAGE_TYPE_DATA_POINT_SET = 45,
   SERVER_MESSAGE_TYPE_DATA_POINT = 46,
-  SERVER_MESSAGE_TYPE_TRADER_CHANGED = 47
+  SERVER_MESSAGE_TYPE_TRADER_CHANGED = 47,
+  SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY = 48,
+  SERVER_MESSAGE_TYPE_CLIENT_COUNT = 49
 };
 bool SERVER_MESSAGE_TYPE_IsValid(int value);
 const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MIN = SERVER_MESSAGE_TYPE_CLIENT_CONNECTED;
-const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_TRADER_CHANGED;
+const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_CLIENT_COUNT;
 const int SERVER_MESSAGE_TYPE_ARRAYSIZE = SERVER_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor();
@@ -2768,6 +2772,95 @@ class DataSeriesPointSet : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
+class DataSeriesReplay : public ::google::protobuf::Message {
+ public:
+  DataSeriesReplay();
+  virtual ~DataSeriesReplay();
+
+  DataSeriesReplay(const DataSeriesReplay& from);
+
+  inline DataSeriesReplay& operator=(const DataSeriesReplay& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DataSeriesReplay& default_instance();
+
+  void Swap(DataSeriesReplay* other);
+
+  // implements Message ----------------------------------------------
+
+  DataSeriesReplay* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DataSeriesReplay& from);
+  void MergeFrom(const DataSeriesReplay& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // repeated string sets = 1;
+  inline int sets_size() const;
+  inline void clear_sets();
+  static const int kSetsFieldNumber = 1;
+  inline const ::std::string& sets(int index) const;
+  inline ::std::string* mutable_sets(int index);
+  inline void set_sets(int index, const ::std::string& value);
+  inline void set_sets(int index, const char* value);
+  inline void set_sets(int index, const char* value, size_t size);
+  inline ::std::string* add_sets();
+  inline void add_sets(const ::std::string& value);
+  inline void add_sets(const char* value);
+  inline void add_sets(const char* value, size_t size);
+  inline const ::google::protobuf::RepeatedPtrField< ::std::string>& sets() const;
+  inline ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_sets();
+
+  // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesReplay)
+ private:
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::RepeatedPtrField< ::std::string> sets_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_python_2eproto();
+  friend void protobuf_AssignDesc_python_2eproto();
+  friend void protobuf_ShutdownFile_python_2eproto();
+
+  void InitAsDefaultInstance();
+  static DataSeriesReplay* default_instance_;
+};
+// -------------------------------------------------------------------
+
 class PlaySound : public ::google::protobuf::Message {
  public:
   PlaySound();
@@ -3071,6 +3164,88 @@ class ColorDefinition : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static ColorDefinition* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class ClientCount : public ::google::protobuf::Message {
+ public:
+  ClientCount();
+  virtual ~ClientCount();
+
+  ClientCount(const ClientCount& from);
+
+  inline ClientCount& operator=(const ClientCount& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const ClientCount& default_instance();
+
+  void Swap(ClientCount* other);
+
+  // implements Message ----------------------------------------------
+
+  ClientCount* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const ClientCount& from);
+  void MergeFrom(const ClientCount& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 count = 1;
+  inline bool has_count() const;
+  inline void clear_count();
+  static const int kCountFieldNumber = 1;
+  inline ::google::protobuf::uint32 count() const;
+  inline void set_count(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.ClientCount)
+ private:
+  inline void set_has_count();
+  inline void clear_has_count();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 count_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_python_2eproto();
+  friend void protobuf_AssignDesc_python_2eproto();
+  friend void protobuf_ShutdownFile_python_2eproto();
+
+  void InitAsDefaultInstance();
+  static ClientCount* default_instance_;
 };
 // ===================================================================
 
@@ -5474,6 +5649,54 @@ DataSeriesPointSet::mutable_points() {
 
 // -------------------------------------------------------------------
 
+// DataSeriesReplay
+
+// repeated string sets = 1;
+inline int DataSeriesReplay::sets_size() const {
+  return sets_.size();
+}
+inline void DataSeriesReplay::clear_sets() {
+  sets_.Clear();
+}
+inline const ::std::string& DataSeriesReplay::sets(int index) const {
+  return sets_.Get(index);
+}
+inline ::std::string* DataSeriesReplay::mutable_sets(int index) {
+  return sets_.Mutable(index);
+}
+inline void DataSeriesReplay::set_sets(int index, const ::std::string& value) {
+  sets_.Mutable(index)->assign(value);
+}
+inline void DataSeriesReplay::set_sets(int index, const char* value) {
+  sets_.Mutable(index)->assign(value);
+}
+inline void DataSeriesReplay::set_sets(int index, const char* value, size_t size) {
+  sets_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* DataSeriesReplay::add_sets() {
+  return sets_.Add();
+}
+inline void DataSeriesReplay::add_sets(const ::std::string& value) {
+  sets_.Add()->assign(value);
+}
+inline void DataSeriesReplay::add_sets(const char* value) {
+  sets_.Add()->assign(value);
+}
+inline void DataSeriesReplay::add_sets(const char* value, size_t size) {
+  sets_.Add()->assign(reinterpret_cast<const char*>(value), size);
+}
+inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
+DataSeriesReplay::sets() const {
+  return sets_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::std::string>*
+DataSeriesReplay::mutable_sets() {
+  return &sets_;
+}
+
+// -------------------------------------------------------------------
+
 // PlaySound
 
 // required uint32 id = 1;
@@ -5756,6 +5979,32 @@ inline void ColorDefinition::set_allocated_argb(::std::string* argb) {
     clear_has_argb();
     argb_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   }
+}
+
+// -------------------------------------------------------------------
+
+// ClientCount
+
+// required uint32 count = 1;
+inline bool ClientCount::has_count() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void ClientCount::set_has_count() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void ClientCount::clear_has_count() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void ClientCount::clear_count() {
+  count_ = 0u;
+  clear_has_count();
+}
+inline ::google::protobuf::uint32 ClientCount::count() const {
+  return count_;
+}
+inline void ClientCount::set_count(::google::protobuf::uint32 value) {
+  set_has_count();
+  count_ = value;
 }
 
 

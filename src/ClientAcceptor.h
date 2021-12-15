@@ -79,10 +79,12 @@ public:
     void sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted);
     void sendGridChangeReply(proto::GridUpdate& message, int32_t connectioinId = -1);
     void sendGridUpdate(proto::GridUpdate& data, int32_t connectionId = -1);
-    void sendChartDataPoints(proto::DataSeriesPointSet& set);
+    void sendChartDataPoints(proto::DataSeriesPointSet& data, std::ostringstream& streamMessage);
+    void sendChartHistories(proto::DataSeriesReplay& data, int32_t connectionId);
     void sendGuiHeartbeat(uint64_t utc_ts_in_nanos);
     void sendPlaySound(uint32_t id);
     void sendTraderUpdate(const char* trader);
+    void sendClientCount();
     void handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds, int32_t connectionId, const char* trader);
     void handleLoginRejected(int32_t connectionId);
     void handleLoggedOut(int32_t connectionId);

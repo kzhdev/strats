@@ -30,16 +30,23 @@ namespace Python {
         template<typename T>
         bool sendMessageToClient(ClientConnection& traderConnection, proto::SERVER_MESSAGE_TYPE responseType, T &message);
 
+        template<typename T>
+        bool sendMessageToClient(ClientConnection& traderConnection, proto::SERVER_MESSAGE_TYPE responseType, T &message, std::ostringstream& streamMessage);
+
     private:
         static ServerClientMessenger *s_instance;
 
         template<typename T>
         bool sendMessageToClientCommon(ClientConnection& traderConnection,  std::uint8_t type, T &message, message_id_t messageId);
 
+        template<typename T>
+        bool sendMessageToClientCommon(ClientConnection& traderConnection,  std::uint8_t type, T &message, message_id_t messageId, std::ostringstream& streamMessage);
+
         void log(const std::string& s);
 
         static constexpr int BUFFER_SIZE = 20'971'520; //20 MiB
         char buffer[BUFFER_SIZE];
+        FILE* chart_data = nullptr;
     };
 
 template<typename T>
@@ -51,7 +58,21 @@ bool ServerClientMessenger::sendMessageToClient(ClientConnection& traderConnecti
 }
 
 template<typename T>
+bool ServerClientMessenger::sendMessageToClient(ClientConnection& traderConnection,  proto::SERVER_MESSAGE_TYPE responseType, T &message, std::ostringstream& streamMessage) {
+    if (BOOST_UNLIKELY(traderConnection.isDisconnected())) {
+        return false;
+    }
+    return sendMessageToClientCommon(traderConnection, responseType, message, ++traderConnection.m_messageSequence, streamMessage);
+}
+
+template<typename T>
 bool ServerClientMessenger::sendMessageToClientCommon(ClientConnection& traderConnection,  std::uint8_t type, T &message, message_id_t messageId) {
+    std::ostringstream streamMessage;
+    return sendMessageToClientCommon(traderConnection, type, message, messageId, streamMessage);
+}
+
+template<typename T>
+bool ServerClientMessenger::sendMessageToClientCommon(ClientConnection& traderConnection,  std::uint8_t type, T &message, message_id_t messageId, std::ostringstream& streamMessage) {
     MessageHeader header;
     header.m_messageTypeID = type;
 
@@ -62,7 +83,6 @@ bool ServerClientMessenger::sendMessageToClientCommon(ClientConnection& traderCo
     header.m_unixTimestamp = nanos;
     header.m_messageID = messageId;
 
-    std::ostringstream streamMessage;
     message.SerializeToOstream(&streamMessage);
 
     streamMessage.seekp(0, std::ios::end);
