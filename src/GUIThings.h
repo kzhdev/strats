@@ -1435,26 +1435,29 @@ public:
         // Strategy Enable
         for (; headerOffset < toUInt(StrategyId::MAX); ++headerOffset) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, strategyFullName((StrategyId)headerOffset));
-            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
+            auto strategy = executor->getStrategy(static_cast<StrategyId>(headerOffset));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(strategy->isEnabled() ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled),
+                    toUInt(strategy->isEnabled() ? Color::TRANSPARENT_SWITCH_ENABLED : Color::TRANSPARENT_SWITCH_DISABLED));
         }
 
         // Strategy Quote External
         for (; headerOffset < toUInt(StrategyId::MAX) * 2; ++headerOffset) {
+            auto strategy = executor->getStrategy(static_cast<StrategyId>(headerOffset - toUInt(StrategyId::MAX)));
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset,
-                             boost::str(boost::format("%1% QuoteExternal") % toString((StrategyId)(headerOffset - toUInt(StrategyId::MAX)))));
-            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
+                             boost::str(boost::format("%1% QuoteExternal") % toString(strategy->strategyId())));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(strategy->canQuoteExternally() ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled),
+                    toUInt(strategy->canQuoteExternally() ? Color::TRANSPARENT_SWITCH_ENABLED : Color::TRANSPARENT_SWITCH_DISABLED));
         }
 
         // Exchange ExtQuote Control
         auto extQuote = executor->s_systemState._exchQuoteExternally.load(std::memory_order_relaxed);
         for (auto iter = executor->_usedVenues.begin(); iter != executor->_usedVenues.end(); ++iter) {
             addRowHeaderCell(WindowIds::MainControl, rowHeader, headerOffset, boost::str(boost::format("%1% QuoteExternal") % ven::VenueUtils::getName(*iter)));
-            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(proto::SystemState::SystemStateDisabled), toUInt(Color::TRANSPARENT_SWITCH_DISABLED));
+            setCell(cells, headerOffset, MainControlAction::Enabled, std::to_string(extQuote.test(toUInt(*iter)) ? proto::SystemState::SystemStateEnabled : proto::SystemState::SystemStateDisabled),
+                    toUInt(extQuote.test(toUInt(*iter)) ? Color::TRANSPARENT_SWITCH_ENABLED : Color::TRANSPARENT_SWITCH_DISABLED));
             _mapRowIndexVenue.emplace(headerOffset, static_cast<uint8_t>(*iter));
             _mapVenueRowIndex.emplace(static_cast<uint8_t>(*iter), headerOffset++);
-            extQuote.reset(static_cast<uint8_t>(*iter));
         }
-        executor->s_systemState._exchQuoteExternally.store(extQuote, std::memory_order_release);
 
         auto buttons = definition->mutable_buttons();
         addButton(buttons, toUInt(MainControlButtons::HardShutdown), "Shutdown", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_Nothing, RequiresConfirmation::YES);

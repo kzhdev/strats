@@ -2826,7 +2826,7 @@ class DataSeriesReplay : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // repeated string sets = 1;
+  // repeated bytes sets = 1;
   inline int sets_size() const;
   inline void clear_sets();
   static const int kSetsFieldNumber = 1;
@@ -2834,11 +2834,11 @@ class DataSeriesReplay : public ::google::protobuf::Message {
   inline ::std::string* mutable_sets(int index);
   inline void set_sets(int index, const ::std::string& value);
   inline void set_sets(int index, const char* value);
-  inline void set_sets(int index, const char* value, size_t size);
+  inline void set_sets(int index, const void* value, size_t size);
   inline ::std::string* add_sets();
   inline void add_sets(const ::std::string& value);
   inline void add_sets(const char* value);
-  inline void add_sets(const char* value, size_t size);
+  inline void add_sets(const void* value, size_t size);
   inline const ::google::protobuf::RepeatedPtrField< ::std::string>& sets() const;
   inline ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_sets();
 
@@ -5651,7 +5651,7 @@ DataSeriesPointSet::mutable_points() {
 
 // DataSeriesReplay
 
-// repeated string sets = 1;
+// repeated bytes sets = 1;
 inline int DataSeriesReplay::sets_size() const {
   return sets_.size();
 }
@@ -5670,7 +5670,7 @@ inline void DataSeriesReplay::set_sets(int index, const ::std::string& value) {
 inline void DataSeriesReplay::set_sets(int index, const char* value) {
   sets_.Mutable(index)->assign(value);
 }
-inline void DataSeriesReplay::set_sets(int index, const char* value, size_t size) {
+inline void DataSeriesReplay::set_sets(int index, const void* value, size_t size) {
   sets_.Mutable(index)->assign(
     reinterpret_cast<const char*>(value), size);
 }
@@ -5683,7 +5683,7 @@ inline void DataSeriesReplay::add_sets(const ::std::string& value) {
 inline void DataSeriesReplay::add_sets(const char* value) {
   sets_.Add()->assign(value);
 }
-inline void DataSeriesReplay::add_sets(const char* value, size_t size) {
+inline void DataSeriesReplay::add_sets(const void* value, size_t size) {
   sets_.Add()->assign(reinterpret_cast<const char*>(value), size);
 }
 inline const ::google::protobuf::RepeatedPtrField< ::std::string>&

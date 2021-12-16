@@ -798,7 +798,7 @@ void protobuf_AddDesc_python_2eproto() {
     "Id\030\002 \002(\r\022\014\n\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\"C\n"
     "\022DataSeriesPointSet\022-\n\006points\030\001 \003(\0132\035.Py"
     "thon.proto.DataSeriesPoint\" \n\020DataSeries"
-    "Replay\022\014\n\004sets\030\001 \003(\t\"\027\n\tPlaySound\022\n\n\002id\030"
+    "Replay\022\014\n\004sets\030\001 \003(\014\"\027\n\tPlaySound\022\n\n\002id\030"
     "\001 \002(\r\"\232\001\n\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002"
     "(\r\0220\n\005front\030\003 \002(\0162!.Python.proto.ButtonF"
     "rontBehavior\022.\n\004back\030\004 \002(\0162 .Python.prot"
@@ -8134,17 +8134,13 @@ bool DataSeriesReplay::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // repeated string sets = 1;
+      // repeated bytes sets = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
          parse_sets:
-          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+          DO_(::google::protobuf::internal::WireFormatLite::ReadBytes(
                 input, this->add_sets()));
-          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
-            this->sets(this->sets_size() - 1).data(),
-            this->sets(this->sets_size() - 1).length(),
-            ::google::protobuf::internal::WireFormat::PARSE);
         } else {
           goto handle_uninterpreted;
         }
@@ -8171,12 +8167,9 @@ bool DataSeriesReplay::MergePartialFromCodedStream(
 
 void DataSeriesReplay::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // repeated string sets = 1;
+  // repeated bytes sets = 1;
   for (int i = 0; i < this->sets_size(); i++) {
-  ::google::protobuf::internal::WireFormat::VerifyUTF8String(
-    this->sets(i).data(), this->sets(i).length(),
-    ::google::protobuf::internal::WireFormat::SERIALIZE);
-    ::google::protobuf::internal::WireFormatLite::WriteString(
+    ::google::protobuf::internal::WireFormatLite::WriteBytes(
       1, this->sets(i), output);
   }
 
@@ -8188,13 +8181,10 @@ void DataSeriesReplay::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* DataSeriesReplay::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // repeated string sets = 1;
+  // repeated bytes sets = 1;
   for (int i = 0; i < this->sets_size(); i++) {
-    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
-      this->sets(i).data(), this->sets(i).length(),
-      ::google::protobuf::internal::WireFormat::SERIALIZE);
     target = ::google::protobuf::internal::WireFormatLite::
-      WriteStringToArray(1, this->sets(i), target);
+      WriteBytesToArray(1, this->sets(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -8207,10 +8197,10 @@ void DataSeriesReplay::SerializeWithCachedSizes(
 int DataSeriesReplay::ByteSize() const {
   int total_size = 0;
 
-  // repeated string sets = 1;
+  // repeated bytes sets = 1;
   total_size += 1 * this->sets_size();
   for (int i = 0; i < this->sets_size(); i++) {
-    total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
+    total_size += ::google::protobuf::internal::WireFormatLite::BytesSize(
       this->sets(i));
   }
 

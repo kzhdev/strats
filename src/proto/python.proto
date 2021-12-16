@@ -225,7 +225,7 @@ message DataSeriesPointSet {
 }
 
 message DataSeriesReplay {
-    repeated string sets = 1;
+    repeated bytes sets = 1;
 }
 
 message PlaySound {

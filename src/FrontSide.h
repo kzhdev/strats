@@ -212,7 +212,7 @@ public:
             t += 86400;
         }
         auto trading_day = hf::util::TimeUtils::strftime("%Y%m%d ", t * 1000000000);
-        _chartHistories.open("./chart_histories", std::ios::in | std::ios::app);
+        _chartHistories.open("./chart_histories_" + trading_day, std::ios::in | std::ios::app | std::ios::binary);
         if (!_chartHistories.is_open()) {
             logging::GetLogger().logError("Failed to open chart_histories file");
         }
@@ -353,7 +353,7 @@ public:
                                          ErrorType::Normal, login._connectionId);
                     }
                     if (_executor->_economicNumbers.empty()) {
-                        sendErrorMessage("No economic number expected in the next 24 hours", ErrorType::Normal);
+                        sendErrorMessage("No economic number expected in the next 24 hours", ErrorType::Normal, login._connectionId);
                     }
                     sendChartHistories(login._connectionId);
                     iter = _newLogins.erase(iter);
@@ -530,10 +530,10 @@ public:
     }
 
     void saveDataPointSets(const std::string& data) {
-        if (_chartHistories.is_open()) {
-            assert(data.find('\n') == std::string::npos);
-            _chartHistories << data << "\n";
-        }
+//        if (_chartHistories.is_open()) {
+//            _chartHistories.write(data.size(), sizeof(size_t));
+//            _chartHistories << data << "\n";
+//        }
     }
 
     void processOutgoingMessages() {
@@ -1820,7 +1820,9 @@ public:
     void onOtherRequest(ViperMessageType mt, int32_t connectionId)  {
         switch (mt) {
             case ViperMessageType::Login: {
-                onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
+                if (_firstLogin) {
+                    onSystemStateChange(SystemState::LoggedIn, "GUI Requested");
+                }
                 proto::GUIInitialization m;
                 _guiThings.populateGUIInitialization(m, _strategies, _executor);
                 _clientAcceptor->handleLoginAccepted(m,
@@ -1843,7 +1845,10 @@ public:
                 break;
             }
             case ViperMessageType::Logout: {
-                onSystemStateChange(SystemState::LoggedOut, "GUI Requested");
+                _clientAcceptor->handleLoggedOut(connectionId);
+                if (!_clientAcceptor->getNumberConnection()) {
+                    onSystemStateChange(SystemState::LoggedOut, "GUI Requested");
+                }
                 break;
             }
             case ViperMessageType::ClientDown: {

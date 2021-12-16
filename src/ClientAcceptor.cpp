@@ -236,16 +236,13 @@ void ClientsAcceptor::runIteration() {
             auto requestType = (proto::GUI_MESSAGE_TYPE) header.m_messageTypeID;
             if (requestType != proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGIN && !connection.canExecuteRequest()) {
                 std::string text = "";
-                proto::ERROR_CODE errorCode;
                 if (connection.isClosing()) {
                     text = boost::str(boost::format("Cannot process traderConnection request %1% because trader is in closing state") % (int) messageID);
-                    errorCode = proto::ERROR_CODE_TRADER_IS_CLOSED_OR_CLOSING;
                 } else {
                     text = boost::str(boost::format("Cannot process traderConnection request %1%. Trader must log in first") % (int) messageID);
-                    errorCode = proto::ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN;
+                    ServerClientMessenger::instance()->doSendClientRequestRejected(connection, requestType, proto::ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN, text, messageID);
                 }
                 LOG_INFO(text);
-                ServerClientMessenger::instance()->doSendClientRequestRejected(connection, requestType, errorCode, text, messageID);
                 if (BOOST_LIKELY(!buffer.moveToNextProtoMessage())) {
                     break;
                 } else {
