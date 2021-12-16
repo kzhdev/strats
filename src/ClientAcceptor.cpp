@@ -375,9 +375,6 @@ void ClientsAcceptor::onConnectionError(std::map<int, std::shared_ptr<ClientConn
     if(traderConnection.isLoggedIn()) {
         auto id = traderConnection.m_fd;
         removeTraderConnection(iter);
-        if (!hasConnection()) {
-            sendOtherRequest(ViperMessageType::ClientDown, 0, 0);
-        }
     } else {
         removeTraderConnection(iter);
     }
@@ -388,7 +385,11 @@ void ClientsAcceptor::removeTraderConnection(std::map<int, std::shared_ptr<Clien
     iter = m_monitor.m_traderConnections.erase(iter);
     ::close(fd);
     LOG_INFO(boost::format("Socket %1% erased") % fd);
-    sendClientCount();
+    if (!hasConnection()) {
+        sendOtherRequest(ViperMessageType::ClientDown, 0, 0);
+    } else {
+        sendClientCount();
+    }
 }
 
 void ClientsAcceptor::onDecodeMessageError(std::map<int, std::shared_ptr<ClientConnection>>::iterator& it, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID) {
