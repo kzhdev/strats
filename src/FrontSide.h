@@ -237,7 +237,6 @@ public:
             buf.resize(300);
             do {
                 if (chartHistories.read(buf.data(), 300)) {
-                    LOG(0, "<---- chart: {i1}", buf)
                     cacheDataPointSets(buf);
                     size -= 300;
                 }
