@@ -201,26 +201,55 @@ public:
             _internalIdToMarketMakerConfigOffset[_viperConfig._symbolToInterId[sym]] = i;
         }
 
-        loadChartHistories();
+        auto chartHistoriesFile = chartHistoriesFileName();
+        _chartHistories.open("./chart_histories_" + chartHistoriesFile, std::ios::app | std::ios::binary);
+        if (!_chartHistories.is_open()) {
+            logging::GetLogger().logError("Failed to open chart_histories file");
+        }
+        loadChartHistories(chartHistoriesFile);
     }
 
-    void loadChartHistories() {
-        // get the trading day
+    static std::string chartHistoriesFileName() noexcept {
         std::time_t t = std::time(nullptr);
         auto tm = std::localtime(&t);
         if (tm->tm_hour >= 17) {
             t += 86400;
         }
-        auto trading_day = hf::util::TimeUtils::strftime("%Y%m%d ", t * 1000000000);
-        _chartHistories.open("./chart_histories_" + trading_day, std::ios::in | std::ios::app | std::ios::binary);
-        if (!_chartHistories.is_open()) {
-            logging::GetLogger().logError("Failed to open chart_histories file");
-        }
+        return hf::util::TimeUtils::strftime("%Y%m%d", t * 1000000000);
+    }
 
-        std::string line;
-        while (std::getline(_chartHistories, line)) {
-            cacheDataPointSets(line);
-        }
+    void loadChartHistories(const std::string& chartHistoriesFile) {
+        std::ifstream chartHistories;
+        try {
+            chartHistories.open("./chart_histories_" + chartHistoriesFile, std::ios::ate | std::ios::binary);
+            if (!chartHistories.is_open()) {
+                logging::GetLogger().logError("Failed to open chart_histories file");
+                return;
+            }
+
+            auto size = chartHistories.tellg();
+            if (size == 0) {
+                return;
+            }
+            chartHistories.seekg(0);
+
+            std::string buf;
+            buf.resize(300);
+            do {
+                if (chartHistories.read(buf.data(), 300)) {
+                    LOG(0, "<---- chart: {i1}", buf)
+                    cacheDataPointSets(buf);
+                    size -= 300;
+                }
+
+                if (size && size < 300) {
+                    logging::GetLogger().logError(chartHistoriesFile + " corrupted?");
+                    assert(false);
+                    break;
+                }
+            } while (!chartHistories.eof());
+        } catch(...) {}
+        chartHistories.close();
     }
 
     bool isPnlWithinLimits(uint32_t id) {
@@ -506,7 +535,7 @@ public:
         if (relativeValue->_hasDataForCharts) {
             proto::DataSeriesPointSet pointsSet;
             _guiThings.populateChartDataPoints(pointsSet, relativeValue);
-
+            assert(pointsSet.ByteSize() == 300 && "DataSeriesPointSet changed? fix the length in loadChartHistories");
             std::ostringstream oss;
             _clientAcceptor->sendChartDataPoints(pointsSet, oss);
 
@@ -530,10 +559,9 @@ public:
     }
 
     void saveDataPointSets(const std::string& data) {
-//        if (_chartHistories.is_open()) {
-//            _chartHistories.write(data.size(), sizeof(size_t));
-//            _chartHistories << data << "\n";
-//        }
+        if (_chartHistories.is_open()) {
+            _chartHistories << data;
+        }
     }
 
     void processOutgoingMessages() {
@@ -1999,6 +2027,9 @@ public:
 
     void sendChartHistories(int32_t connectionId) {
         for (auto& replay : _dataPoints) {
+            if (!replay.sets_size()) {
+                break;
+            }
             _clientAcceptor->sendChartHistories(replay, connectionId);
         }
     }
@@ -2071,7 +2102,7 @@ public:
 
     std::vector<proto::DataSeriesReplay> _dataPoints;
     uint32_t _currentDataReplaySize = 0;
-    std::fstream _chartHistories;
+    std::ofstream _chartHistories;
 };
 
 }
