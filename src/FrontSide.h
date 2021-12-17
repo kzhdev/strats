@@ -233,15 +233,21 @@ public:
             }
             chartHistories.seekg(0);
 
+            size_t length;
             std::string buf;
-            buf.resize(300);
             do {
-                if (chartHistories.read(buf.data(), 300)) {
-                    cacheDataPointSets(buf);
-                    size -= 300;
+                if (!chartHistories.read(reinterpret_cast<char*>(&length), sizeof(length))) {
+                    logging::GetLogger().logError("Error reading DataSeriesPointSet size");
+                    break;
                 }
 
-                if (size && size < 300) {
+                buf.resize(length);
+                if (chartHistories.read(buf.data(), length)) {
+                    cacheDataPointSets(buf);
+                    size -= length;
+                }
+
+                if (size && size < length) {
                     logging::GetLogger().logError(chartHistoriesFile + " corrupted?");
                     assert(false);
                     break;
@@ -534,7 +540,6 @@ public:
         if (relativeValue->_hasDataForCharts) {
             proto::DataSeriesPointSet pointsSet;
             _guiThings.populateChartDataPoints(pointsSet, relativeValue);
-            assert(pointsSet.ByteSize() == 300 && "DataSeriesPointSet changed? fix the length in loadChartHistories");
             std::ostringstream oss;
             _clientAcceptor->sendChartDataPoints(pointsSet, oss);
 
@@ -559,7 +564,9 @@ public:
 
     void saveDataPointSets(const std::string& data) {
         if (_chartHistories.is_open()) {
-            _chartHistories << data;
+            auto len = data.size();
+            _chartHistories.write(reinterpret_cast<const char*>(&len), sizeof(len));
+            _chartHistories.write(data.c_str(), len);
         }
     }
 
