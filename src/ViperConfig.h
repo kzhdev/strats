@@ -119,6 +119,7 @@ struct VectorConfig {
     double _longTermFair;
     uint32_t _chartNumberOfDecimalPlaces;
     bool _hedged;
+    double _ltfDelta;
 };
 
 struct RelativeValueConfig {
@@ -1202,7 +1203,7 @@ struct ViperConfig {
 
     bool loadVectorConfig(std::ifstream& input) {
         logging::GetLogger().logInfo("Loading Vector Config");
-        bool good = parseVectorConfigHeader(input);
+        bool good = parseHeader(input, _vectorConfigHeader, VECTOR_CONFIGS);
 
         if (!good) {
             return false;
@@ -1226,13 +1227,10 @@ struct ViperConfig {
             config._setToMarket = values[i++] == "TRUE";
             config._chartNumberOfDecimalPlaces = boost::lexical_cast<uint32_t>(values[i++]);
             config._hedged = values[i++] == "TRUE";
+            config._ltfDelta = boost::lexical_cast<double>(values[i++]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
-    }
-
-    bool parseVectorConfigHeader(std::ifstream& input) {
-        return parseHeader(input, _vectorConfigHeader, VECTOR_CONFIGS);
     }
 
     bool loadEconomicNumbers() {
@@ -1565,6 +1563,10 @@ struct ViperConfig {
                 }
                 case VectorParametersColumns::Hedged: {
                     config._hedged = (1 == atoi(gridCell.value().c_str()));
+                    break;
+                }
+                case VectorParametersColumns::LTF_Delta: {
+                    config._ltfDelta = atof(gridCell.value().c_str());
                     break;
                 }
                 default:
@@ -2249,6 +2251,7 @@ struct ViperConfig {
             output << "," << getWriteBoolValue(config._setToMarket);
             output << "," << config._chartNumberOfDecimalPlaces;
             output << "," << getWriteBoolValue(config._hedged);
+            output << "," << config._ltfDelta;
             fillInMissingCommas(output, _vectorConfigs.size());
         }
         writeEmptyLine(output);
@@ -2382,7 +2385,7 @@ struct ViperConfig {
     uint32_t _numberOfPricingContracts;
 
     std::vector<VectorConfig> _vectorConfigs;
-    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged"};
+    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged", "LTFDelta"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
     std::vector<int32_t> _positions[toUInt(StrategyId::MAX)];

@@ -1534,8 +1534,8 @@ public:
               const std::string& economicNumbersCsv) {
         _internalHeartbeatPeriod = internalHeartbeatPeriod;
         for(const auto& kvp : transactionCapacity) {
-            const auto& candidateCapacity = reinterpret_cast<const int16_t&>(kvp.second);
-            if(candidateCapacity > std::numeric_limits<std::remove_all_extents_t<decltype(_transactionCapacity)>>::max()) {
+            const auto& candidateCapacity = reinterpret_cast<const int32_t&>(kvp.second);
+            if(candidateCapacity > std::numeric_limits<int16_t>::max()) {
                 logging::GetLogger().logInfo("Transaction capacity too large for venue=" + ven::VenueUtils::getName(kvp.first) + " value=" + std::to_string(candidateCapacity));
             }
             _transactionCapacity[toUInt(kvp.first)] = candidateCapacity;
@@ -3589,7 +3589,7 @@ public:
     std::unordered_set<uint32_t> _mdUpdated;
     std::unordered_set<uint32_t> _updatedContracts;
 
-    int16_t _transactionCapacity[toUInt(hf::VENUE::EUREX) + 1] = {0};
+    int32_t _transactionCapacity[toUInt(hf::VENUE::EUREX) + 1] = {0};
     om::instance_id_t _iid;
     hf::batch_id_t _lastMDbid[toUInt(hf::VENUE::LAST)] = {0};
 

@@ -72,7 +72,7 @@ static const uint32_t D_GTC_CR_RETRY_LIMIT = 9;
 constexpr static uint32_t CHECKER_ENTRY_SIZE = 65536;
 static_assert(CHECKER_ENTRY_SIZE && !(CHECKER_ENTRY_SIZE & (CHECKER_ENTRY_SIZE-1)), "CHECKER_ENTRY_SIZE must be power of 2");
 
-enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, EMA_On_Time, EMA_Off_Time, SetToMarket, Hedged, STF_To_Market};
+enum class VectorParametersColumns {Position, Mkt, STF, LTF, MaxPos, Range, EMA_ON, EMA_Time, EMA_On_Time, EMA_Off_Time, SetToMarket, Hedged, STF_To_Market, LTF_Delta, Increment_LTF, Decrement_LTF};
 enum class ContractParameterRVColumns {BidLean, BidLeanType, BidInternalPrice, BidExternalPrice, BidCross, AskInternalPrice, AskExternalPrice, AskCross,
                                BidInternalQty, BidExternalQty, AskInternalQty, AskExternalQty, STF, Mkt, QuoteExternal, HedgeTolerance, Commission, AskLean, AskLeanType,
                                Width, ExtraWidth, PCTStfMove, MaxTicksThroughMarket, StaticQuote, QuoteSize};

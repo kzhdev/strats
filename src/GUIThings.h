@@ -1932,6 +1932,9 @@ public:
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", true, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Hedged, "Hedged", true, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::STF_To_Market, "STFToMarket", false, proto::DataType::button);
+        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::LTF_Delta, "LTFDelta", false, proto::DataType::button);
+        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Increment_LTF, "+LTFDelta", false, proto::DataType::button);
+        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Decrement_LTF, "-LTFDelta", false, proto::DataType::button);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1957,6 +1960,9 @@ public:
             setCell(cells, vectorIndex, VectorParametersColumns::SetToMarket, std::to_string(config._setToMarket));
             setCell(cells, vectorIndex, VectorParametersColumns::Hedged, std::to_string(config._hedged));
             setCell(cells, vectorIndex, VectorParametersColumns::STF_To_Market, config._vectorName, toUInt(Color::TRANSPARENT));
+            setCell(cells, vectorIndex, VectorParametersColumns::LTF_Delta, std::to_string(config._ltfDelta));
+            setCell(cells, vectorIndex, VectorParametersColumns::Increment_LTF, "+", toUInt(Color::TRANSPARENT));
+            setCell(cells, vectorIndex, VectorParametersColumns::Decrement_LTF, "-", toUInt(Color::TRANSPARENT));
         }
 
         auto buttons = definition->mutable_buttons();
