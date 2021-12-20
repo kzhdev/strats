@@ -1931,6 +1931,7 @@ public:
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::EMA_Off_Time, "EmaOffTime", false, proto::DataType::enum_type, "ema_off_time");
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", true, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Hedged, "Hedged", true, proto::DataType::bool_type);
+        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::STF_To_Market, "STFToMarket", false, proto::DataType::button);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1955,6 +1956,7 @@ public:
             setCell(cells, vectorIndex, VectorParametersColumns::EMA_Off_Time, std::to_string(config._EMAOff));
             setCell(cells, vectorIndex, VectorParametersColumns::SetToMarket, std::to_string(config._setToMarket));
             setCell(cells, vectorIndex, VectorParametersColumns::Hedged, std::to_string(config._hedged));
+            setCell(cells, vectorIndex, VectorParametersColumns::STF_To_Market, config._vectorName, toUInt(Color::TRANSPARENT));
         }
 
         auto buttons = definition->mutable_buttons();

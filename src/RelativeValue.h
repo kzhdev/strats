@@ -906,6 +906,17 @@ public:
             }
         }
 
+        if (update._update.updatetype() == proto::GridUpdateType::CellButtonType) {
+            if (!isEnabled())
+            {
+                auto cellButton = update._update.cellbutton();
+                setShortTermFairToMarket(cellButton.row());
+            } else {
+                sendErrorMessage("Can set STF to market only when RV not enabled", ErrorType::Critical);
+            }
+            return true;
+        }
+
         bool foundation = false;
         bool longTermFairs = false;
         bool shortTermFairs = false;
@@ -921,12 +932,12 @@ public:
                 case VectorParametersColumns::Range: {
                     double value = boost::lexical_cast<double>(gridCell.value());
                     if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), value, _vectorsMaxPosition.getValue(vectorId), _longTermFairsInVector.getValue(vectorId), vectorId)) {
-                        _vectorsRange.setValue(gridCell.row(), value);
+                        _vectorsRange.setValue(vectorId, value);
                         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                         foundation = true;
                         shortTermFairs = true;
                         LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::Range, gridCell.row(), value));
+                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::Range, vectorId, value));
                     } else {
                         LOG(0, "RV could not change range. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
@@ -937,12 +948,12 @@ public:
                 case VectorParametersColumns::MaxPos: {
                     auto value = boost::lexical_cast<double>(gridCell.value());
                     if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
-                        _vectorsMaxPosition.setValue(gridCell.row(), value);
+                        _vectorsMaxPosition.setValue(vectorId, value);
                         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
                         foundation = true;
                         shortTermFairs = true;
                         LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::MaxPos, gridCell.row(), value));
+                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::MaxPos, vectorId, value));
                     } else {
                         LOG(0, "RV could not change max_pos. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
@@ -957,14 +968,14 @@ public:
                     checkEMA.push_back(vectorId);
                     LOG(0, "RV ema_on changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
                     if (!value) {
-                        sendGenericMessageToFront(ViperMessageType::StoreLtf, gridCell.row());
+                        sendGenericMessageToFront(ViperMessageType::StoreLtf, vectorId);
                     }
                     break;
                 }
                 case VectorParametersColumns::EMA_Time: {
                     uint32_t value = boost::lexical_cast<uint32_t>(gridCell.value());
                     uint64_t periodInCycles = GetCyclesFromSeconds(value, _frequency);
-                    _emaPeriodInVector.setValue(gridCell.row(), periodInCycles);
+                    _emaPeriodInVector.setValue(vectorId, periodInCycles);
                     longTermFairs = true;
                     shortTermFairs = true;
                     LOG(0, "RV ema_time changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
@@ -1007,7 +1018,7 @@ public:
                 case VectorParametersColumns::LTF: {
                     double value = boost::lexical_cast<double>(gridCell.value());
                     if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), _vectorsMaxPosition.getValue(vectorId), value, vectorId) && !_useEMAInVector.getValue(vectorId)) {
-                        _longTermFairsInVector.setValue(gridCell.row(), value);
+                        _longTermFairsInVector.setValue(vectorId, value);
                         shortTermFairs = true;
                         LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                     } else {
@@ -1019,14 +1030,14 @@ public:
                 }
                 case VectorParametersColumns::SetToMarket: {
                     bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
-                    _setToMarket.setValue(gridCell.row(), value);
+                    _setToMarket.setValue(vectorId, value);
                     shortTermFairs = true;
                     LOG(0, "RV set_to_market changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
                     break;
                 }
                 case VectorParametersColumns::Hedged: {
                     bool value = 1 == boost::lexical_cast<uint32_t>(gridCell.value());
-                    _factorHedged.setValue(gridCell.row(), value);
+                    _factorHedged.setValue(vectorId, value);
                     LOG(0, "RV hedged changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
                     break;
                 }
@@ -2593,15 +2604,19 @@ public:
 
     void setShortTermFairToMarket() {
         for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-            const bool setToMarket = _setToMarket.getValue(vectorIndex);
-            double market = _currentVectorMarketPrices->getValue(vectorIndex);
-            if (!setToMarket) {
-                double ltf = market + _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
-                _longTermFairsInVector.setValue(vectorIndex, ltf);
-                sendGenericMessageToFront(ViperMessageType::StoreLtf, vectorIndex);
-            }
-            _shortTermFairsInVector.setValue(vectorIndex, market);
+            setShortTermFairToMarket(vectorIndex);
         }
+    }
+
+    void setShortTermFairToMarket(uint32_t vectorIndex) {
+        const bool setToMarket = _setToMarket.getValue(vectorIndex);
+        double market = _currentVectorMarketPrices->getValue(vectorIndex);
+        if (!setToMarket) {
+            double ltf = market + _positionsInVector.getValue(vectorIndex) * _fareMoveForOneUnitPosition.getValue(vectorIndex);
+            _longTermFairsInVector.setValue(vectorIndex, ltf);
+            sendGenericMessageToFront(ViperMessageType::StoreLtf, vectorIndex);
+        }
+        _shortTermFairsInVector.setValue(vectorIndex, market);
     }
 
     void calculateShortTermFairs() {
