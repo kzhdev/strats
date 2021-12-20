@@ -1423,10 +1423,16 @@ public:
         if (filledSize > 0) {
             const uint32_t side = ToViperSide(order.side);
             auto rv = _executor->getStrategy(StrategyId::RelativeValue);
-            if ((!rv->isEnabled() || !rv->canQuoteExternally() || !rv->isContractQuoteExternal(_internalId)) &&
-                (bestStrategy != StrategyId::MAX)) {
-                LOG(0, "IME {C[i1]}. RV cannot quote externally. Send overfill to strategy {i2}. Side={i3} Price={d1} Size={i4}", getContractName(), toUInt(bestStrategy), side, ToDollars(filledPrice), filledSize)
-                _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, bestStrategy, FillType::External, FillSource::Overfill);
+            if (!rv->isEnabled() || !rv->canQuoteExternally() || !rv->isContractQuoteExternal(_internalId)) {
+                if (bestStrategy != StrategyId::MAX) {
+                    LOG(0, "IME {C[i1]}. RV cannot quote externally. Send overfill to strategy {i2}. Side={i3} Price={d1} Size={i4}", getContractName(),
+                        toUInt(bestStrategy), side, ToDollars(filledPrice), filledSize)
+                    _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, bestStrategy,
+                                                  FillType::External, FillSource::Overfill);
+                } else {
+                    LOG(0, "IME {C[i1]}. RV can't quote externally. Send overfill to MM. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
+                    _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
+                }
                 return;
             }
             LOG(0, "IME {C[i1]}. Send overfill to RV. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
