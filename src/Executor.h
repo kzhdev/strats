@@ -308,11 +308,19 @@ public:
         LOG(0, "EXE. {i1} EconomicNumber ended. Undo actions. Id={i2}", toUInt(en._color), en._id)
         sendErrorMessage(boost::str(boost::format("%1% economic number ended. Undo actions. Id=%2%") % to_string(en._color) % en._id), ErrorType::Critical);
 
-        onShiftChanged(toUInt(en._currentShift));
-        sendGenericMessageToFront(ViperMessageType::ShiftChanged);
+        if (en._color != EconomicNumber::DarkRed) {
+            onShiftChanged(toUInt(en._currentShift));
+            sendGenericMessageToFront(ViperMessageType::ShiftChanged);
+        }
 
         switch (en._color) {
             case EconomicNumber::DarkRed:
+                for (auto& state : _contractStates) {
+                    if (state._contract._toMarketMake) {
+                        state._ime.onEconomicNumberEnded(en._color);
+                    }
+                }
+                break;
             case EconomicNumber::Red:
                 for (auto& state : _contractStates) {
                     if (state._contract._toMarketMake) {

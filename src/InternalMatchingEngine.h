@@ -2086,7 +2086,6 @@ public:
         bool undoEconomicNumberAction = false;
         switch (color) {
             case EconomicNumber::Color::DarkRed:
-                undoEconomicNumberAction = _reactToDarkRedNumbers;
                 _inDarkRedEconomicNumber = false;
                 break;
             case EconomicNumber::Color::Red:
