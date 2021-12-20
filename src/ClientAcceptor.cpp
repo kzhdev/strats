@@ -213,7 +213,8 @@ void ClientsAcceptor::runIteration() {
         }
 
         bool fatalError = false;
-        while (true) {
+        bool connectionAlive = true;
+        while (connectionAlive) {
             if (!buffer.prepareToNextMessageProcessingAndCheckReadiness()){
                 buffer.copyPartialMessageToTheBeginningOfTheBuffer();
                 break;
@@ -279,6 +280,7 @@ void ClientsAcceptor::runIteration() {
                     connection.setClosingMessageID(messageID);
                     LOG_INFO(boost::str(boost::format("Logging out. User=%1%") % connection.getUserName()));
                     sendOtherRequest(ViperMessageType::Logout, messageID, connection.m_fd);
+                    connectionAlive = false;
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GRID_CHANGE: {
@@ -330,7 +332,7 @@ void ClientsAcceptor::runIteration() {
                 default:
                     break;
             }
-            if(fatalError) {
+            if(fatalError || !connectionAlive) {
                 break;
             }
 
