@@ -1,11 +1,12 @@
 #Version 1.55.0
-- Allow multiple connections
+- Allow multiple connections.
 - Set shift only when the first client connected
 - Send Viper version in ClientAccepted response
 - Send ClientLogin accepted responses to the connected client only
 - Added TraderChanged protobuf message; When trader switched, send trader name to GUI
-- Send ClientCount update to GUI
+- Send ClientCount update to GUI.
 - Save chart points into chart histories file. Send chart histories to GUI when GUI connected.
+- Assign over fills to RV if RV enabled and quote externally, otherwise assign overfills to the best strategy.
 
 #Version 1.54.6.1
 - Switch to the correct trader after GUI logging in.

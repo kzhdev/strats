@@ -247,7 +247,7 @@ public:
                     size -= length;
                 }
 
-                if (size && size < length) {
+                if (size && size < static_cast<long int>(length)) {
                     logging::GetLogger().logError(chartHistoriesFile + " corrupted?");
                     assert(false);
                     break;
