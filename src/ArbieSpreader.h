@@ -1149,9 +1149,10 @@ inline bool ArbieSpreader::Contract::addAggressiveQuoteAdjustment(Path* path, co
             }
             for (const auto& pathContract : path->_leanContracts) {
                 auto hedgeMarket = pathContract.bestMarket();
-                assert(hedgeMarket->getId() != MarketIds::__end__);
-                otherSideMarket.addFAKPreAdjustment(hedgeMarket);
-                affected_contract.emplace(hedgeMarket);
+                if (hedgeMarket->getId() != MarketIds::__end__) {
+                    otherSideMarket.addFAKPreAdjustment(hedgeMarket);
+                    affected_contract.emplace(hedgeMarket);
+                }
             }
             if (updateBestMarket<otherSide>(&otherSideMarket)) {
                 updateAffectedPathsBestMarket<otherSide>(oldBestPrice);
