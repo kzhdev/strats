@@ -9,6 +9,8 @@
 - Assign over fills to RV if RV enabled and quote externally, otherwise assign overfills to the best strategy.
 - Added STFToMarket cell button in FactorParameter grid. Set the specific factor's STF to market.
 - Added LTFDelta in the model. Added +LTFDelta and -LTFDelta button in FactorParameter grid.
+- Changed DarkRed economic number to no re-enable behaviour.
+- On strategy's disable timer, disable strategy external quoting as well.
 
 #Version 1.54.6.1
 - Switch to the correct trader after GUI logging in.
