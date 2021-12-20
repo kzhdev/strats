@@ -212,7 +212,6 @@ void ClientsAcceptor::runIteration() {
             continue;
         }
 
-        bool fatalError = false;
         bool connectionAlive = true;
         while (connectionAlive) {
             if (!buffer.prepareToNextMessageProcessingAndCheckReadiness()){
@@ -256,7 +255,7 @@ void ClientsAcceptor::runIteration() {
                     proto::ClientLogin message;
                     if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
                         onDecodeMessageError(it, requestType, messageID);
-                        fatalError = true;
+                        connectionAlive = false;
                     } else {
                         if (connection.isLoggedIn()) {
                             auto text = boost::str(boost::format("Client is already logged in as '%1%'") % connection.getUserName());
@@ -287,7 +286,7 @@ void ClientsAcceptor::runIteration() {
                     proto::GridUpdate message;
                     if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
                         onDecodeMessageError(it, requestType, messageID);
-                        fatalError = true;
+                        connectionAlive = false;
                     } else {
                         _frontSide->onGridUpdate(message, connection.m_fd);
                     }
@@ -307,7 +306,7 @@ void ClientsAcceptor::runIteration() {
                     proto::GridUpdate message;
                     if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
                         onDecodeMessageError(it, requestType, messageID);
-                        fatalError = true;
+                        connectionAlive = false;
                     } else {
                         BOOST_ASSERT(message.updatetype() == proto::GridUpdateType::GridButtonType);
                         SystemState state = ToSystemStateFromButtonId(message.gridbutton());
@@ -319,7 +318,7 @@ void ClientsAcceptor::runIteration() {
                     proto::SwitchChange message;
                     if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
                         onDecodeMessageError(it, requestType, messageID);
-                        fatalError = true;
+                        connectionAlive = false;
                     } else {
                         _frontSide->onSwitchChange(message, connection.getUserName());
                     }
@@ -332,7 +331,7 @@ void ClientsAcceptor::runIteration() {
                 default:
                     break;
             }
-            if(fatalError || !connectionAlive) {
+            if(!connectionAlive) {
                 break;
             }
 
