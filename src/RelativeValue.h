@@ -911,8 +911,7 @@ public:
             auto vectorId = cellButton.row();
             switch(cellButton.col()) {
                 case toUInt(VectorParametersColumns::STF_To_Market):
-                    if (!isEnabled())
-                    {
+                    if (!isEnabled()) {
                         setShortTermFairToMarket(vectorId);
                     } else {
                         sendErrorMessage("Can set STF to market only when RV not enabled", ErrorType::Critical);
@@ -921,12 +920,9 @@ public:
 
                 case toUInt(VectorParametersColumns::Increment_LTF): {
                     auto value = _longTermFairsInVector.getValue(vectorId) + _ltfDelta.getValue(vectorId);
-                    switch (updateLTF(vectorId, value)) {
+                    switch (updateLTF(vectorId, value, false)) {
                         case LTFUpdateResult::Success:
-                            break;
                         case LTFUpdateResult::ViolateSTFLimits:
-                            LOG(0, "RV could not increase ltf. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                            sendErrorMessage(boost::str(boost::format("RV could not increase LTF. Change would be over 5 percent of range. LTF=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
                             break;
                         case LTFUpdateResult::CannotUpdate:
                             LOG(0, "RV could not increase ltf. EMA on. Vector={V[i1]}", getVectorName(vectorId))
@@ -938,12 +934,9 @@ public:
 
                 case toUInt(VectorParametersColumns::Decrement_LTF): {
                     auto value = _longTermFairsInVector.getValue(vectorId) - _ltfDelta.getValue(vectorId);
-                    switch (updateLTF(vectorId, value)) {
+                    switch (updateLTF(vectorId, value, false)) {
                         case LTFUpdateResult::Success:
-                            break;
                         case LTFUpdateResult::ViolateSTFLimits:
-                            LOG(0, "RV could not decrease ltf. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                            sendErrorMessage(boost::str(boost::format("RV could not decrease LTF. Change would be over 5 percent of range. LTF=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
                             break;
                         case LTFUpdateResult::CannotUpdate:
                             LOG(0, "RV could not decrease ltf. EMA on. Vector={V[i1]}", getVectorName(vectorId))
@@ -964,11 +957,20 @@ public:
 
         for (int i = 0; i < update._update.cells_size(); ++i) {
             proto::GridCell& gridCell = *update._update.mutable_cells(i);
-            VectorParametersColumns columnType = static_cast<VectorParametersColumns>(gridCell.col());
+            auto columnType = static_cast<VectorParametersColumns>(gridCell.col());
             uint32_t vectorId = gridCell.row();
             switch (columnType) {
                 case VectorParametersColumns::Range: {
-                    double value = boost::lexical_cast<double>(gridCell.value());
+                    auto value = boost::lexical_cast<double>(gridCell.value());
+                    if (isEnabled()) {
+                        auto range = _vectorsRange.getValue(vectorId);
+                        if (isgreater(abs((value / range) - 1), 0.1)) {
+                            LOG(0, "RV could not change Range more than 10% while RV enabled. Vector={V[i1]} Value={d1} OrgValue", getVectorName(vectorId), value, range)
+                            sendErrorMessage(boost::str(boost::format("RV could not change Range more than 10 percent while RV enabled. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
+                            gridCell.set_value(std::to_string(range));
+                            break;
+                        }
+                    }
                     if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), value, _vectorsMaxPosition.getValue(vectorId), _longTermFairsInVector.getValue(vectorId), vectorId)) {
                         _vectorsRange.setValue(vectorId, value);
                         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
@@ -985,6 +987,15 @@ public:
                 }
                 case VectorParametersColumns::MaxPos: {
                     auto value = boost::lexical_cast<double>(gridCell.value());
+                    if (isEnabled()) {
+                        auto maxPos = _vectorsMaxPosition.getValue(vectorId);
+                        if (isgreater(abs((value / maxPos) - 1), 0.1)) {
+                            LOG(0, "RV could not change MaxPos more than 10% while RV enabled. Vector={V[i1]} Value={d1} OrgValue={d2}", getVectorName(vectorId), value, maxPos)
+                            sendErrorMessage(boost::str(boost::format("RV could not change MaxPos more than 10 percent while RV enabled. MaxPos=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
+                            gridCell.set_value(std::to_string(maxPos));
+                            break;
+                        }
+                    }
                     if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
                         _vectorsMaxPosition.setValue(vectorId, value);
                         _fareMoveForOneUnitPosition = _vectorsRange.divide(_vectorsMaxPosition);
@@ -1085,6 +1096,19 @@ public:
                     LOG(0, "RV hedged changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
                     break;
                 }
+                case VectorParametersColumns::LTF_Delta: {
+                    auto value = boost::lexical_cast<double>(gridCell.value());
+                    auto range = _vectorsRange.getValue(vectorId);
+                    if (isgreater(value, range * 0.05)) {
+                        LOG(0, "RV LTFDelta cannot greater than 5% of factor's range. Vector={V[i1]} LTFDelta={d1}", getVectorName(vectorId), value)
+                        sendErrorMessage(boost::str(boost::format("RV LTFDelta cannot greater than 5 percent of factor's range. Factor=%1% LTFDelta=%2%") % _vectorNames[vectorId] % value), ErrorType::Critical);
+                        gridCell.set_value(std::to_string(_ltfDelta.getValue(vectorId)));
+                    } else {
+                        _ltfDelta.setValue(vectorId, value);
+                        LOG(0, "RV LTFDelta changed. Vector={V[i1]} Value={i2}", getVectorName(vectorId), value)
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -1138,17 +1162,22 @@ public:
         CannotUpdate,
     };
 
-    LTFUpdateResult updateLTF(uint32_t vectorId, double value) {
+    LTFUpdateResult updateLTF(uint32_t vectorId, double value, bool checkLimits = true) {
         if (_useEMAInVector.getValue(vectorId)) {
             return LTFUpdateResult::CannotUpdate;
         }
 
-        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), _vectorsMaxPosition.getValue(vectorId), value, vectorId)) {
-            _longTermFairsInVector.setValue(vectorId, value);
-            LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-            return LTFUpdateResult::Success;
+        if (checkLimits) {
+            if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), _vectorsMaxPosition.getValue(vectorId), value, vectorId)) {
+                _longTermFairsInVector.setValue(vectorId, value);
+                LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                return LTFUpdateResult::Success;
+            }
+            return LTFUpdateResult::ViolateSTFLimits;
         }
-        return LTFUpdateResult::ViolateSTFLimits;
+        _longTermFairsInVector.setValue(vectorId, value);
+        LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+        return LTFUpdateResult::Success;
     }
 
     uint64_t changeTimeToNextDay(uint64_t time) const noexcept {

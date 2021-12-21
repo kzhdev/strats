@@ -1374,9 +1374,13 @@ public:
                 gridUpdate._update = update;
                 const WindowIds windowId = static_cast<WindowIds>(update.gridid());
                 if (windowId == WindowIds::PNL) {
-                    _pnlLimitsChecker.handlePnlLimitChange(gridUpdate, _viperConfig._currentShift);
-                    onGridUpdateAccepted(toUInt(WindowIds::PNL), connectionId);
-                    checkAndActOnPnl(true);
+                    if (gridUpdate._update.updatetype() == proto::GridUpdateType::CellButtonType) {
+                        _pnlLimitsChecker.resetDrawdown(static_cast<PNLRows>(gridUpdate._update.cellbutton().row()));
+                    } else {
+                        _pnlLimitsChecker.handlePnlLimitChange(gridUpdate, _viperConfig._currentShift);
+                        onGridUpdateAccepted(toUInt(WindowIds::PNL), connectionId);
+                        checkAndActOnPnl(true);
+                    }
                 } else if (windowId == WindowIds::GlobalConfigs) {
                     handleGlobalConfigChange(gridUpdate, connectionId);
                 } else if (windowId == WindowIds::ManualFillsEntry) {

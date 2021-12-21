@@ -1153,6 +1153,7 @@ public:
         addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::USDrawdownLimit, "USDrawdownLimit", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::SafeModePnlLimit, "SafeModePnlLimit", false, proto::DataType::unsigned_type);
         addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::SafeModeDrawdownLimit, "SafeModeDrawdownLimit", false, proto::DataType::unsigned_type);
+        addColumnHeaderCell(WindowIds::PNL, columnHeader, PNLColumns::ResetDrawdown, "ResetDrawdown", false, proto::DataType::button);
 
         auto rowHeader = definition->mutable_rowheader();
 
@@ -1195,6 +1196,7 @@ public:
             for (uint32_t ii = 0; ii < shiftLimits.size(); ++ii) {
                 setCell(cells, i, shiftColumns[ii], std::to_string(shiftLimits[ii]));
             }
+            setCell(cells, i, PNLColumns::ResetDrawdown, "Reset Drawdown", toUInt(Color::TRANSPARENT));
         }
 
         auto buttons = definition->mutable_buttons();

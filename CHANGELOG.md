@@ -11,6 +11,8 @@
 - Added LTFDelta in the model. Added +LTFDelta and -LTFDelta button in FactorParameter grid.
 - Changed DarkRed economic number to no re-enable behaviour.
 - On strategy's disable timer, disable strategy external quoting as well.
+- RV LTFDelta cannot change more than 5% of factor's range.
+- RV Range and MaxPos cannot change more than 10% while RV enabled.
 
 #Version 1.54.6.1
 - Switch to the correct trader after GUI logging in.

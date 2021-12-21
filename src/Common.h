@@ -159,7 +159,7 @@ enum class ArbieSpreaderParameterColumns {
 enum class ArbieSpreaderPathsColumns { Commission, Enabled, STFOffset};
 enum class PositionsColumns {RV, AS, MMInternal, MMExternal, Total};
 enum class StackerParametersColumns { QuoteSize, QuoteGap, MaxQuote, StackLevels, StackSlack, MaxTicksOffTopLevel, UseGTC, AllowMultipleNewHedge, EnableQuoteSprayer, RedNumberPull, DarkRedNumberPull };
-enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit, AsiaPnlLimit, AsiaDrawdownLimit, EuropePnlLimit,EuropeDrawdownLimit, USPnlLimit, USDrawdownLimit, SafeModePnlLimit, SafeModeDrawdownLimit};
+enum class PNLColumns {Open, Closed, Total, Drawdown, PnlLimit, DrawdownLimit, AsiaPnlLimit, AsiaDrawdownLimit, EuropePnlLimit,EuropeDrawdownLimit, USPnlLimit, USDrawdownLimit, SafeModePnlLimit, SafeModeDrawdownLimit, ResetDrawdown};
 enum class PNLRows {MarketMakers, RelativeValue, ArbieSpreader, Total, __end_marker__};
 enum class PnlDetailColumns {MMOpen, MMClosed, RVOpen, RVClosed, ASOpen, ASClosed, Total, MMTotal, RVTotal, ASTotal};
 enum class GlobalConfigsColumns {Value, Asia, Europe, US, Release};

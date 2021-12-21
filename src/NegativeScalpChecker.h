@@ -168,6 +168,11 @@ struct Pnl {
     hf::price_t _drawdown = 0;
 
     hf::price_t getTotal() const noexcept { return _open + _closed; }
+    void reset() noexcept {
+        _open = 0;
+        _closed = 0;
+        _drawdown = 0;
+    }
 };
 
 enum CalculatorId : uint8_t {

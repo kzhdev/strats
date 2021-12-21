@@ -32,6 +32,14 @@ public:
         return limitsBreached;
     }
 
+    void resetDrawdown(PNLRows row) {
+        if (row ==PNLRows::Total) {
+            _pnlCalculator->_pnlTotal.reset();
+        } else if (row < PNLRows::Total) {
+            _pnlCalculator->_pnl[toUInt(row)].reset();
+        }
+    }
+
     void handlePnlLimitChange(GridUpdate& update, Shifts currentShift) {
         auto updateLimit = [currentShift](PnlCheckData& data, hf::price_t limit, Shifts shift, PNLRows type) {
             if (currentShift == shift) {
