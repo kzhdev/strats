@@ -1932,7 +1932,7 @@ public:
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::SetToMarket, "SetToMarket", true, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Hedged, "Hedged", true, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::STF_To_Market, "STFToMarket", false, proto::DataType::button);
-        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::LTF_Delta, "LTFDelta", false, proto::DataType::button);
+        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::LTF_Delta, "LTFDelta", false, proto::DataType::double_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Increment_LTF, "+LTFDelta", false, proto::DataType::button);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Decrement_LTF, "-LTFDelta", false, proto::DataType::button);
 
