@@ -295,12 +295,14 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(RowHeaderCell));
   ColumnHeaderCell_descriptor_ = file->message_type(10);
-  static const int ColumnHeaderCell_offsets_[5] = {
+  static const int ColumnHeaderCell_offsets_[7] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, label_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, id_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, type_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, enumerationname_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, readonly_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, target_col_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColumnHeaderCell, delta_col_),
   };
   ColumnHeaderCell_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -764,11 +766,12 @@ void protobuf_AddDesc_python_2eproto() {
     "ell\022\022\n\ngridButton\030\005 \001(\r\022,\n\ncellButton\030\006 "
     "\001(\0132\030.Python.proto.CellButton\"&\n\nCellBut"
     "ton\022\013\n\003row\030\001 \002(\r\022\013\n\003col\030\002 \002(\r\"*\n\rRowHead"
-    "erCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"~\n\020Col"
-    "umnHeaderCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r"
-    "\022$\n\004type\030\003 \002(\0162\026.Python.proto.DataType\022\027"
-    "\n\017enumerationName\030\004 \001(\t\022\020\n\010readOnly\030\005 \002("
-    "\010\"\210\002\n\016GridDefinition\022\016\n\006gridId\030\001 \002(\r\022$\n\004"
+    "erCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\"\245\001\n\020Co"
+    "lumnHeaderCell\022\r\n\005label\030\001 \002(\t\022\n\n\002id\030\002 \002("
+    "\r\022$\n\004type\030\003 \002(\0162\026.Python.proto.DataType\022"
+    "\027\n\017enumerationName\030\004 \001(\t\022\020\n\010readOnly\030\005 \002"
+    "(\010\022\022\n\ntarget_col\030\006 \001(\r\022\021\n\tdelta_col\030\007 \001("
+    "\r\"\210\002\n\016GridDefinition\022\016\n\006gridId\030\001 \002(\r\022$\n\004"
     "type\030\002 \002(\0162\026.Python.proto.GridType\022\014\n\004na"
     "me\030\003 \002(\t\0224\n\014columnHeader\030\004 \003(\0132\036.Python."
     "proto.ColumnHeaderCell\022.\n\trowHeader\030\005 \003("
@@ -851,18 +854,19 @@ void protobuf_AddDesc_python_2eproto() {
     "e\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013MainControl"
     "\020\004\022\016\n\nEntryTable\020\005*[\n\013SystemState\022\033\n\027Sys"
     "temStateHardShutdown\020\000\022\026\n\022SystemStateEna"
-    "bled\020\001\022\027\n\023SystemStateDisabled\020\002*\233\001\n\010Data"
+    "bled\020\001\022\027\n\023SystemStateDisabled\020\002*\323\001\n\010Data"
     "Type\022\017\n\013signed_type\020\000\022\021\n\runsigned_type\020\001"
     "\022\017\n\013double_type\020\002\022\017\n\013string_type\020\003\022\r\n\ten"
     "um_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbool_type\020"
-    "\006\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010*\233\001\n\023Button"
-    "FrontBehavior\022\036\n\032ButtonFrontBehavior_Rev"
-    "ert\020\001\022$\n ButtonFrontBehavior_CommitValue"
-    "s\020\002\022\037\n\033ButtonFrontBehavior_Nothing\020\003\022\035\n\031"
-    "ButtonFrontBehavior_Clear\020\004*r\n\022ButtonBac"
-    "kBehavior\022\033\n\027ButtonBackBehavior_Send\020\001\022\036"
-    "\n\032ButtonBackBehavior_Nothing\020\002\022\037\n\033Button"
-    "BackBehavior_SubmitId\020\003", 4703);
+    "\006\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010\022\032\n\026value_i"
+    "ncrement_button\020\t\022\032\n\026value_decrement_but"
+    "ton\020\n*\233\001\n\023ButtonFrontBehavior\022\036\n\032ButtonF"
+    "rontBehavior_Revert\020\001\022$\n ButtonFrontBeha"
+    "vior_CommitValues\020\002\022\037\n\033ButtonFrontBehavi"
+    "or_Nothing\020\003\022\035\n\031ButtonFrontBehavior_Clea"
+    "r\020\004*r\n\022ButtonBackBehavior\022\033\n\027ButtonBackB"
+    "ehavior_Send\020\001\022\036\n\032ButtonBackBehavior_Not"
+    "hing\020\002\022\037\n\033ButtonBackBehavior_SubmitId\020\003", 4799);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "python.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -1091,6 +1095,8 @@ bool DataType_IsValid(int value) {
     case 6:
     case 7:
     case 8:
+    case 9:
+    case 10:
       return true;
     default:
       return false;
@@ -4110,6 +4116,8 @@ const int ColumnHeaderCell::kIdFieldNumber;
 const int ColumnHeaderCell::kTypeFieldNumber;
 const int ColumnHeaderCell::kEnumerationNameFieldNumber;
 const int ColumnHeaderCell::kReadOnlyFieldNumber;
+const int ColumnHeaderCell::kTargetColFieldNumber;
+const int ColumnHeaderCell::kDeltaColFieldNumber;
 #endif  // !_MSC_VER
 
 ColumnHeaderCell::ColumnHeaderCell()
@@ -4133,6 +4141,8 @@ void ColumnHeaderCell::SharedCtor() {
   type_ = 0;
   enumerationname_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   readonly_ = false;
+  target_col_ = 0u;
+  delta_col_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -4187,6 +4197,8 @@ void ColumnHeaderCell::Clear() {
       }
     }
     readonly_ = false;
+    target_col_ = 0u;
+    delta_col_ = 0u;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -4280,6 +4292,38 @@ bool ColumnHeaderCell::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(48)) goto parse_target_col;
+        break;
+      }
+
+      // optional uint32 target_col = 6;
+      case 6: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_target_col:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &target_col_)));
+          set_has_target_col();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(56)) goto parse_delta_col;
+        break;
+      }
+
+      // optional uint32 delta_col = 7;
+      case 7: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_delta_col:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &delta_col_)));
+          set_has_delta_col();
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -4336,6 +4380,16 @@ void ColumnHeaderCell::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteBool(5, this->readonly(), output);
   }
 
+  // optional uint32 target_col = 6;
+  if (has_target_col()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(6, this->target_col(), output);
+  }
+
+  // optional uint32 delta_col = 7;
+  if (has_delta_col()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(7, this->delta_col(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -4378,6 +4432,16 @@ void ColumnHeaderCell::SerializeWithCachedSizes(
   // required bool readOnly = 5;
   if (has_readonly()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(5, this->readonly(), target);
+  }
+
+  // optional uint32 target_col = 6;
+  if (has_target_col()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(6, this->target_col(), target);
+  }
+
+  // optional uint32 delta_col = 7;
+  if (has_delta_col()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(7, this->delta_col(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -4423,6 +4487,20 @@ int ColumnHeaderCell::ByteSize() const {
       total_size += 1 + 1;
     }
 
+    // optional uint32 target_col = 6;
+    if (has_target_col()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->target_col());
+    }
+
+    // optional uint32 delta_col = 7;
+    if (has_delta_col()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->delta_col());
+    }
+
   }
   if (!unknown_fields().empty()) {
     total_size +=
@@ -4465,6 +4543,12 @@ void ColumnHeaderCell::MergeFrom(const ColumnHeaderCell& from) {
     if (from.has_readonly()) {
       set_readonly(from.readonly());
     }
+    if (from.has_target_col()) {
+      set_target_col(from.target_col());
+    }
+    if (from.has_delta_col()) {
+      set_delta_col(from.delta_col());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -4494,6 +4578,8 @@ void ColumnHeaderCell::Swap(ColumnHeaderCell* other) {
     std::swap(type_, other->type_);
     std::swap(enumerationname_, other->enumerationname_);
     std::swap(readonly_, other->readonly_);
+    std::swap(target_col_, other->target_col_);
+    std::swap(delta_col_, other->delta_col_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

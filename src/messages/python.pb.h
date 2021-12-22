@@ -259,11 +259,13 @@ enum DataType {
   rhone_price = 5,
   bool_type = 6,
   button = 7,
-  rhone_time = 8
+  rhone_time = 8,
+  value_increment_button = 9,
+  value_decrement_button = 10
 };
 bool DataType_IsValid(int value);
 const DataType DataType_MIN = signed_type;
-const DataType DataType_MAX = rhone_time;
+const DataType DataType_MAX = value_decrement_button;
 const int DataType_ARRAYSIZE = DataType_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* DataType_descriptor();
@@ -1465,6 +1467,20 @@ class ColumnHeaderCell : public ::google::protobuf::Message {
   inline bool readonly() const;
   inline void set_readonly(bool value);
 
+  // optional uint32 target_col = 6;
+  inline bool has_target_col() const;
+  inline void clear_target_col();
+  static const int kTargetColFieldNumber = 6;
+  inline ::google::protobuf::uint32 target_col() const;
+  inline void set_target_col(::google::protobuf::uint32 value);
+
+  // optional uint32 delta_col = 7;
+  inline bool has_delta_col() const;
+  inline void clear_delta_col();
+  static const int kDeltaColFieldNumber = 7;
+  inline ::google::protobuf::uint32 delta_col() const;
+  inline void set_delta_col(::google::protobuf::uint32 value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.ColumnHeaderCell)
  private:
   inline void set_has_label();
@@ -1477,6 +1493,10 @@ class ColumnHeaderCell : public ::google::protobuf::Message {
   inline void clear_has_enumerationname();
   inline void set_has_readonly();
   inline void clear_has_readonly();
+  inline void set_has_target_col();
+  inline void clear_has_target_col();
+  inline void set_has_delta_col();
+  inline void clear_has_delta_col();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -1485,9 +1505,11 @@ class ColumnHeaderCell : public ::google::protobuf::Message {
   int type_;
   ::std::string* enumerationname_;
   bool readonly_;
+  ::google::protobuf::uint32 target_col_;
+  ::google::protobuf::uint32 delta_col_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(5 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(7 + 31) / 32];
 
   friend void  protobuf_AddDesc_python_2eproto();
   friend void protobuf_AssignDesc_python_2eproto();
@@ -4536,6 +4558,50 @@ inline bool ColumnHeaderCell::readonly() const {
 inline void ColumnHeaderCell::set_readonly(bool value) {
   set_has_readonly();
   readonly_ = value;
+}
+
+// optional uint32 target_col = 6;
+inline bool ColumnHeaderCell::has_target_col() const {
+  return (_has_bits_[0] & 0x00000020u) != 0;
+}
+inline void ColumnHeaderCell::set_has_target_col() {
+  _has_bits_[0] |= 0x00000020u;
+}
+inline void ColumnHeaderCell::clear_has_target_col() {
+  _has_bits_[0] &= ~0x00000020u;
+}
+inline void ColumnHeaderCell::clear_target_col() {
+  target_col_ = 0u;
+  clear_has_target_col();
+}
+inline ::google::protobuf::uint32 ColumnHeaderCell::target_col() const {
+  return target_col_;
+}
+inline void ColumnHeaderCell::set_target_col(::google::protobuf::uint32 value) {
+  set_has_target_col();
+  target_col_ = value;
+}
+
+// optional uint32 delta_col = 7;
+inline bool ColumnHeaderCell::has_delta_col() const {
+  return (_has_bits_[0] & 0x00000040u) != 0;
+}
+inline void ColumnHeaderCell::set_has_delta_col() {
+  _has_bits_[0] |= 0x00000040u;
+}
+inline void ColumnHeaderCell::clear_has_delta_col() {
+  _has_bits_[0] &= ~0x00000040u;
+}
+inline void ColumnHeaderCell::clear_delta_col() {
+  delta_col_ = 0u;
+  clear_has_delta_col();
+}
+inline ::google::protobuf::uint32 ColumnHeaderCell::delta_col() const {
+  return delta_col_;
+}
+inline void ColumnHeaderCell::set_delta_col(::google::protobuf::uint32 value) {
+  set_has_delta_col();
+  delta_col_ = value;
 }
 
 // -------------------------------------------------------------------

@@ -913,37 +913,11 @@ public:
                 case toUInt(VectorParametersColumns::STF_To_Market):
                     if (!isEnabled()) {
                         setShortTermFairToMarket(vectorId);
+                        calculateQuotes();
                     } else {
                         sendErrorMessage("Can set STF to market only when RV not enabled", ErrorType::Critical);
                     }
                     break;
-
-                case toUInt(VectorParametersColumns::Increment_LTF): {
-                    auto value = _longTermFairsInVector.getValue(vectorId) + _ltfDelta.getValue(vectorId);
-                    switch (updateLTF(vectorId, value, false)) {
-                        case LTFUpdateResult::Success:
-                        case LTFUpdateResult::ViolateSTFLimits:
-                            break;
-                        case LTFUpdateResult::CannotUpdate:
-                            LOG(0, "RV could not increase ltf. EMA on. Vector={V[i1]}", getVectorName(vectorId))
-                            sendErrorMessage(boost::str(boost::format("RV could not increase LTF. EMA on. Factor=%1%") % _vectorNames[vectorId]), ErrorType::Critical);
-                            break;
-                    }
-                    break;
-                }
-
-                case toUInt(VectorParametersColumns::Decrement_LTF): {
-                    auto value = _longTermFairsInVector.getValue(vectorId) - _ltfDelta.getValue(vectorId);
-                    switch (updateLTF(vectorId, value, false)) {
-                        case LTFUpdateResult::Success:
-                        case LTFUpdateResult::ViolateSTFLimits:
-                            break;
-                        case LTFUpdateResult::CannotUpdate:
-                            LOG(0, "RV could not decrease ltf. EMA on. Vector={V[i1]}", getVectorName(vectorId))
-                            sendErrorMessage(boost::str(boost::format("RV could not decrease LTF. EMA on. Factor=%1%") % _vectorNames[vectorId]), ErrorType::Critical);
-                            break;
-                    }
-                }
             }
             return true;
         }
@@ -965,7 +939,7 @@ public:
                     if (isEnabled()) {
                         auto range = _vectorsRange.getValue(vectorId);
                         if (isgreater(abs((value / range) - 1), 0.1)) {
-                            LOG(0, "RV could not change Range more than 10% while RV enabled. Vector={V[i1]} Value={d1} OrgValue", getVectorName(vectorId), value, range)
+                            LOG(0, "RV could not change Range more than 10 percent while RV enabled. Vector={V[i1]} Value={d1} OrgValue={d2}", getVectorName(vectorId), value, range)
                             sendErrorMessage(boost::str(boost::format("RV could not change Range more than 10 percent while RV enabled. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
                             gridCell.set_value(std::to_string(range));
                             break;
@@ -979,7 +953,7 @@ public:
                         LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::Range, vectorId, value));
                     } else {
-                        LOG(0, "RV could not change range. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        LOG(0, "RV could not change range. Change would be over 5 percent of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
                         gridCell.set_value(std::to_string(_vectorsRange.getValue(vectorId)));
                     }
@@ -990,9 +964,9 @@ public:
                     if (isEnabled()) {
                         auto maxPos = _vectorsMaxPosition.getValue(vectorId);
                         if (isgreater(abs((value / maxPos) - 1), 0.1)) {
-                            LOG(0, "RV could not change MaxPos more than 10% while RV enabled. Vector={V[i1]} Value={d1} OrgValue={d2}", getVectorName(vectorId), value, maxPos)
+                            LOG(0, "RV could not change MaxPos more than 10 percent while RV enabled. Vector={V[i1]} Value={d1} OrgValue={d2}", getVectorName(vectorId), value, maxPos)
                             sendErrorMessage(boost::str(boost::format("RV could not change MaxPos more than 10 percent while RV enabled. MaxPos=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
-                            gridCell.set_value(std::to_string(maxPos));
+                            gridCell.set_value(std::to_string(static_cast<int32_t>(maxPos)));
                             break;
                         }
                     }
@@ -1004,7 +978,7 @@ public:
                         LOG(0, "RV max_pos changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::MaxPos, vectorId, value));
                     } else {
-                        LOG(0, "RV could not change max_pos. Change would be over 5% of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        LOG(0, "RV could not change max_pos. Change would be over 5 percent of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         sendErrorMessage(boost::str(boost::format("RV could not change max pos. Change would be over 5 percent of range. MaxPos=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
                         gridCell.set_value(std::to_string(static_cast<int32_t>(_vectorsMaxPosition.getValue(vectorId))));
                     }

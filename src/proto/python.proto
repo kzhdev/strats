@@ -125,6 +125,8 @@ message ColumnHeaderCell {
     required DataType type = 3;
     optional string enumerationName = 4;
     required bool readOnly = 5;
+    optional uint32 target_col = 6;
+    optional uint32 delta_col = 7;
 }
 
 enum GridType {
@@ -188,6 +190,8 @@ enum DataType {
     bool_type = 6;
     button = 7;
     rhone_time = 8;
+    value_increment_button = 9;
+    value_decrement_button = 10;
 }
 
 message EnumMember {

@@ -1505,7 +1505,7 @@ public:
     }
 
     template <typename HeaderT, typename EnumValue>
-    proto::ColumnHeaderCell* addColumnHeaderCell(WindowIds gridId, HeaderT* header, EnumValue id, const std::string& label, bool readyOnly, proto::DataType type, const std::string& e = "") {
+    proto::ColumnHeaderCell* addColumnHeaderCell(WindowIds gridId, HeaderT* header, EnumValue id, const std::string& label, bool readyOnly, proto::DataType type, const std::string& e = "", uint32_t targetColumn = 0, uint32_t deltaColumn = 0) {
         proto::ColumnHeaderCell* headerCell = header->Add();
         headerCell->set_id(toUInt(id));
         headerCell->set_label(label);
@@ -1516,6 +1516,10 @@ public:
         headerCell->set_readonly(readyOnly);
         auto& columns = _columns[toUInt(gridId)];
         columns[toUInt(id)] = label;
+        if (type == proto::DataType::value_increment_button || type == proto::DataType::value_decrement_button) {
+            headerCell->set_target_col(targetColumn);
+            headerCell->set_delta_col(deltaColumn);
+        }
         return headerCell;
     }
 
@@ -1935,8 +1939,8 @@ public:
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Hedged, "Hedged", true, proto::DataType::bool_type);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::STF_To_Market, "STFToMarket", false, proto::DataType::button);
         addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::LTF_Delta, "LTFDelta", false, proto::DataType::double_type);
-        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Increment_LTF, "+LTFDelta", false, proto::DataType::button);
-        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Decrement_LTF, "-LTFDelta", false, proto::DataType::button);
+        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Increment_LTF, "+LTFDelta", false, proto::DataType::value_increment_button, "", toUInt(VectorParametersColumns::LTF), toUInt(VectorParametersColumns::LTF_Delta));
+        addColumnHeaderCell(WindowIds::VectorParameters, columnHeader, VectorParametersColumns::Decrement_LTF, "-LTFDelta", false, proto::DataType::value_decrement_button, "", toUInt(VectorParametersColumns::LTF), toUInt(VectorParametersColumns::LTF_Delta));
 
         auto rowHeader = definition->mutable_rowheader();
 
