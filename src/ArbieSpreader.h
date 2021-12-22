@@ -612,6 +612,7 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::price_t fillPrice
     for (auto path : _temporarilyInvalidatedPaths) {
         path->_recalc = true;
     }
+    _temporarilyInvalidatedPaths.clear();
 
     if (canHedge && pathPrice != hf::NULL_PRICE) {
         if (calculateTicksThroughMarket<Side>(fillPrice, pathPrice) >= contract._maxTicksThroughMarket) {
@@ -978,7 +979,7 @@ bool ArbieSpreader::Path::canHedge(hf::qty_t size, hf::price_t& pathPrice, std::
             temporarilyDisabledPath.emplace(this);
         }
         return false;
-    } else if (firstPath) {
+    } else if (firstPath && _stfOffset._stfOffset != hf::NULL_PRICE) {
         // 2 Scenarios:
         // 1. After AS Quote adjustment, the path might be invalidated
         // 2. While the fill inflight, the path is banned by another contract. Although the path is banned, we should
