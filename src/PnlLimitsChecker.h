@@ -34,9 +34,9 @@ public:
 
     void resetDrawdown(PNLRows row) {
         if (row ==PNLRows::Total) {
-            _pnlCalculator->_pnlTotal.reset();
+            _totalLimits._maxPnl = _pnlCalculator->_pnlTotal.getTotal();
         } else if (row < PNLRows::Total) {
-            _pnlCalculator->_pnl[toUInt(row)].reset();
+            _strategyLimits[toUInt(row)]._maxPnl = _pnlCalculator->_pnl[toUInt(row)].getTotal();
         }
     }
 
