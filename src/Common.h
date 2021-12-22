@@ -752,8 +752,10 @@ struct Market {
 
     void addFAKPreAdjustment(Market* market) {
         assert(market->_id != MarketIds::__end__);
-        _fakPreAdjustedMarkets.push_back(market);
-        market->addFAKPreAdjustment(_asQuoteAdjustment);
+        if (BOOST_LIKELY(market->_id != MarketIds::__end__)) {
+            _fakPreAdjustedMarkets.push_back(market);
+            market->addFAKPreAdjustment(_asQuoteAdjustment);
+        }
     }
 
     void addFAKPreAdjustment(hf::qty_t adj) {
@@ -764,8 +766,7 @@ struct Market {
     }
 
     void undoFAKPreAdjustment(hf::qty_t adj) {
-        assert(_id != MarketIds::__end__);
-        if (BOOST_LIKELY(_fakPreAdjustment != 0)) {
+        if (BOOST_LIKELY(_id != MarketIds::__end__ && _fakPreAdjustment != 0)) {
             _fakPreAdjustment = std::max<hf::qty_t>(0, _fakPreAdjustment - adj);
             LOG(0, "{i1}. Market {C[i2]} Id={i3} Side={i4} Undo FAK Pre adjustment. Adj={i5} FAKPreAdj={i6} asQuoteAdj={i7} FAKAdj={i8} Price={d1} Size={i9} AdjustedSize={i10}", _strategy,
                 _contractId, _id, _side, adj, _fakPreAdjustment, _asQuoteAdjustment, _fakSizeAdjustment[_id],
