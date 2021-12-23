@@ -113,6 +113,53 @@ public:
         cursor += slot._num;
         return &slot._data;
     }
+
+    /**
+     * Get next available data
+     *
+     * If multiple readers drain the queue, each data will be processed by only one reader.
+     * In another word, each reader processes different data
+     *
+     * @param The reader's cursor
+     * @return A valid pointer to the data if new data available, otherwise null_ptr
+     *
+     * NOTE: If a data available, the cursor will be advanced
+     */
+    T* next(std::atomic_uint_fast64_t& cursor) noexcept {
+        auto reserved = _reserved_cursor->load(std::memory_order_relaxed);
+        auto oldCursor = cursor.load(std::memory_order_relaxed);
+        uint64_t newCursor;
+        uint64_t targetCursor = 0;
+        do {
+            newCursor = oldCursor;
+            if (BOOST_UNLIKELY((reserved - newCursor) > _size)) {
+                using LockFreeQueueSpace::s_log;
+                if (reserved < newCursor) {
+                    LOG_INFO(boost::format("%1% has been reset") % getID());
+                    cursor = 0;
+                } else {
+                    LOG_ERROR(boost::format("!!!! %1% is falling behind. reserved=%2% cursor=%3%") % getID() % reserved % cursor);
+                    newCursor += (reserved - newCursor) / 2;
+                    slot* s;
+                    do {
+                        ++newCursor;
+                        s = &_data[newCursor & _mask];
+                    } while (s->_id.load(std::memory_order_relaxed) != newCursor && newCursor < reserved);
+                }
+            }
+
+            auto& slot = _data[newCursor & _mask];
+            if (slot._id.load(std::memory_order_relaxed) != newCursor) {
+                // no new data available
+                return nullptr;
+            }
+
+            targetCursor = newCursor;
+            newCursor += slot._num;
+        } while(!cursor.compare_exchange_weak(oldCursor, newCursor, std::memory_order_release, std::memory_order_relaxed));
+
+        return &_data[targetCursor & _mask]._data;
+    }
 };
 
 }}
