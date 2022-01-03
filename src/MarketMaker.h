@@ -56,7 +56,8 @@ public:
 
     // GUI update
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) override;
-    void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sendingFunc) const override;
+    void sendStateToGUI(std::function<void(proto::GridUpdate&, WindowIds)>&& sendingFunc, std::function<bool(WindowIds)>&& hasSubscription) const override;
+    proto::GridUpdate getStateUpdate() const;
 
     bool isContractQuoteExternal(uint32_t contractId) const noexcept override;
 

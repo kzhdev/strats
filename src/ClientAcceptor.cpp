@@ -189,9 +189,9 @@ void ClientsAcceptor::runIteration() {
             continue;
         }
 
-        ClientConnection& connection = *it->second;
+        auto& connection = it->second;
 
-        ReadBuffer& buffer = connection.getReadBuffer();
+        ReadBuffer& buffer = connection->getReadBuffer();
 
         const ssize_t n = buffer.readFromStream(fd);
         if (n < 0) {
@@ -205,8 +205,8 @@ void ClientsAcceptor::runIteration() {
         }
 
         if (n <= 0) {
-            if(!connection.isDisconnected()) {
-                connection.setClientDisconnected(true);
+            if(!connection->isDisconnected()) {
+                connection->setClientDisconnected(true);
                 onConnectionError(it);
             }
             continue;
@@ -225,7 +225,7 @@ void ClientsAcceptor::runIteration() {
             if (BOOST_UNLIKELY(!checkProtocolVersion(header.m_version))) {
                 std::string text = boost::str(boost::format("Message protocol version %1% is incorrect") % (int)header.m_version);
                 LOG_ERROR(text);
-                ServerClientMessenger::instance()->doSendFormatError(connection, proto::ERROR_CODE_WRONG_PROTOCOL_VERSION, text, messageID);
+                ServerClientMessenger::instance()->doSendFormatError(*connection, proto::ERROR_CODE_WRONG_PROTOCOL_VERSION, text, messageID);
                 if(BOOST_LIKELY(!buffer.moveToNextProtoMessage())) {
                     break;
                 } else {
@@ -234,13 +234,13 @@ void ClientsAcceptor::runIteration() {
             }
 
             auto requestType = (proto::GUI_MESSAGE_TYPE) header.m_messageTypeID;
-            if (requestType != proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGIN && !connection.canExecuteRequest()) {
+            if (requestType != proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGIN && !connection->canExecuteRequest()) {
                 std::string text = "";
-                if (connection.isClosing()) {
+                if (connection->isClosing()) {
                     text = boost::str(boost::format("Cannot process traderConnection request %1% because trader is in closing state") % (int) messageID);
                 } else {
                     text = boost::str(boost::format("Cannot process traderConnection request %1%. Trader must log in first") % (int) messageID);
-                    ServerClientMessenger::instance()->doSendClientRequestRejected(connection, requestType, proto::ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN, text, messageID);
+                    ServerClientMessenger::instance()->doSendClientRequestRejected(*connection, requestType, proto::ERROR_CODE_CLIENT_IS_NOT_LOGGED_IN, text, messageID);
                 }
                 LOG_INFO(text);
                 if (BOOST_LIKELY(!buffer.moveToNextProtoMessage())) {
@@ -257,28 +257,28 @@ void ClientsAcceptor::runIteration() {
                         onDecodeMessageError(it, requestType, messageID);
                         connectionAlive = false;
                     } else {
-                        if (connection.isLoggedIn()) {
-                            auto text = boost::str(boost::format("Client is already logged in as '%1%'") % connection.getUserName());
+                        if (connection->isLoggedIn()) {
+                            auto text = boost::str(boost::format("Client is already logged in as '%1%'") % connection->getUserName());
                             LOG_INFO(text);
-                            ServerClientMessenger::instance()->doSendClientLoginReject(connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, text, messageID);
+                            ServerClientMessenger::instance()->doSendClientLoginReject(*connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, text, messageID);
                         } else {
                             LOG_INFO(boost::str(boost::format("Logging in. User=%1%") % message.username()));
-                            connection.onLogin(message.username());
-                            connection._beatToSend._interval = GetCyclesFromSeconds(message.heartbeatinterval(), _frequency);
-                            connection._beatToSend._nextTime = connection._beatToSend._interval + clockUtil::GetCycles();
-                            connection._beatToReceive._interval = GetCyclesFromSeconds(_timeOutSeconds, _frequency);
-                            connection._beatToReceive._nextTime = connection._beatToReceive._interval + clockUtil::GetCycles();
-                            sendOtherRequest(ViperMessageType::Login, messageID, connection.m_fd);
-                            connection.loginComplete();
-                            sendClientCount();
+                            connection->onLogin(message.username());
+                            connection->_beatToSend._interval = GetCyclesFromSeconds(message.heartbeatinterval(), _frequency);
+                            connection->_beatToSend._nextTime = connection->_beatToSend._interval + clockUtil::GetCycles();
+                            connection->_beatToReceive._interval = GetCyclesFromSeconds(_timeOutSeconds, _frequency);
+                            connection->_beatToReceive._nextTime = connection->_beatToReceive._interval + clockUtil::GetCycles();
+                            sendOtherRequest(ViperMessageType::Login, messageID, it);
+                            connection->loginComplete();
+                            sendClients();
                         }
                     }
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_CLIENT_LOGOUT: {
-                    connection.setClosingMessageID(messageID);
-                    LOG_INFO(boost::str(boost::format("Logging out. User=%1%") % connection.getUserName()));
-                    sendOtherRequest(ViperMessageType::Logout, messageID, connection.m_fd);
+                    connection->setClosingMessageID(messageID);
+                    LOG_INFO(boost::str(boost::format("Logging out. User=%1%") % connection->getUserName()));
+                    sendOtherRequest(ViperMessageType::Logout, messageID, it);
                     connectionAlive = false;
                     break;
                 }
@@ -288,17 +288,17 @@ void ClientsAcceptor::runIteration() {
                         onDecodeMessageError(it, requestType, messageID);
                         connectionAlive = false;
                     } else {
-                        _frontSide->onGridUpdate(message, connection.m_fd);
+                        _frontSide->onGridUpdate(message, connection->m_fd);
                     }
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED: {
-                    LOG_INFO("GUI Initialization accepted. connectionId=" + std::to_string(connection.m_fd));
+                    LOG_INFO("GUI Initialization accepted. connectionId=" + std::to_string(connection->m_fd));
                     _frontSide->onGuiInitializationAccepted();
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GUI_INITIALIZATION_REJECTED: {
-                    LOG_INFO("GUI Initialization rejected. connectionId=" + std::to_string(connection.m_fd));
+                    LOG_INFO("GUI Initialization rejected. connectionId=" + std::to_string(connection->m_fd));
                     _frontSide->onGuiInitializationRejected();
                     break;
                 }
@@ -310,7 +310,7 @@ void ClientsAcceptor::runIteration() {
                     } else {
                         BOOST_ASSERT(message.updatetype() == proto::GridUpdateType::GridButtonType);
                         SystemState state = ToSystemStateFromButtonId(message.gridbutton());
-                        _frontSide->onSystemStateChange(state, "GUI requested. user=" + connection.getUserName());
+                        _frontSide->onSystemStateChange(state, "GUI requested. user=" + connection->getUserName());
                     }
                     break;
                 }
@@ -320,13 +320,32 @@ void ClientsAcceptor::runIteration() {
                         onDecodeMessageError(it, requestType, messageID);
                         connectionAlive = false;
                     } else {
-                        _frontSide->onSwitchChange(message, connection.getUserName());
+                        _frontSide->onSwitchChange(message, connection->getUserName());
                     }
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_HEARTBEAT: {
-                    connection._beatToReceive._nextTime = clockUtil::GetCycles() + connection._beatToReceive._interval;
+                    connection->_beatToReceive._nextTime = clockUtil::GetCycles() + connection->_beatToReceive._interval;
                     break;
+                }
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_SUBSCRIBE_GRID_UPDATE: {
+                    proto::SubscribeGridUpdate message;
+                    if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
+                        onDecodeMessageError(it, requestType, messageID);
+                        connectionAlive = false;
+                    } else {
+                        _frontSide->onSubscribeGridUpdate(connection, message.gridid());
+                    }
+                    break;
+                }
+                case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_UNSUBSCRIBE_GRID_UPDATE: {
+                    proto::UnsubscribeGridUpdate message;
+                    if (BOOST_UNLIKELY(!buffer.parseMessage(message))) {
+                        onDecodeMessageError(it, requestType, messageID);
+                        connectionAlive = false;
+                    } else {
+                        _frontSide->onUnsubscribeGridUpdate(connection, message.gridid());
+                    }
                 }
                 default:
                     break;
@@ -366,34 +385,30 @@ void ClientsAcceptor::sendHeartBeat(ClientConnection& conn) {
     ServerClientMessenger::instance()->sendMessageToClient(conn, proto::SERVER_MESSAGE_TYPE_HEARTBEAT, message);
 }
 
-void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, uint32_t messageID, int32_t connectionId) {
-    _frontSide->onOtherRequest(mt, connectionId);
+void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, uint32_t messageID, ClientConnectionIterT& iter) {
+    _frontSide->onOtherRequest(mt, iter);
 }
 
-void ClientsAcceptor::onConnectionError(std::map<int, std::shared_ptr<ClientConnection>>::iterator& iter) {
+void ClientsAcceptor::onConnectionError(ClientConnectionIterT& iter) {
     auto& traderConnection = *iter->second;
     LOG_INFO(boost::str(boost::format("Client connection error. connectionId=%1%") % traderConnection.m_fd));
-    if(traderConnection.isLoggedIn()) {
-        auto id = traderConnection.m_fd;
-        removeTraderConnection(iter);
-    } else {
-        removeTraderConnection(iter);
-    }
+    removeTraderConnection(iter);
 }
 
-void ClientsAcceptor::removeTraderConnection(std::map<int, std::shared_ptr<ClientConnection>>::iterator& iter) {
+void ClientsAcceptor::removeTraderConnection(ClientConnectionIterT& iter) {
+    _frontSide->onRemoveClientConnection(iter->second);
     int fd = iter->second->getFileDescriptor();
     iter = m_monitor.m_traderConnections.erase(iter);
     ::close(fd);
     LOG_INFO(boost::format("Socket %1% erased") % fd);
     if (!hasConnection()) {
-        sendOtherRequest(ViperMessageType::ClientDown, 0, 0);
+        sendOtherRequest(ViperMessageType::ClientDown, 0, iter);
     } else {
-        sendClientCount();
+        sendClients();
     }
 }
 
-void ClientsAcceptor::onDecodeMessageError(std::map<int, std::shared_ptr<ClientConnection>>::iterator& it, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID) {
+void ClientsAcceptor::onDecodeMessageError(ClientConnectionIterT& it, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID) {
     auto& traderConnection = *it->second;
     std::string text = boost::str(boost::format("Cannot parse proto message from buffer. Type %1%. connectionId=%2%") % toString(messageRequestType) % it->first);
     LOG_ERROR(text);
@@ -403,7 +418,22 @@ void ClientsAcceptor::onDecodeMessageError(std::map<int, std::shared_ptr<ClientC
 }
 
 bool ClientsAcceptor::hasConnection() const noexcept {
-    return m_monitor.m_traderConnections.begin() !=  m_monitor.m_traderConnections.end();
+    return !m_monitor.m_traderConnections.empty();
+}
+
+void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data, ClientConnection* connection) {
+    if (hasConnection()) {
+        data.set_messageid(0);
+        if (!connection) {
+            sendMessageToAllConnection([&data](ClientConnection* connection) {
+                ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
+            });
+        } else {
+            ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
+        }
+    } else {
+        LOG_WARN(boost::str(boost::format("Wanted to send GridUpdate but do not have connection. %1%") %  data.ShortDebugString()));
+    }
 }
 
 void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data, int32_t connectionId) {
@@ -439,9 +469,8 @@ void ClientsAcceptor::sendChartDataPoints(proto::DataSeriesPointSet& data, std::
 
 void ClientsAcceptor::sendChartHistories(proto::DataSeriesReplay& data, int32_t connectionId) {
     auto iter = m_monitor.m_traderConnections.find(connectionId);
-    if (BOOST_LIKELY(iter != m_monitor.m_traderConnections.end())) {
-        ClientConnection* connection = iter->second.get();
-        ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY, data);
+    if (iter != m_monitor.m_traderConnections.end()) {
+        ServerClientMessenger::instance()->sendMessageToClient(*iter->second, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY, data);
     }
 }
 
@@ -456,16 +485,11 @@ void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, 
     }
 }
 
-void ClientsAcceptor::handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds, int32_t connectionId, const char* trader) {
+void ClientsAcceptor::handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds,
+                                          ClientConnection& connection, const char* trader) {
     if (hasConnection()) {
-        auto iter = m_monitor.m_traderConnections.find(connectionId);
-        if (BOOST_LIKELY(iter != m_monitor.m_traderConnections.end())) {
-            ClientConnection* connection = iter->second.get();
-            ServerClientMessenger::instance()->doSendClientLogin(*connection, 0, heartbeatIntervalInMilliseconds, trader);
-            ServerClientMessenger::instance()->sendGUIInitialization(*connection, m);
-        } else {
-            LOG_WARN(boost::str(boost::format("Wanted to send LoginAccepted but do not have connection. connectionId=%1%") % connectionId));
-        }
+        ServerClientMessenger::instance()->doSendClientLogin(connection, 0, heartbeatIntervalInMilliseconds, trader);
+        ServerClientMessenger::instance()->sendGUIInitialization(connection, m);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send LoginAccepted but do not have connection. ")));
     }
@@ -485,36 +509,27 @@ void ClientsAcceptor::handleLoginRejected(int32_t connectionId) {
     }
 }
 
-void ClientsAcceptor::handleLoggedOut(int32_t connectionId) {
+void ClientsAcceptor::handleLoggedOut(ClientConnectionIterT& connIter) {
     if (hasConnection()) {
-        auto iter = m_monitor.m_traderConnections.find(connectionId);
-        if (BOOST_LIKELY(iter != m_monitor.m_traderConnections.end())) {
-            ClientConnection* connection = iter->second.get();
-            ServerClientMessenger::instance()->doSendClientLogout(*connection, false, 0);
-            removeTraderConnection(iter);
-        } else {
-            LOG_WARN(boost::str(boost::format("Wanted to send LoggedOut but do not have connection. connectionId=%1%") % connectionId));
-        }
+        ServerClientMessenger::instance()->doSendClientLogout(*connIter->second, false, 0);
+        removeTraderConnection(connIter);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send LoggedOut but do not have connection. ")));
     }
 }
 
-void ClientsAcceptor::sendGridChangeReply(proto::GridUpdate& message, int32_t connectionId) {
+void ClientsAcceptor::sendGridChangeReply(proto::GridUpdate& message, ClientConnection* connection) {
     if (hasConnection()) {
-        if (connectionId < 0) {
+        if (!connection) {
             sendMessageToAllConnection([&message](ClientConnection* connection) {
                 ServerClientMessenger::instance()->sendMessageToClient(*connection,
                                                                        proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED,
                                                                        message);
             });
         } else {
-            auto iter = m_monitor.m_traderConnections.find(connectionId);
-            if (iter != m_monitor.m_traderConnections.end()) {
-                ServerClientMessenger::instance()->sendMessageToClient(*iter->second,
-                                                                       proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED,
-                                                                       message);
-            }
+            ServerClientMessenger::instance()->sendMessageToClient(*connection,
+                                                                   proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED,
+                                                                   message);
         }
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send GridChangeReply but do not have connection. ")));
@@ -547,10 +562,18 @@ void ClientsAcceptor::sendTraderUpdate(const char* trader) {
     }
 }
 
-void ClientsAcceptor::sendClientCount() {
+void ClientsAcceptor::sendClients() {
     if (hasConnection()) {
-        proto::ClientCount message;
-        message.set_count(m_monitor.m_traderConnections.size());
+        std::string clients;
+        size_t sz = m_monitor.m_traderConnections.size();
+        for (const auto& kvp : m_monitor.m_traderConnections) {
+            clients.append(kvp.second->getUserName());
+            if (--sz > 0) {
+                clients.append(",");
+            }
+        }
+        proto::Clients message;
+        message.set_clients(clients);
         sendMessageToAllConnection([&message](ClientConnection* connection) {
             ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_CLIENT_COUNT,
                                                                    message);

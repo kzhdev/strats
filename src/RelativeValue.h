@@ -3046,11 +3046,25 @@ public:
     }
 
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) override;
-    void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& send) const override;
+    void sendStateToGUI(std::function<void(proto::GridUpdate&, WindowIds)>&& send, std::function<bool(WindowIds)>&& hasSubscription) const override;
     void handleViperMessage(const ViperMessage& message);
 
+    proto::GridUpdate getQuoteSizeUpdate() const;
+    proto::GridUpdate getHedgeRatiosUpdate() const;
+    proto::GridUpdate getFactorHedgedUpdate() const;
+    proto::GridUpdate getExtraContractWidth_PctStfMove_MaxTicksThroughMarket_Update() const;
+    proto::GridUpdate getCommissionUpdate() const;
+    proto::GridUpdate getParametersUpdate() const;
+    proto::GridUpdate getVectorParametersUpdate() const;
+
 private:
-    void sendVectorGridStateToGui(std::function<void(proto::GridUpdate&)>& send) const;
+    void populateParametersGrid(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
+    void populatePricingMatrix(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
+    void populateRiskMatrix(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
+    void populateHedgeRatios(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
+    void populateFactorHedged(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
+    void populateQuoteSizes(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
+    void populateCommissions(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
     void onShiftUpdate(uint32_t shift);
     void onEconomicNumberEnded(EconomicNumber::Color color);
     void handleSTFSubscription(uint32_t strategyId, uint32_t contractId);

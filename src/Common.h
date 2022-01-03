@@ -173,7 +173,7 @@ enum class LoggingLevelColumns {LoggingLevel};
 enum class NegativeScalpCheckerColumns { Period, ClipCount, Pnl };
 enum class EconomicNumberColumns {Time, MMDuration, RVDuration, ASDuration, Color, Description};
 
-enum class WindowIds {
+enum class WindowIds : uint8_t {
     VectorParameters = 1,
     ContractParametersRv = 2,
     LeanMatrix = 3,
@@ -205,6 +205,7 @@ enum class WindowIds {
     EconomicNumbers = 29,
     ArbieSpreaderParameters = 30,
     ArbieSpreaderPaths = 31,
+    __WindowsIds_Last__,
 };
 
 enum class Color {

@@ -68,8 +68,9 @@ private:
     std::string _userName;
 };
 
-class ClientsAcceptor {
+using ClientConnectionIterT = std::map<int, std::shared_ptr<ClientConnection>>::iterator;
 
+class ClientsAcceptor {
 public:
     ClientsAcceptor(std::string srvrName, int32_t port, FrontSide* frontSide, double frequency);
 
@@ -77,17 +78,18 @@ public:
     void runIteration();
 
     void sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted);
-    void sendGridChangeReply(proto::GridUpdate& message, int32_t connectioinId = -1);
+    void sendGridChangeReply(proto::GridUpdate& message, ClientConnection* connection = nullptr);
+    void sendGridUpdate(proto::GridUpdate& data, ClientConnection* connection = nullptr);
     void sendGridUpdate(proto::GridUpdate& data, int32_t connectionId = -1);
     void sendChartDataPoints(proto::DataSeriesPointSet& data, std::ostringstream& streamMessage);
     void sendChartHistories(proto::DataSeriesReplay& data, int32_t connectionId);
     void sendGuiHeartbeat(uint64_t utc_ts_in_nanos);
     void sendPlaySound(uint32_t id);
     void sendTraderUpdate(const char* trader);
-    void sendClientCount();
-    void handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds, int32_t connectionId, const char* trader);
+    void sendClients();
+    void handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds, ClientConnection& connection, const char* trader);
     void handleLoginRejected(int32_t connectionId);
-    void handleLoggedOut(int32_t connectionId);
+    void handleLoggedOut(ClientConnectionIterT& connIter);
     void doHeartBeats();
     void checkConnectionHealth();
     const char* const getConnectionUserName(int32_t connectionId) const noexcept;
@@ -95,10 +97,10 @@ public:
 
 private:
     int createMonitorSocket();
-    void onDecodeMessageError(std::map<int, std::shared_ptr<ClientConnection>>::iterator& traderConnection, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID);
-    void removeTraderConnection(std::map<int, std::shared_ptr<ClientConnection>>::iterator& traderConnection);
-    void onConnectionError(std::map<int, std::shared_ptr<ClientConnection>>::iterator& traderConnection);
-    void sendOtherRequest(ViperMessageType mt, uint32_t messageID, int32_t connection_id);
+    void onDecodeMessageError(ClientConnectionIterT& traderConnection, proto::GUI_MESSAGE_TYPE messageRequestType, message_id_t messageID);
+    void removeTraderConnection(ClientConnectionIterT& traderConnection);
+    void onConnectionError(ClientConnectionIterT& traderConnection);
+    void sendOtherRequest(ViperMessageType mt, uint32_t messageID, ClientConnectionIterT& connection);
     void sendHeartBeat(ClientConnection& conn);
     bool hasConnection() const noexcept;
 

@@ -8,13 +8,150 @@ auto& guiThings = GUIThings::get();
 }
 
 void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
-    guiThings.populateMarketMakerParameters(definitions->Add());
+    auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::MarketMakerParameters, "Market Maker Parameters", proto::GridType::Table, true);
+    guiThings.addHeader(definition, {
+            headerCell(MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type),
+            headerCell(MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::QuoteGap, "QuoteGap", false, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::QuotePctTob, "Quote%TOB", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type),
+            headerCell(MarketMakerParametersColumns::Width, "WidthPercentage", true, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::AsiaWidth, "AsiaWidthPercentage", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::EuroWidth, "EuroWidthPercentage", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::USWidth, "USWidthPercentage", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::SafeModeWidth, "SafeModeWidthPercentage", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::MinInternalPriceChange, "MinInternalPriceChange", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::EstablishedLevel, "EstLevelEMA", true, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::EstLevelEMASeconds, "EstLevelEMASeconds", false, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::EstLevelPctEMA, "EstLevel%EMA", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::HedgeOffset, "HedgeOffset", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::JoinSize, "JoinSize", false, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::LeaveSize, "LeaveSize", false, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::PayUpQty, "PayUpQty", false, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::PayUpOrders, "PayUpOrders", false, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::PayUpMultiple, "PayUpMultiple", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::MaxPosInterrnal, "MaxPosInternal", false, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::MaxPosExternal, "MaxPosExternal", false, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::Commission, "Commission", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::Enabled, "Enabled", false, proto::DataType::bool_type),
+            headerCell(MarketMakerParametersColumns::InternalPosition, "InternalPosition", true, proto::DataType::signed_type),
+            headerCell(MarketMakerParametersColumns::ExternalPosition, "ExternalPosition", true, proto::DataType::signed_type),
+            headerCell(MarketMakerParametersColumns::BidInternalPrice, "BidIntPrice", true, proto::DataType::rhone_price),
+            headerCell(MarketMakerParametersColumns::AskInternalPrice, "AskIntPrice", true, proto::DataType::rhone_price),
+            headerCell(MarketMakerParametersColumns::BidInternalQty, "BidIntQty", true, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::AskInternalQty, "AskIntQty", true, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::BidExternalPrice, "BidExtPrice", true, proto::DataType::rhone_price),
+            headerCell(MarketMakerParametersColumns::AskExternalPrice, "AskExtPrice", true, proto::DataType::rhone_price),
+            headerCell(MarketMakerParametersColumns::BidExternalQty, "BidExtQty", true, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::AskExternalQty, "AskExtQty", true, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::MidPoint, "MidPoint", true, proto::DataType::rhone_price),
+            headerCell(MarketMakerParametersColumns::BidHedgeInternalPrice, "BidHedgeIntPrice", true, proto::DataType::rhone_price),
+            headerCell(MarketMakerParametersColumns::BidHedgeExternalPrice, "BidHedgeExtPrice", true, proto::DataType::rhone_price),
+            headerCell(MarketMakerParametersColumns::BidHedgeSize, "BidHedgeSize", true, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::AskHedgeInternalPrice, "AskHedgeIntPrice", true, proto::DataType::rhone_price),
+            headerCell(MarketMakerParametersColumns::AskHedgeExternalPrice, "AskHedgeExtPrice", true, proto::DataType::rhone_price),
+            headerCell(MarketMakerParametersColumns::AskHedgeSize, "AskHedgeSize", true, proto::DataType::unsigned_type),
+            headerCell(MarketMakerParametersColumns::WorsenPayupCondPercent, "WorsenPayupCond%", false, proto::DataType::double_type),
+            headerCell(MarketMakerParametersColumns::QueueImportance, "QueueImportance", false, proto::DataType::enum_type, "queue_importance"),
+    });
+
+    for (uint32_t contractIndex = 0; contractIndex < _viperConfig._marketMakerConfigs.size(); ++contractIndex) {
+        MarketMakerConfig& config = _viperConfig._marketMakerConfigs.at(contractIndex);
+        uint32_t internalId = _viperConfig.getInternalId(config._contract);
+        guiThings.addRowHeaderCell(WindowIds::MarketMakerParameters, rowHeader,internalId, config._contract);
+        guiThings.addCells(cells, internalId, {
+                Cell(MarketMakerParametersColumns::Enabled, std::to_string(config._enabled)),
+                Cell(MarketMakerParametersColumns::QuoteExternal, std::to_string(config._quoteExternal)),
+                Cell(MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize)),
+                Cell(MarketMakerParametersColumns::QuoteGap, std::to_string(config._quoteGap)),
+                Cell(MarketMakerParametersColumns::QuotePctTob, std::to_string(config._quotePctTob)),
+                Cell(MarketMakerParametersColumns::MaxTicksWide, std::to_string(config._maxTicksWide)),
+                Cell(MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)])),
+        });
+        for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
+            guiThings.addCells(cells, internalId, {
+                    Cell((MarketMakerParametersColumns) (toUInt(MarketMakerParametersColumns::Width) + i + 1),
+                            std::to_string(config._widthPercentage[i]))
+            });
+        }
+        guiThings.addCells(cells, internalId, {
+                Cell(MarketMakerParametersColumns::MinInternalPriceChange, std::to_string(config._minInternalPriceChange)),
+                Cell(MarketMakerParametersColumns::EstablishedLevel, std::to_string(config._establishedLevel)),
+                Cell(MarketMakerParametersColumns::EstLevelEMASeconds, std::to_string(config._estLevelEMASeconds)),
+                Cell(MarketMakerParametersColumns::EstLevelPctEMA, std::to_string(config._estLevelPctEMA)),
+                Cell(MarketMakerParametersColumns::HedgeOffset, std::to_string(config._hedgeOffset)),
+                Cell(MarketMakerParametersColumns::JoinSize, std::to_string(config._joinSize)),
+                Cell(MarketMakerParametersColumns::LeaveSize, std::to_string(config._leaveSize)),
+                Cell(MarketMakerParametersColumns::PayUpQty, std::to_string(config._payUpQty)),
+                Cell(MarketMakerParametersColumns::PayUpOrders, std::to_string(config._payUpOrders)),
+                Cell(MarketMakerParametersColumns::PayUpMultiple, std::to_string(config._payUpMultiple)),
+                Cell(MarketMakerParametersColumns::MaxPosInterrnal, std::to_string(config._maxPosInternal)),
+                Cell(MarketMakerParametersColumns::MaxPosExternal, std::to_string(config._maxPosExternal)),
+                Cell(MarketMakerParametersColumns::Commission, std::to_string(config._commission)),
+                Cell(MarketMakerParametersColumns::InternalPosition, "0"),
+                Cell(MarketMakerParametersColumns::ExternalPosition, "0"),
+                Cell(MarketMakerParametersColumns::BidInternalPrice, "0"),
+                Cell(MarketMakerParametersColumns::AskInternalPrice, "0"),
+                Cell(MarketMakerParametersColumns::BidInternalQty, "0"),
+                Cell(MarketMakerParametersColumns::AskInternalQty, "0"),
+                Cell(MarketMakerParametersColumns::BidExternalPrice, "0"),
+                Cell(MarketMakerParametersColumns::AskExternalPrice, "0"),
+                Cell(MarketMakerParametersColumns::BidExternalQty, "0"),
+                Cell(MarketMakerParametersColumns::AskExternalQty, "0"),
+                Cell(MarketMakerParametersColumns::MidPoint, "0"),
+                Cell(MarketMakerParametersColumns::BidHedgeExternalPrice, "0"),
+                Cell(MarketMakerParametersColumns::BidHedgeInternalPrice, "0"),
+                Cell(MarketMakerParametersColumns::BidHedgeSize, "0"),
+                Cell(MarketMakerParametersColumns::AskHedgeExternalPrice, "0"),
+                Cell(MarketMakerParametersColumns::AskHedgeInternalPrice, "0"),
+                Cell(MarketMakerParametersColumns::AskHedgeSize, "0"),
+                Cell(MarketMakerParametersColumns::WorsenPayupCondPercent, std::to_string(config._worsenPayupCondPercent)),
+                Cell(MarketMakerParametersColumns::QueueImportance, std::to_string(config._queueImportance)),
+        });
+    }
 }
 
-void MarketMaker::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& send) const {
+void MarketMaker::sendStateToGUI(std::function<void(proto::GridUpdate&, WindowIds)>&& send, std::function<bool(WindowIds)>&& hasSubscription) const {
+    if (hasSubscription(WindowIds::MarketMakerParameters)) {
+        proto::GridUpdate message = getStateUpdate();
+        send(message, WindowIds::MarketMakerParameters);
+    }
+}
+
+proto::GridUpdate MarketMaker::getStateUpdate() const {
     proto::GridUpdate message;
-    guiThings.populateMarketMakerState(message, this);
-    send(message);
+    message.set_gridid(toUInt(WindowIds::MarketMakerParameters));
+    message.set_updatetype(proto::GridUpdateType::CellsType);
+    auto cells = message.mutable_cells();
+    for (uint32_t contractIndex = 0; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
+        const auto& mm = _marketMakers[contractIndex];
+        if (mm._contract._toMarketMake) {
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::MidPoint, std::to_string(mm._midPoint));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(mm._internallyInitiatedPosition));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::ExternalPosition, std::to_string(mm._externallyInitiatedPosition));
+            auto& bidQuote = mm._quotes[BID];
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidInternalPrice, std::to_string(bidQuote._internalPrice));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidInternalQty, std::to_string(bidQuote._internalSize + bidQuote._externalSize));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidExternalPrice, std::to_string(bidQuote._externalPrice));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidExternalQty, std::to_string(bidQuote._externalSize));
+            auto& askQuote = mm._quotes[ASK];
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskInternalPrice, std::to_string(askQuote._internalPrice));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskInternalQty, std::to_string(askQuote._internalSize + askQuote._externalSize));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalPrice, std::to_string(askQuote._externalPrice));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalQty, std::to_string(askQuote._externalSize));
+            auto& bidHedge = mm._hedges[BID];
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeInternalPrice, std::to_string(bidHedge._internalPrice));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeExternalPrice, std::to_string(bidHedge._externalPrice));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeSize, std::to_string(bidHedge._sizeToQuote));
+            auto& askHedge = mm._hedges[ASK];
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeInternalPrice, std::to_string(askHedge._internalPrice));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeExternalPrice, std::to_string(askHedge._externalPrice));
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeSize, std::to_string(askHedge._sizeToQuote));
+            _viperConfig._marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel = mm._emaEstLevel;
+            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::EstablishedLevel, std::to_string(_viperConfig._marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel));
+        }
+    }
+    return message;
 }
 
 bool MarketMaker::processGridChange(GridUpdate& update) {

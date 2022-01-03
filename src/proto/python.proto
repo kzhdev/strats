@@ -21,6 +21,8 @@ enum GUI_MESSAGE_TYPE {
     GUI_MESSAGE_TYPE_GUI_INITIALIZATION_REJECTED = 6;
     GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE = 7;
     GUI_MESSAGE_TYPE_SWITCH_CHANGE = 8;
+    GUI_MESSAGE_TYPE_SUBSCRIBE_GRID_UPDATE = 9;
+    GUI_MESSAGE_TYPE_UNSUBSCRIBE_GRID_UPDATE = 10;
 }
 
 enum SERVER_MESSAGE_TYPE {
@@ -145,6 +147,7 @@ message GridDefinition {
     repeated RowHeaderCell rowHeader = 5;
     repeated GridCell cells = 6;
     repeated Button buttons = 7;
+    optional bool refreshOnSubscription = 8;
 }
 
 message GUIInitialization {
@@ -262,6 +265,14 @@ message ColorDefinition {
     required string argb = 2; // #AARRGGBB
 }
 
-message ClientCount {
-    required uint32 count = 1;
+message Clients {
+    required string clients = 1;
+}
+
+message SubscribeGridUpdate {
+	required uint32 gridId = 1;
+}
+
+message UnsubscribeGridUpdate {
+	required uint32 gridId = 1;
 }

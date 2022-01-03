@@ -62,7 +62,9 @@ class DataSeriesReplay;
 class PlaySound;
 class Button;
 class ColorDefinition;
-class ClientCount;
+class Clients;
+class SubscribeGridUpdate;
+class UnsubscribeGridUpdate;
 
 enum PROTOCOL_VERSION {
   VERSION = 1
@@ -111,11 +113,13 @@ enum GUI_MESSAGE_TYPE {
   GUI_MESSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED = 5,
   GUI_MESSAGE_TYPE_GUI_INITIALIZATION_REJECTED = 6,
   GUI_MESSAGE_TYPE_SYSTEM_STATE_CHANGE = 7,
-  GUI_MESSAGE_TYPE_SWITCH_CHANGE = 8
+  GUI_MESSAGE_TYPE_SWITCH_CHANGE = 8,
+  GUI_MESSAGE_TYPE_SUBSCRIBE_GRID_UPDATE = 9,
+  GUI_MESSAGE_TYPE_UNSUBSCRIBE_GRID_UPDATE = 10
 };
 bool GUI_MESSAGE_TYPE_IsValid(int value);
 const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MIN = GUI_MESSAGE_TYPE_CLIENT_LOGIN;
-const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MAX = GUI_MESSAGE_TYPE_SWITCH_CHANGE;
+const GUI_MESSAGE_TYPE GUI_MESSAGE_TYPE_MAX = GUI_MESSAGE_TYPE_UNSUBSCRIBE_GRID_UPDATE;
 const int GUI_MESSAGE_TYPE_ARRAYSIZE = GUI_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* GUI_MESSAGE_TYPE_descriptor();
@@ -1648,6 +1652,13 @@ class GridDefinition : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::Python::proto::Button >*
       mutable_buttons();
 
+  // optional bool refreshOnSubscription = 8;
+  inline bool has_refreshonsubscription() const;
+  inline void clear_refreshonsubscription();
+  static const int kRefreshOnSubscriptionFieldNumber = 8;
+  inline bool refreshonsubscription() const;
+  inline void set_refreshonsubscription(bool value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.GridDefinition)
  private:
   inline void set_has_gridid();
@@ -1656,6 +1667,8 @@ class GridDefinition : public ::google::protobuf::Message {
   inline void clear_has_type();
   inline void set_has_name();
   inline void clear_has_name();
+  inline void set_has_refreshonsubscription();
+  inline void clear_has_refreshonsubscription();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -1666,9 +1679,10 @@ class GridDefinition : public ::google::protobuf::Message {
   ::google::protobuf::RepeatedPtrField< ::Python::proto::RowHeaderCell > rowheader_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell > cells_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::Button > buttons_;
+  bool refreshonsubscription_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(7 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(8 + 31) / 32];
 
   friend void  protobuf_AddDesc_python_2eproto();
   friend void protobuf_AssignDesc_python_2eproto();
@@ -3189,14 +3203,14 @@ class ColorDefinition : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
-class ClientCount : public ::google::protobuf::Message {
+class Clients : public ::google::protobuf::Message {
  public:
-  ClientCount();
-  virtual ~ClientCount();
+  Clients();
+  virtual ~Clients();
 
-  ClientCount(const ClientCount& from);
+  Clients(const Clients& from);
 
-  inline ClientCount& operator=(const ClientCount& from) {
+  inline Clients& operator=(const Clients& from) {
     CopyFrom(from);
     return *this;
   }
@@ -3210,17 +3224,17 @@ class ClientCount : public ::google::protobuf::Message {
   }
 
   static const ::google::protobuf::Descriptor* descriptor();
-  static const ClientCount& default_instance();
+  static const Clients& default_instance();
 
-  void Swap(ClientCount* other);
+  void Swap(Clients* other);
 
   // implements Message ----------------------------------------------
 
-  ClientCount* New() const;
+  Clients* New() const;
   void CopyFrom(const ::google::protobuf::Message& from);
   void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const ClientCount& from);
-  void MergeFrom(const ClientCount& from);
+  void CopyFrom(const Clients& from);
+  void MergeFrom(const Clients& from);
   void Clear();
   bool IsInitialized() const;
 
@@ -3243,21 +3257,26 @@ class ClientCount : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required uint32 count = 1;
-  inline bool has_count() const;
-  inline void clear_count();
-  static const int kCountFieldNumber = 1;
-  inline ::google::protobuf::uint32 count() const;
-  inline void set_count(::google::protobuf::uint32 value);
+  // required string clients = 1;
+  inline bool has_clients() const;
+  inline void clear_clients();
+  static const int kClientsFieldNumber = 1;
+  inline const ::std::string& clients() const;
+  inline void set_clients(const ::std::string& value);
+  inline void set_clients(const char* value);
+  inline void set_clients(const char* value, size_t size);
+  inline ::std::string* mutable_clients();
+  inline ::std::string* release_clients();
+  inline void set_allocated_clients(::std::string* clients);
 
-  // @@protoc_insertion_point(class_scope:Python.proto.ClientCount)
+  // @@protoc_insertion_point(class_scope:Python.proto.Clients)
  private:
-  inline void set_has_count();
-  inline void clear_has_count();
+  inline void set_has_clients();
+  inline void clear_has_clients();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::google::protobuf::uint32 count_;
+  ::std::string* clients_;
 
   mutable int _cached_size_;
   ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
@@ -3267,7 +3286,171 @@ class ClientCount : public ::google::protobuf::Message {
   friend void protobuf_ShutdownFile_python_2eproto();
 
   void InitAsDefaultInstance();
-  static ClientCount* default_instance_;
+  static Clients* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class SubscribeGridUpdate : public ::google::protobuf::Message {
+ public:
+  SubscribeGridUpdate();
+  virtual ~SubscribeGridUpdate();
+
+  SubscribeGridUpdate(const SubscribeGridUpdate& from);
+
+  inline SubscribeGridUpdate& operator=(const SubscribeGridUpdate& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const SubscribeGridUpdate& default_instance();
+
+  void Swap(SubscribeGridUpdate* other);
+
+  // implements Message ----------------------------------------------
+
+  SubscribeGridUpdate* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const SubscribeGridUpdate& from);
+  void MergeFrom(const SubscribeGridUpdate& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 gridId = 1;
+  inline bool has_gridid() const;
+  inline void clear_gridid();
+  static const int kGridIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 gridid() const;
+  inline void set_gridid(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.SubscribeGridUpdate)
+ private:
+  inline void set_has_gridid();
+  inline void clear_has_gridid();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 gridid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_python_2eproto();
+  friend void protobuf_AssignDesc_python_2eproto();
+  friend void protobuf_ShutdownFile_python_2eproto();
+
+  void InitAsDefaultInstance();
+  static SubscribeGridUpdate* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class UnsubscribeGridUpdate : public ::google::protobuf::Message {
+ public:
+  UnsubscribeGridUpdate();
+  virtual ~UnsubscribeGridUpdate();
+
+  UnsubscribeGridUpdate(const UnsubscribeGridUpdate& from);
+
+  inline UnsubscribeGridUpdate& operator=(const UnsubscribeGridUpdate& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const UnsubscribeGridUpdate& default_instance();
+
+  void Swap(UnsubscribeGridUpdate* other);
+
+  // implements Message ----------------------------------------------
+
+  UnsubscribeGridUpdate* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const UnsubscribeGridUpdate& from);
+  void MergeFrom(const UnsubscribeGridUpdate& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 gridId = 1;
+  inline bool has_gridid() const;
+  inline void clear_gridid();
+  static const int kGridIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 gridid() const;
+  inline void set_gridid(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.UnsubscribeGridUpdate)
+ private:
+  inline void set_has_gridid();
+  inline void clear_has_gridid();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 gridid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_python_2eproto();
+  friend void protobuf_AssignDesc_python_2eproto();
+  friend void protobuf_ShutdownFile_python_2eproto();
+
+  void InitAsDefaultInstance();
+  static UnsubscribeGridUpdate* default_instance_;
 };
 // ===================================================================
 
@@ -4823,6 +5006,28 @@ GridDefinition::mutable_buttons() {
   return &buttons_;
 }
 
+// optional bool refreshOnSubscription = 8;
+inline bool GridDefinition::has_refreshonsubscription() const {
+  return (_has_bits_[0] & 0x00000080u) != 0;
+}
+inline void GridDefinition::set_has_refreshonsubscription() {
+  _has_bits_[0] |= 0x00000080u;
+}
+inline void GridDefinition::clear_has_refreshonsubscription() {
+  _has_bits_[0] &= ~0x00000080u;
+}
+inline void GridDefinition::clear_refreshonsubscription() {
+  refreshonsubscription_ = false;
+  clear_has_refreshonsubscription();
+}
+inline bool GridDefinition::refreshonsubscription() const {
+  return refreshonsubscription_;
+}
+inline void GridDefinition::set_refreshonsubscription(bool value) {
+  set_has_refreshonsubscription();
+  refreshonsubscription_ = value;
+}
+
 // -------------------------------------------------------------------
 
 // GUIInitialization
@@ -6049,28 +6254,128 @@ inline void ColorDefinition::set_allocated_argb(::std::string* argb) {
 
 // -------------------------------------------------------------------
 
-// ClientCount
+// Clients
 
-// required uint32 count = 1;
-inline bool ClientCount::has_count() const {
+// required string clients = 1;
+inline bool Clients::has_clients() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void ClientCount::set_has_count() {
+inline void Clients::set_has_clients() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void ClientCount::clear_has_count() {
+inline void Clients::clear_has_clients() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void ClientCount::clear_count() {
-  count_ = 0u;
-  clear_has_count();
+inline void Clients::clear_clients() {
+  if (clients_ != &::google::protobuf::internal::kEmptyString) {
+    clients_->clear();
+  }
+  clear_has_clients();
 }
-inline ::google::protobuf::uint32 ClientCount::count() const {
-  return count_;
+inline const ::std::string& Clients::clients() const {
+  return *clients_;
 }
-inline void ClientCount::set_count(::google::protobuf::uint32 value) {
-  set_has_count();
-  count_ = value;
+inline void Clients::set_clients(const ::std::string& value) {
+  set_has_clients();
+  if (clients_ == &::google::protobuf::internal::kEmptyString) {
+    clients_ = new ::std::string;
+  }
+  clients_->assign(value);
+}
+inline void Clients::set_clients(const char* value) {
+  set_has_clients();
+  if (clients_ == &::google::protobuf::internal::kEmptyString) {
+    clients_ = new ::std::string;
+  }
+  clients_->assign(value);
+}
+inline void Clients::set_clients(const char* value, size_t size) {
+  set_has_clients();
+  if (clients_ == &::google::protobuf::internal::kEmptyString) {
+    clients_ = new ::std::string;
+  }
+  clients_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* Clients::mutable_clients() {
+  set_has_clients();
+  if (clients_ == &::google::protobuf::internal::kEmptyString) {
+    clients_ = new ::std::string;
+  }
+  return clients_;
+}
+inline ::std::string* Clients::release_clients() {
+  clear_has_clients();
+  if (clients_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = clients_;
+    clients_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void Clients::set_allocated_clients(::std::string* clients) {
+  if (clients_ != &::google::protobuf::internal::kEmptyString) {
+    delete clients_;
+  }
+  if (clients) {
+    set_has_clients();
+    clients_ = clients;
+  } else {
+    clear_has_clients();
+    clients_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// -------------------------------------------------------------------
+
+// SubscribeGridUpdate
+
+// required uint32 gridId = 1;
+inline bool SubscribeGridUpdate::has_gridid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void SubscribeGridUpdate::set_has_gridid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void SubscribeGridUpdate::clear_has_gridid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void SubscribeGridUpdate::clear_gridid() {
+  gridid_ = 0u;
+  clear_has_gridid();
+}
+inline ::google::protobuf::uint32 SubscribeGridUpdate::gridid() const {
+  return gridid_;
+}
+inline void SubscribeGridUpdate::set_gridid(::google::protobuf::uint32 value) {
+  set_has_gridid();
+  gridid_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// UnsubscribeGridUpdate
+
+// required uint32 gridId = 1;
+inline bool UnsubscribeGridUpdate::has_gridid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void UnsubscribeGridUpdate::set_has_gridid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void UnsubscribeGridUpdate::clear_has_gridid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void UnsubscribeGridUpdate::clear_gridid() {
+  gridid_ = 0u;
+  clear_has_gridid();
+}
+inline ::google::protobuf::uint32 UnsubscribeGridUpdate::gridid() const {
+  return gridid_;
+}
+inline void UnsubscribeGridUpdate::set_gridid(::google::protobuf::uint32 value) {
+  set_has_gridid();
+  gridid_ = value;
 }
 
 

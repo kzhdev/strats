@@ -13,7 +13,7 @@ inline uint32_t crossedColor(YesNoType ynt) {
 }
 
 void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) {
-    auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderParameters, "Arbie Spreader Parameter", proto::GridType::Table);
+    auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderParameters, "Arbie Spreader Parameter", proto::GridType::Table, true);
 
     guiThings.addHeader(definition, {
         headerCell(ArbieSpreaderParameterColumns::Enabled, "Enabled", false, proto::DataType::bool_type),
@@ -43,33 +43,33 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
     for (const auto& config : _viperConfig._arbieSpreaderConfigs) {
         uint32_t internalId = _viperConfig.getInternalId(config._contract);
         guiThings.addRowHeaderCell(WindowIds::ArbieSpreaderParameters, rowHeader, internalId, config._contract);
-        guiThings.addRow(cells, internalId, {
-            rowCell(ArbieSpreaderParameterColumns::Enabled, std::to_string(config._enabled)),
-            rowCell(ArbieSpreaderParameterColumns::QuoteExternal, std::to_string(config._quoteExternal)),
-            rowCell(ArbieSpreaderParameterColumns::Edge, std::to_string(config._edge)),
-            rowCell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(config._edge * _edgeMultiplier)),
-            rowCell(ArbieSpreaderParameterColumns::QuoteSize, std::to_string(config._quoteSize)),
-            rowCell(ArbieSpreaderParameterColumns::STF, std::to_string(hf::NULL_PRICE)),
-            rowCell(ArbieSpreaderParameterColumns::HedgeOffset, std::to_string(config._hedgeOffset)),
-            rowCell(ArbieSpreaderParameterColumns::MaxTicksThroughMarket, std::to_string(config._maxTicksThroughMarket)),
-            rowCell(ArbieSpreaderParameterColumns::BidLeanPath, ""),
-            rowCell(ArbieSpreaderParameterColumns::AskLeanPath, ""),
-            rowCell(ArbieSpreaderParameterColumns::BidLeanPrice, std::to_string(hf::NULL_PRICE)),
-            rowCell(ArbieSpreaderParameterColumns::AskLeanPrice, std::to_string(hf::NULL_PRICE)),
-            rowCell(ArbieSpreaderParameterColumns::BidInternalPrice, std::to_string(hf::NULL_PRICE)),
-            rowCell(ArbieSpreaderParameterColumns::BidExternalPrice, std::to_string(hf::NULL_PRICE)),
-            rowCell(ArbieSpreaderParameterColumns::AskInternalPrice, std::to_string(hf::NULL_PRICE)),
-            rowCell(ArbieSpreaderParameterColumns::AskExternalPrice, std::to_string(hf::NULL_PRICE)),
-            rowCell(ArbieSpreaderParameterColumns::BidInternalSize, "0"),
-            rowCell(ArbieSpreaderParameterColumns::BidExternalSize, "0"),
-            rowCell(ArbieSpreaderParameterColumns::AskInternalSize, "0"),
-            rowCell(ArbieSpreaderParameterColumns::AskExternalSize, "0"),
-            rowCell(ArbieSpreaderParameterColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown))),
-            rowCell(ArbieSpreaderParameterColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown))),
+        guiThings.addCells(cells, internalId, {
+            Cell(ArbieSpreaderParameterColumns::Enabled, std::to_string(config._enabled)),
+            Cell(ArbieSpreaderParameterColumns::QuoteExternal, std::to_string(config._quoteExternal)),
+            Cell(ArbieSpreaderParameterColumns::Edge, std::to_string(config._edge)),
+            Cell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(config._edge * _edgeMultiplier)),
+            Cell(ArbieSpreaderParameterColumns::QuoteSize, std::to_string(config._quoteSize)),
+            Cell(ArbieSpreaderParameterColumns::STF, std::to_string(hf::NULL_PRICE)),
+            Cell(ArbieSpreaderParameterColumns::HedgeOffset, std::to_string(config._hedgeOffset)),
+            Cell(ArbieSpreaderParameterColumns::MaxTicksThroughMarket, std::to_string(config._maxTicksThroughMarket)),
+            Cell(ArbieSpreaderParameterColumns::BidLeanPath, ""),
+            Cell(ArbieSpreaderParameterColumns::AskLeanPath, ""),
+            Cell(ArbieSpreaderParameterColumns::BidLeanPrice, std::to_string(hf::NULL_PRICE)),
+            Cell(ArbieSpreaderParameterColumns::AskLeanPrice, std::to_string(hf::NULL_PRICE)),
+            Cell(ArbieSpreaderParameterColumns::BidInternalPrice, std::to_string(hf::NULL_PRICE)),
+            Cell(ArbieSpreaderParameterColumns::BidExternalPrice, std::to_string(hf::NULL_PRICE)),
+            Cell(ArbieSpreaderParameterColumns::AskInternalPrice, std::to_string(hf::NULL_PRICE)),
+            Cell(ArbieSpreaderParameterColumns::AskExternalPrice, std::to_string(hf::NULL_PRICE)),
+            Cell(ArbieSpreaderParameterColumns::BidInternalSize, "0"),
+            Cell(ArbieSpreaderParameterColumns::BidExternalSize, "0"),
+            Cell(ArbieSpreaderParameterColumns::AskInternalSize, "0"),
+            Cell(ArbieSpreaderParameterColumns::AskExternalSize, "0"),
+            Cell(ArbieSpreaderParameterColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown))),
+            Cell(ArbieSpreaderParameterColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown))),
         });
     }
 
-    auto [pathsDefinition, pathsRowHeader, pathsCells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderPaths, "Arbie Spreader Paths", proto::GridType::Table);
+    auto [pathsDefinition, pathsRowHeader, pathsCells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderPaths, "Arbie Spreader Paths", proto::GridType::Table, true);
     guiThings.addHeader(pathsDefinition, {
             headerCell(ArbieSpreaderPathsColumns::Commission, "Commission", false, proto::DataType::double_type),
             headerCell(ArbieSpreaderPathsColumns::Enabled, "Enabled", false, proto::DataType::bool_type),
@@ -85,10 +85,10 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
                 _pathsParameters.emplace(index, path);
                 guiThings.addRowHeaderCell(WindowIds::ArbieSpreaderPaths, pathsRowHeader, index,
                                            config._contract + " | " + path->_name);
-                guiThings.addRow(pathsCells, index, {
-                        rowCell(ArbieSpreaderPathsColumns::Commission, std::to_string(path->_config->_commission)),
-                        rowCell(ArbieSpreaderPathsColumns::Enabled, std::to_string(path->_config->_enabled)),
-                        rowCell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(path->_stfOffset._stfOffset)),
+                guiThings.addCells(pathsCells, index, {
+                        Cell(ArbieSpreaderPathsColumns::Commission, std::to_string(path->_config->_commission)),
+                        Cell(ArbieSpreaderPathsColumns::Enabled, std::to_string(path->_config->_enabled)),
+                        Cell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(path->_stfOffset._stfOffset)),
                 });
                 ++index;
             }
@@ -96,64 +96,68 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
     }
 }
 
-void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&)>&& send) const {
-    proto::GridUpdate message;
-    message.set_gridid(toUInt(WindowIds::ArbieSpreaderParameters));
-    message.set_updatetype(proto::GridUpdateType::CellsType);
-    auto cells = message.mutable_cells();
-    for (const auto& contract : _contracts) {
-        if (!contract._usedInQuoting) {
-            continue;
-        }
-
-        YesNoType bidCrossed = YesNoType::Unknown;
-        YesNoType askCrossed = YesNoType::Unknown;
-        if (state() == SystemState::CheckQuotes) {
-            auto extBid = contract._markets[BID][Market::External].getPrice();
-            auto extAsk = contract._markets[ASK][Market::External].getPrice();
-            if (contract._quote[BID]._externalPrice != hf::NULL_PRICE && extAsk != hf::NULL_PRICE) {
-                bidCrossed = contract._quote[BID]._externalPrice >= extAsk ? YesNoType::Yes : YesNoType::No;
+void ArbieSpreader::sendStateToGUI(std::function<void(proto::GridUpdate&, WindowIds)>&& send, std::function<bool(WindowIds)>&& hasSubscription) const {
+    if (hasSubscription(WindowIds::ArbieSpreaderParameters)) {
+        proto::GridUpdate message;
+        message.set_gridid(toUInt(WindowIds::ArbieSpreaderParameters));
+        message.set_updatetype(proto::GridUpdateType::CellsType);
+        auto cells = message.mutable_cells();
+        for (const auto& contract : _contracts) {
+            if (!contract._usedInQuoting) {
+                continue;
             }
-            if (contract._quote[ASK]._externalPrice != hf::NULL_PRICE && extBid != hf::NULL_PRICE) {
-                askCrossed = contract._quote[ASK]._externalPrice <= extBid ? YesNoType::Yes : YesNoType::No;
+
+            YesNoType bidCrossed = YesNoType::Unknown;
+            YesNoType askCrossed = YesNoType::Unknown;
+            if (state() == SystemState::CheckQuotes) {
+                auto extBid = contract._markets[BID][Market::External].getPrice();
+                auto extAsk = contract._markets[ASK][Market::External].getPrice();
+                if (contract._quote[BID]._externalPrice != hf::NULL_PRICE && extAsk != hf::NULL_PRICE) {
+                    bidCrossed = contract._quote[BID]._externalPrice >= extAsk ? YesNoType::Yes : YesNoType::No;
+                }
+                if (contract._quote[ASK]._externalPrice != hf::NULL_PRICE && extBid != hf::NULL_PRICE) {
+                    askCrossed = contract._quote[ASK]._externalPrice <= extBid ? YesNoType::Yes : YesNoType::No;
+                }
             }
-        }
 
-        guiThings.addRow(cells, contract._def._internalId, {
-                rowCell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(ToDollars(contract._edge))),
-                rowCell(ArbieSpreaderParameterColumns::STF, std::to_string(contract._stf)),
-                rowCell(ArbieSpreaderParameterColumns::BidLeanPath, contract._quote[BID]._hedgePath == -1 ? "" : contract._paths[BID][0]->_name),
-                rowCell(ArbieSpreaderParameterColumns::AskLeanPath, contract._quote[ASK]._hedgePath == -1 ? "" : contract._paths[ASK][0]->_name),
-                rowCell(ArbieSpreaderParameterColumns::BidLeanPrice, std::to_string(contract._quote[BID]._leanPrice)),
-                rowCell(ArbieSpreaderParameterColumns::AskLeanPrice, std::to_string(contract._quote[ASK]._leanPrice)),
-                rowCell(ArbieSpreaderParameterColumns::BidInternalPrice, std::to_string(contract._quote[BID]._internalPrice)),
-                rowCell(ArbieSpreaderParameterColumns::BidExternalPrice, std::to_string(contract._quote[BID]._externalPrice)),
-                rowCell(ArbieSpreaderParameterColumns::AskInternalPrice, std::to_string(contract._quote[ASK]._internalPrice)),
-                rowCell(ArbieSpreaderParameterColumns::AskExternalPrice, std::to_string(contract._quote[ASK]._externalPrice)),
-                rowCell(ArbieSpreaderParameterColumns::BidInternalSize, std::to_string(contract._quote[BID]._internalSize)),
-                rowCell(ArbieSpreaderParameterColumns::BidExternalSize, std::to_string(contract._quote[BID]._externalSize)),
-                rowCell(ArbieSpreaderParameterColumns::AskInternalSize, std::to_string(contract._quote[ASK]._internalSize)),
-                rowCell(ArbieSpreaderParameterColumns::AskExternalSize, std::to_string(contract._quote[ASK]._externalSize)),
-                rowCell(ArbieSpreaderParameterColumns::BidCross, std::to_string(toUInt(bidCrossed)), crossedColor(bidCrossed)),
-                rowCell(ArbieSpreaderParameterColumns::AskCross, std::to_string(toUInt(askCrossed)), crossedColor(askCrossed)),
-        });
-    }
-    send(message);
-
-    proto::GridUpdate pathsUpdate;
-    pathsUpdate.set_gridid(toUInt(WindowIds::ArbieSpreaderPaths));
-    pathsUpdate.set_updatetype(proto::GridUpdateType::CellsType);
-    auto pathCells = pathsUpdate.mutable_cells();
-    for (auto& kvp : _pathsParameters) {
-        auto path = kvp.second;
-        if (BOOST_UNLIKELY(path->_stfOffset._stfOffset == hf::NULL_PRICE && getStrategy(StrategyId::RelativeValue)->isEnabled())) {
-            logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Null stf. Path %2% id=%3% stf_id=%4%") % path->_contract->_def._name % path->_name % path->_id % path->_stfOffset._id));
+            guiThings.addCells(cells, contract._def._internalId, {
+                    Cell(ArbieSpreaderParameterColumns::ActualEdge, std::to_string(ToDollars(contract._edge))),
+                    Cell(ArbieSpreaderParameterColumns::STF, std::to_string(contract._stf)),
+                    Cell(ArbieSpreaderParameterColumns::BidLeanPath, contract._quote[BID]._hedgePath == -1 ? "" : contract._paths[BID][0]->_name),
+                    Cell(ArbieSpreaderParameterColumns::AskLeanPath, contract._quote[ASK]._hedgePath == -1 ? "" : contract._paths[ASK][0]->_name),
+                    Cell(ArbieSpreaderParameterColumns::BidLeanPrice, std::to_string(contract._quote[BID]._leanPrice)),
+                    Cell(ArbieSpreaderParameterColumns::AskLeanPrice, std::to_string(contract._quote[ASK]._leanPrice)),
+                    Cell(ArbieSpreaderParameterColumns::BidInternalPrice, std::to_string(contract._quote[BID]._internalPrice)),
+                    Cell(ArbieSpreaderParameterColumns::BidExternalPrice, std::to_string(contract._quote[BID]._externalPrice)),
+                    Cell(ArbieSpreaderParameterColumns::AskInternalPrice, std::to_string(contract._quote[ASK]._internalPrice)),
+                    Cell(ArbieSpreaderParameterColumns::AskExternalPrice, std::to_string(contract._quote[ASK]._externalPrice)),
+                    Cell(ArbieSpreaderParameterColumns::BidInternalSize, std::to_string(contract._quote[BID]._internalSize)),
+                    Cell(ArbieSpreaderParameterColumns::BidExternalSize, std::to_string(contract._quote[BID]._externalSize)),
+                    Cell(ArbieSpreaderParameterColumns::AskInternalSize, std::to_string(contract._quote[ASK]._internalSize)),
+                    Cell(ArbieSpreaderParameterColumns::AskExternalSize, std::to_string(contract._quote[ASK]._externalSize)),
+                    Cell(ArbieSpreaderParameterColumns::BidCross, std::to_string(toUInt(bidCrossed)), crossedColor(bidCrossed)),
+                    Cell(ArbieSpreaderParameterColumns::AskCross, std::to_string(toUInt(askCrossed)), crossedColor(askCrossed)),
+            });
         }
-        guiThings.addRow(pathCells, kvp.first, {
-            rowCell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(path->_stfOffset._stfOffset)),
-        });
+        send(message, WindowIds::ArbieSpreaderParameters);
     }
-    send(pathsUpdate);
+
+    if (hasSubscription(WindowIds::ArbieSpreaderPaths)) {
+        proto::GridUpdate pathsUpdate;
+        pathsUpdate.set_gridid(toUInt(WindowIds::ArbieSpreaderPaths));
+        pathsUpdate.set_updatetype(proto::GridUpdateType::CellsType);
+        auto pathCells = pathsUpdate.mutable_cells();
+        for (auto& kvp : _pathsParameters) {
+            auto path = kvp.second;
+            if (BOOST_UNLIKELY(path->_stfOffset._stfOffset == hf::NULL_PRICE && getStrategy(StrategyId::RelativeValue)->isEnabled())) {
+                logging::GetLogger().logWarning(boost::str(boost::format("AS %1%. Null stf. Path %2% id=%3% stf_id=%4%") % path->_contract->_def._name % path->_name % path->_id % path->_stfOffset._id));
+            }
+            guiThings.addCells(pathCells, kvp.first, {
+                    Cell(ArbieSpreaderPathsColumns::STFOffset, std::to_string(path->_stfOffset._stfOffset)),
+            });
+        }
+        send(pathsUpdate, WindowIds::ArbieSpreaderPaths);
+    }
 }
 
 void ArbieSpreader::processGridChange(GridUpdate& update) {

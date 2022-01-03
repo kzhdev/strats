@@ -438,7 +438,7 @@ public:
 
     // GUI update
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) override;
-    void sendStateToGUI(std::function<void(proto::GridUpdate&)>&& sendingFunc) const override;
+    void sendStateToGUI(std::function<void(proto::GridUpdate&, WindowIds)>&& sendingFunc, std::function<bool(WindowIds)>&& hasSubscription) const override;
 
 private:
     void calculateRVSTFMove(Contract& contract, ShortTermFairOffset& stfOffset, bool force = false);
