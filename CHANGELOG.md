@@ -14,6 +14,7 @@
 - RV LTFDelta cannot change more than 5% of factor's range.
 - RV Range and MaxPos cannot change more than 10% while RV enabled.
 - Added RestDrawdown cell button in PNL grid.
+- Implemented GUI grid subscription/unsubscription mechanism (GUI v1.6.6 required). 
 
 #Version 1.54.6.1
 - Switch to the correct trader after GUI logging in.
