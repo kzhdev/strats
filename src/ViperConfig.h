@@ -163,7 +163,8 @@ struct MarketMakerConfig {
     double _quotePctTob;
     uint32_t _quoteSize;
     uint32_t _quoteGap;
-    int32_t _maxTicksWide;
+    int32_t _maxTicksWideStopExtQuoting;
+    int32_t _maxTicksWideDisable;
     double _widthPercentage[toUInt(Shifts::__current_marker__) + 1];
     uint32_t _joinSize;
     uint32_t _leaveSize;
@@ -881,7 +882,8 @@ struct ViperConfig {
             config._establishedLevel = boost::lexical_cast<uint32_t>(values[i++]);
             config._estLevelEMASeconds = boost::lexical_cast<uint32_t>(values[i++]);
             config._estLevelPctEMA = boost::lexical_cast<double>(values[i++]);
-            config._maxTicksWide = boost::lexical_cast<int32_t>(values[i++]);
+            config._maxTicksWideStopExtQuoting = boost::lexical_cast<int32_t>(values[i++]);
+            config._maxTicksWideDisable = boost::lexical_cast<int32_t>(values[i++]);
             config._worsenPayupCondPercent = boost::lexical_cast<double>(values[i++]);
             if (BOOST_UNLIKELY(config._worsenPayupCondPercent < 0 || IsZero(config._worsenPayupCondPercent))) {
                 throw std::runtime_error(config._contract + " _worsenPayupCondPercent must be > 0");
@@ -1793,8 +1795,12 @@ struct ViperConfig {
                     config._estLevelPctEMA = boost::lexical_cast<double>(gridCell.value());
                     break;
                 }
-                case MarketMakerParametersColumns::MaxTicksWide: {
-                    config._maxTicksWide = atoi(gridCell.value().c_str());
+                case MarketMakerParametersColumns::MaxTicksWideStopExtQuoting: {
+                    config._maxTicksWideStopExtQuoting = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case MarketMakerParametersColumns::MaxTicksWideDisable: {
+                    config._maxTicksWideDisable = atoi(gridCell.value().c_str());
                     break;
                 }
                 case MarketMakerParametersColumns::WorsenPayupCondPercent : {
@@ -2299,7 +2305,8 @@ struct ViperConfig {
             output << "," << config._establishedLevel;
             output << "," << config._estLevelEMASeconds;
             output << "," << config._estLevelPctEMA;
-            output << "," << config._maxTicksWide;
+            output << "," << config._maxTicksWideStopExtQuoting;
+            output << "," << config._maxTicksWideDisable;
             output << "," << config._worsenPayupCondPercent;
             output << "," << config._queueImportance;
             output << "," << config._internalPosition;
@@ -2419,7 +2426,8 @@ struct ViperConfig {
             "EstLevelEMA",
             "EstLevelEMASeconds",
             "EstLevel%EMA",
-            "maxTicksWide",
+            "maxTicksWideStopExtQuoting",
+            "maxTicksWideDisable",
             "MMWorsenPayUpCondPct",
             "queueImportance",
             "internalPosition",

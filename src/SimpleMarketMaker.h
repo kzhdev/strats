@@ -149,7 +149,8 @@ class SimpleMarketMaker {
     OrderRequestManager& _orderRequestManager = OrderRequestManager::get();
     MarketMaker* _marketMaker;
     ReadyOrderRequests _lastOrderRequests;
-    bool _maxTicksWideBreached = false;
+    bool _maxTicksWideStopExtQuotingBreached = false;
+    bool _maxTicksWideDisableBreached = false;
 
     static constexpr uint8_t QUOTE_ORDER_ID = orderId(StrategyId::MarketMaker, Order::Type::Quoting);
     static constexpr uint8_t HEDGE_ORDER_ID = orderId(StrategyId::MarketMaker, Order::Type::Hedging);
@@ -218,8 +219,8 @@ public:
         _tickSize = contract._tickSize;
         _hedgeOffset = config._hedgeOffset;
         _hedgeOffsetPrice = _hedgeOffset * _tickSize;
-        _maxTicksWide = config._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config._maxTicksWide * _tickSize;
-        _TwoTimesMaxTicksWide = config._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : _maxTicksWide * 2;
+        _maxTicksWideStopExtQuoting = config._maxTicksWideStopExtQuoting < 0 ? std::numeric_limits<int64_t>::max() : config._maxTicksWideStopExtQuoting * _tickSize;
+        _maxTicksWideDisable = config._maxTicksWideDisable < 0 ? std::numeric_limits<int64_t>::max() : _maxTicksWideDisable * _tickSize;
         _internallyInitiatedPosition = config._internalPosition;
         _externallyInitiatedPosition = config._externalPosition;
         _worsenPayupConditionAmount = config._worsenPayupCondPercent * _tickSize;
@@ -380,7 +381,7 @@ public:
                     _marketMaker->sendErrorMessage(boost::str(boost::format("MM - Not having market data so turning market maker off. Contract=%1%") % _contract._name), ErrorType::Critical);
                     LOG(0, "MM {C[i1]}. Lost market data. Disabling, turn off external quoting and useGTC. ", getContractName())
                     disable(true, false, true);
-                    setQuoteExternalFlagToFalse();
+                    setQuoteExternalFlag(false);
                     _marketMaker->notifyFrontMMExternalQuoteDisabled(_contract._internalId);
                     _marketMaker->sendErrorMessage(boost::str(boost::format("MM - no market data, disable external quoting, disable GTC. Contract=%1%") % _contract._name), ErrorType::Critical);
                 }
@@ -449,31 +450,47 @@ public:
             return;
         }
 
-        bool maxTickWideAlreadyBreached = _maxTicksWideBreached;
-        if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _TwoTimesMaxTicksWide)) {
-            _maxTicksWideBreached = true;
-            LOG(0, "MM {C[i1]}. 2x MaxTicksWidth breached, disable contract; disable external quoting; disable GTC.", getContractName())
+        if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _maxTicksWideDisable)) {
+            _maxTicksWideDisableBreached = true;
+            LOG(0, "MM {C[i1]}. MaxTicksWidthDisable breached, disable contract; disable external quoting; disable GTC.", getContractName())
             disable(true, false, true);
             disableExternalQuoting(true);
             _marketMaker->sendErrorMessage(boost::str(boost::format(
-                    "MM - 2x MaxTicksWidth breached, disable contract, disable external quoting, disable GTC. Contract=%1%")
+                    "MM - MaxTicksWidthDisable breached, disable contract, disable external quoting, disable GTC. Contract=%1%")
                     % _contract._name), ErrorType::Critical);
             return;
         }
 
-        if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _maxTicksWide)) {
-            if (!_maxTicksWideBreached) {
-                LOG(0, "MM {C[i1]}. MaxTicksWidth breached, disable external quoting; disable GTC.", getContractName())
+        bool maxTickWideAlreadyBreached = _maxTicksWideStopExtQuotingBreached;
+        if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _maxTicksWideStopExtQuoting)) {
+            if (!_maxTicksWideStopExtQuotingBreached) {
+                _marketMaker->sendGenericMessageToExecutor(ViperMessageType::ChangeUseGTC, _contract._internalId, false);
                 std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
-                disableExternalQuotingAndUseGTC(msg);
-                _maxTicksWideBreached = true;
+                auto [quoteExt, useGTC] = disableExternalQuotingAndUseGTC(msg);
+                _quoteExternalBeforeMaxTicksWideStopQuotingBreached = quoteExt;
+                _useGTCBeforeMaxTicksWideStopQuotingBreached = useGTC;
+                _maxTicksWideStopExtQuotingBreached = true;
             }
-        } else if (_maxTicksWideBreached) {
-            _maxTicksWideBreached = false;
+        } else if (_maxTicksWideStopExtQuotingBreached) {
+            _maxTicksWideStopExtQuotingBreached = false;
+            if (_quoteExternalBeforeMaxTicksWideStopQuotingBreached) {
+                LOG(0, "MM {C[i1]}. MaxTicksWidthStopExtQuote Unbreached. Re-enable external quoting", getContractName())
+                _marketMaker->sendErrorMessage(boost::str(boost::format(
+                        "MM - MaxTicksWidthStopExtQuote Unbreached, re-enable external quoting. Contract=%1%")
+                                                          % _contract._name), ErrorType::Normal);
+                enableExternalQuoting();
+            }
+            if (_useGTCBeforeMaxTicksWideStopQuotingBreached) {
+                LOG(0, "MM {C[i1]}. MaxTicksWidthStopExtQuote Unbreached. Re-enable UseGTC", getContractName())
+                _marketMaker->sendErrorMessage(boost::str(boost::format(
+                        "MM - MaxTicksWidthStopExtQuote Unbreached, re-enable useGTC. Contract=%1%")
+                                                          % _contract._name), ErrorType::Normal);
+                _marketMaker->sendGenericMessageToExecutor(ViperMessageType::ChangeUseGTC, _contract._internalId, true);
+            }
         }
 
         bool hasChange = false;
-        if (BOOST_UNLIKELY(_maxTicksWideBreached & !maxTickWideAlreadyBreached)) {
+        if (BOOST_UNLIKELY(_maxTicksWideStopExtQuotingBreached & !maxTickWideAlreadyBreached)) {
             _quotes[BID].reset();
             _quotes[ASK].reset();
             modifyQuoteOrder<BID, 0>(_quotes[BID], false);
@@ -604,7 +621,7 @@ public:
                             bool quoteExternally, bool forceUpdate) {
         bool hasChange = false;
         int32_t quoteLevelIndex = -1;
-        if (BOOST_LIKELY(!_maxTicksWideBreached)) {
+        if (BOOST_LIKELY(!_maxTicksWideStopExtQuotingBreached)) {
             if (tobChanged || forceUpdate) {
                 // Top book changed.
                 // NOTE: either side of tob changed we need to recalculate because the weighted mid point might changed
@@ -891,21 +908,23 @@ public:
         quote._lastExternalSizeSent = quote._externalSize;
     }
 
-    void disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {
+    std::tuple<bool, bool> disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true) {
         bool msgSend = false;
-        auto oldValue = setQuoteExternalFlagToFalse();
-        if (oldValue) {
+        auto oldQuoteExternal = setQuoteExternalFlag(false);
+        if (oldQuoteExternal) {
             _marketMaker->notifyFrontMMExternalQuoteDisabled(_contract._internalId);
             _marketMaker->sendErrorMessage(message, ErrorType::Critical);
             msgSend = true;
         }
 
-        if (*_contract._useGTC) {
+        auto oldUseGTC = *_contract._useGTC;
+        if (oldUseGTC) {
             _marketMaker->sendGenericMessageToExecutor(ViperMessageType::ChangeUseGTC, _contract._internalId, false);
             if (!msgSend) {
                 _marketMaker->sendErrorMessage(message, ErrorType::Critical);
             }
         }
+        return std::make_tuple(oldQuoteExternal, oldUseGTC);
     }
 
     hf::price_t calculateMidPoint(const md::top_t::level_t& bid, const md::top_t::level_t& ask) const {
@@ -1239,14 +1258,15 @@ public:
                 return false;
             }
 
-            if (BOOST_UNLIKELY((topBook<ASK>().pr - topBook<BID>().pr) > _TwoTimesMaxTicksWide)) {
-                _maxTicksWideBreached = true;
+            if (BOOST_UNLIKELY((topBook<ASK>().pr - topBook<BID>().pr) > _maxTicksWideDisable)) {
+                _maxTicksWideDisableBreached = true;
                 disable();
-                LOG(0, "MM {C[i1]}. Not enabling. 2x MaxTicksWidth breached", getContractName())
-                _marketMaker->sendErrorMessage(boost::str(boost::format("Not enabling MM %1% - 2x MaxTicksWidth breached")
+                LOG(0, "MM {C[i1]}. Not enabling. MaxTicksWidthDisable breached", getContractName())
+                _marketMaker->sendErrorMessage(boost::str(boost::format("Not enabling MM %1% - MaxTicksWidthDisable breached")
                     % _contract._name), ErrorType::Critical);
                 return false;
             }
+            _maxTicksWideDisableBreached = false;
             return true;
         }
         return false;
@@ -1259,7 +1279,7 @@ public:
             }
 
             if(!isWithinPositionLimits()) {
-                setQuoteExternalFlagToFalse();
+                setQuoteExternalFlag(false);
                 _marketMaker->sendErrorMessage("MM - isWithinPositionLimits() check failed on start, disabling external quoting", ErrorType::Critical);
                 _marketMaker->notifyFrontMMExternalQuoteDisabled(_contract._internalId);
             }
@@ -1293,21 +1313,29 @@ public:
         }
     }
 
-    bool setQuoteExternalFlagToFalse(bool skip_logging = false) {
+    bool setQuoteExternalFlag(bool value, bool skip_logging = false) {
         bool cachedValue = _quoteExternal;
         _quoteExternal = false;
-        if (!skip_logging & cachedValue) {
-            LOG(0, "MM {C[i1]}. Quote external changed. Value=false", getContractName());
+        if (!skip_logging & (cachedValue != value)) {
+            LOG(0, "MM {C[i1]}. Quote external changed. Value={i2}", getContractName(), value);
         }
         return cachedValue;
     }
 
     bool disableExternalQuoting(bool skip_logging = false) {
-        bool oldValue = setQuoteExternalFlagToFalse(skip_logging);
+        bool oldValue = setQuoteExternalFlag(false);
         if (oldValue) {
             applyUpdates();
         }
         return oldValue;
+    }
+
+    void enableExternalQuoting() {
+        bool oldValue = setQuoteExternalFlag(true);
+        if (!oldValue) {
+            _marketMaker->notifyFrontMMExternalQuoteDisabled(_contract._internalId);
+            applyUpdates();
+        }
     }
 
     bool handleParametersUpdate(proto::GridCell& gridCell) {
@@ -1479,16 +1507,25 @@ public:
             case MarketMakerParametersColumns::Enabled: {
                 break;
             }
-            case MarketMakerParametersColumns::MaxTicksWide: {
+            case MarketMakerParametersColumns::MaxTicksWideStopExtQuoting: {
                 int32_t value = atoi(gridCell.value().c_str());
-                LOG(0, "MM {C[i1]}. MaxTicksWide changed. Value={i2}", getContractName(), value)
+                LOG(0, "MM {C[i1]}. MaxTicksWideStopExtQuoting changed. Value={i2}", getContractName(), value)
                 if (value  < 0) {
-                    _maxTicksWide = std::numeric_limits<int64_t>::max();
-                    _TwoTimesMaxTicksWide = _maxTicksWide;
-                    LOG(0, "MM {C[i1]}. Ignore MaxTicksWide checking.", getContractName())
+                    _maxTicksWideStopExtQuoting = std::numeric_limits<int64_t>::max();
+                    LOG(0, "MM {C[i1]}. Ignore MaxTicksWideStopExtQuoting checking.", getContractName())
                 } else {
-                    _maxTicksWide = value * _tickSize;
-                    _TwoTimesMaxTicksWide = _maxTicksWide * 2;
+                    _maxTicksWideStopExtQuoting = value * _tickSize;
+                }
+                break;
+            }
+            case MarketMakerParametersColumns::MaxTicksWideDisable: {
+                int32_t value = atoi(gridCell.value().c_str());
+                LOG(0, "MM {C[i1]}. MaxTicksWideDisable changed. Value={i2}", getContractName(), value)
+                if (value  < 0) {
+                    _maxTicksWideDisable = std::numeric_limits<int64_t>::max();
+                    LOG(0, "MM {C[i1]}. Ignore MaxTicksWideDisable checking.", getContractName())
+                } else {
+                    _maxTicksWideDisable = value * _tickSize;
                 }
                 break;
             }
@@ -1652,18 +1689,21 @@ public:
     }
 
     void onEconomicNumberEnded(EconomicNumber::Color color) {
-        if (_maxTicksWideBreached) {
-            LOG(0, "MM {C[i1}. Not Enable quote external on {i2} economic number ended due to maxTickWideBreached.", getContractName(), toUInt(color));
+        if (_maxTicksWideDisableBreached) {
+            LOG(0, "MM {C[i1}. Not Enable quote external on {i2} economic number ended due to maxTickWideDisable breached.", getContractName(), toUInt(color));
             _marketMaker->sendErrorMessage(boost::str(boost::format(
-                    "Not Enable %1% MM quote external on %2% economic number ended due to maxTickWideBreached.") %
+                    "Not Enable %1% MM quote external on %2% economic number ended due to maxTickWideDisable breached.") %
                     _contract._name % to_string(color)), ErrorType::Critical);
         } else {
             _marketMaker->sendGenericMessageToExecutor(ViperMessageType::CanEnableUseGTC, _contract._internalId);
-            if (_quoteExternalBeforeEconomicNumber) {
+            if (_quoteExternalBeforeEconomicNumber & !_maxTicksWideStopExtQuoting) {
                 LOG(0, "MM {C[i1}. Enable quote external on {i2} economic number ended", getContractName(), toUInt(color));
-                _quoteExternal = _quoteExternalBeforeEconomicNumber;
-                _marketMaker->notifyFrontMMExternalQuoteEnabled(_contract._internalId);
-                applyUpdates();
+                enableExternalQuoting();
+            } else {
+                LOG(0, "MM {C[i1}. Not Enable quote external on {i2} economic number ended. maxTicksWideStopExtQuoting breached", getContractName(), toUInt(color));
+                _marketMaker->sendErrorMessage(boost::str(boost::format(
+                        "Not Enable %1% MM quote external on %2% economic number ended. maxTickWideStopQuoting breached.") %
+                                                          _contract._name % to_string(color)), ErrorType::Normal);
             }
         }
 
@@ -1685,6 +1725,8 @@ public:
     bool _enabled = false;
     bool _quoteExternal;
     bool _quoteExternalBeforeEconomicNumber = false;
+    bool _quoteExternalBeforeMaxTicksWideStopQuotingBreached = false;
+    bool _useGTCBeforeMaxTicksWideStopQuotingBreached = false;
     hf::qty_t _quoteSize;
     hf::qty_t _quoteGap;
     double _pctTobMaxQuote;
@@ -1706,8 +1748,8 @@ public:
     double _estLevelPctEma;
     hf::price_t _tickSize;
     hf::price_t _hedgeOffsetPrice;
-    hf::price_t _maxTicksWide;
-    hf::price_t _TwoTimesMaxTicksWide;
+    hf::price_t _maxTicksWideStopExtQuoting;
+    hf::price_t _maxTicksWideDisable;
     double _hedgeOffset;
     hf::qty_t _internallyInitiatedPosition = 0;
     hf::qty_t _externallyInitiatedPosition = 0;

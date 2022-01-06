@@ -125,9 +125,10 @@ enum class MarketMakerParametersColumns {
     AskHedgeInternalPrice,
     AskHedgeExternalPrice,
     AskHedgeSize,
-    MaxTicksWide,
-    QuotePctTob,
+    MaxTicksWideStopExtQuoting,
+    MaxTicksWideDisable,
 
+    QuotePctTob,
     WorsenPayupCondPercent,
     QueueImportance,
     QuoteGap,

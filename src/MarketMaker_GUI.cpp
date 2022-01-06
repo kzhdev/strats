@@ -14,7 +14,8 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
             headerCell(MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type),
             headerCell(MarketMakerParametersColumns::QuoteGap, "QuoteGap", false, proto::DataType::unsigned_type),
             headerCell(MarketMakerParametersColumns::QuotePctTob, "Quote%TOB", false, proto::DataType::double_type),
-            headerCell(MarketMakerParametersColumns::MaxTicksWide, "MaxTicksWide", false, proto::DataType::signed_type),
+            headerCell(MarketMakerParametersColumns::MaxTicksWideStopExtQuoting, "MaxTicksWideStopExtQuoting", false, proto::DataType::signed_type),
+            headerCell(MarketMakerParametersColumns::MaxTicksWideDisable, "MaxTicksWideDisable", false, proto::DataType::signed_type),
             headerCell(MarketMakerParametersColumns::Width, "WidthPercentage", true, proto::DataType::double_type),
             headerCell(MarketMakerParametersColumns::AsiaWidth, "AsiaWidthPercentage", false, proto::DataType::double_type),
             headerCell(MarketMakerParametersColumns::EuroWidth, "EuroWidthPercentage", false, proto::DataType::double_type),
@@ -65,7 +66,8 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
                 Cell(MarketMakerParametersColumns::QuoteSize, std::to_string(config._quoteSize)),
                 Cell(MarketMakerParametersColumns::QuoteGap, std::to_string(config._quoteGap)),
                 Cell(MarketMakerParametersColumns::QuotePctTob, std::to_string(config._quotePctTob)),
-                Cell(MarketMakerParametersColumns::MaxTicksWide, std::to_string(config._maxTicksWide)),
+                Cell(MarketMakerParametersColumns::MaxTicksWideStopExtQuoting, std::to_string(config._maxTicksWideStopExtQuoting)),
+                Cell(MarketMakerParametersColumns::MaxTicksWideDisable, std::to_string(config._maxTicksWideDisable)),
                 Cell(MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)])),
         });
         for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
