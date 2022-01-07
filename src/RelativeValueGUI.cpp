@@ -5,10 +5,15 @@ using namespace Python;
 
 namespace {
 GUIThings& guiThings = GUIThings::get();
+uint32_t crossedColor(YesNoType ynt) {
+    return ynt == YesNoType::Yes ? toUInt(Color::TRANSPARENT_RED) : ynt == YesNoType::No ? toUInt(
+            Color::TRANSPARENT_GREEN) : toUInt(Color::TRANSPARENT);
+}
 }
 
 void RelativeValue::populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
     populateParametersGrid(definitions);
+    populateVectorParameters(definitions);
     populatePricingMatrix(definitions);
     populateRiskMatrix(definitions);
     populateHedgeRatios(definitions);
@@ -47,38 +52,165 @@ void RelativeValue::populateParametersGrid(::google::protobuf::RepeatedPtrField<
             headerCell(ContractParameterRVColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type),
     });
 
+    bool checkForCross = (state() == SystemState::CheckQuotes);
+
     for (uint32_t index = 0; index < _viperConfig._relativeValueConfigs.size(); ++index) {
         RelativeValueConfig& config = _viperConfig._relativeValueConfigs[index];
         uint32_t internalId = _viperConfig.getInternalId(config._contract);
         guiThings.addRowHeaderCell(WindowIds::ContractParametersRv, rowHeader,internalId, config._contract);
         guiThings.addCells(cells, internalId, {
-                Cell(ContractParameterRVColumns::BidLean, GUIThings::NO_VALUE_ID),
-                Cell(ContractParameterRVColumns::AskLean, GUIThings::NO_VALUE_ID),
-                Cell(ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(LeanType::None))),
-                Cell(ContractParameterRVColumns::AskLeanType, std::to_string(toUInt(LeanType::None))),
-                Cell(ContractParameterRVColumns::BidInternalPrice, "0"),
-                Cell(ContractParameterRVColumns::BidExternalPrice, "0"),
-                Cell(ContractParameterRVColumns::AskInternalPrice, "0"),
-                Cell(ContractParameterRVColumns::AskExternalPrice, "0"),
-                Cell(ContractParameterRVColumns::BidInternalQty, "0"),
-                Cell(ContractParameterRVColumns::BidExternalQty, "0"),
-                Cell(ContractParameterRVColumns::AskInternalQty, "0"),
-                Cell(ContractParameterRVColumns::AskExternalQty, "0"),
-                Cell(ContractParameterRVColumns::STF, "0"),
-                Cell(ContractParameterRVColumns::Mkt, "0"),
                 Cell(ContractParameterRVColumns::QuoteExternal, std::to_string(config._quoteExternal)),
                 Cell(ContractParameterRVColumns::HedgeTolerance, std::to_string(config._hedgeTolerance)),
                 Cell(ContractParameterRVColumns::Width, std::to_string(config._width)),
                 Cell(ContractParameterRVColumns::PCTStfMove, std::to_string(config._pctStfMove)),
                 Cell(ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(config._maxTicksThroughMarket)),
                 Cell(ContractParameterRVColumns::Commission, std::to_string(config._commission)),
-                Cell(ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown))),
-                Cell(ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown))),
                 Cell(ContractParameterRVColumns::ExtraWidth, std::to_string(ToDollars(_extraContractWidths.getValue(internalId)))),
                 Cell(ContractParameterRVColumns::StaticQuote, std::to_string(config._staticQuote)),
                 Cell(ContractParameterRVColumns::QuoteSize, std::to_string(config._quoteSize)),
         });
+        populateVectorParameterCells(cells, internalId, checkForCross);
     }
+}
+
+void RelativeValue::populateVectorParameterCells(::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >* cells, uint32_t contractId, bool checkForCross) const {
+    const RvContract& contract = _contracts[contractId];
+    if (contract._traded) {
+        const Quote& bid = contract._quotes[BID];
+        if (bid._bestPrice != hf::NULL_PRICE) {
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalPrice, std::to_string(bid._bestPrice));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalQty, std::to_string(bid._bestSize));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalPrice, std::to_string(bid._externalPrice));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, std::to_string(bid._externalSize));
+            const RvContract& bidBestLean = _contracts[bid._bestLeanIndex];
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
+            LeanType leanType = LeanType::None;
+            if (bid._leans.getNumberOfLeans() > 0) {
+                const Lean& bidLean = bid._leans._leans[0];
+                if (!bidLean._isExternal) {
+                    leanType = static_cast<LeanType>(bidLean._marketIndex);
+                } else {
+                    leanType = LeanType::External;
+                }
+            }
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(leanType)));
+            YesNoType bidCrossed = YesNoType::Unknown;
+            if (checkForCross && bid._externalPrice != hf::NULL_PRICE && contract.externalMarket<ASK>().getPrice() != hf::NULL_PRICE) {
+                bidCrossed = bid._externalPrice >= contract.externalMarket<ASK>().getPrice() ? YesNoType::Yes : YesNoType::No;
+            }
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)), crossedColor(bidCrossed));
+        }
+        else {
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, GUIThings::NO_VALUE_ID);
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(LeanType::None)));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalPrice, std::to_string(hf::NULL_PRICE));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalQty, "0");
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalPrice, std::to_string(hf::NULL_PRICE));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, "0");
+        }
+        const Quote& ask = contract._quotes[ASK];
+        if (ask._bestPrice != hf::NULL_PRICE) {
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(ask._bestPrice));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalQty, std::to_string(ask._bestSize));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalPrice, std::to_string(ask._externalPrice));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, std::to_string(ask._externalSize));
+            const RvContract& askBestLean = _contracts[ask._bestLeanIndex];
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
+            LeanType leanType = LeanType::None;
+            if (ask._leans.getNumberOfLeans() > 0) {
+                const Lean& askLean = ask._leans._leans[0];
+                if (!askLean._isExternal) {
+                    leanType = static_cast<LeanType>(askLean._marketIndex);
+                } else {
+                    leanType = LeanType::External;
+                }
+            }
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskLeanType, std::to_string(toUInt(leanType)));
+            YesNoType askCrossed = YesNoType::Unknown;
+            if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract.externalMarket<BID>().getPrice() != hf::NULL_PRICE) {
+                askCrossed = ask._externalPrice <= contract.externalMarket<BID>().getPrice() ? YesNoType::Yes : YesNoType::No;
+            }
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)), crossedColor(askCrossed));
+        }
+        else {
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, GUIThings::NO_VALUE_ID);
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskLeanType, std::to_string(toUInt(LeanType::None)));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(hf::NULL_PRICE));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalQty, "0");
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalPrice, std::to_string(hf::NULL_PRICE));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, "0");
+        }
+
+        {
+            hf::price_t price = 0;
+            if (contract._definition._legs.size() > 1) {
+                double sum = 0;
+                for (const auto& leg : contract._definition._legs) {
+                    sum += _overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
+                }
+                price = ToRhonePrice(sum);
+            } else {
+                price = ToRhonePrice(_overdeterminedPrices.getValue(0, contractId));
+            }
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(price));
+        }
+        {
+            hf::price_t stf = _shortTermFairsForContracts.getRef(contractId)._fair;
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
+        }
+    }
+}
+
+void RelativeValue::populateVectorParameters(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) const {
+    auto [definition, rowHeader, cells] =
+        guiThings.addWindow(definitions, WindowIds::VectorParameters, "Factor Parameters", proto::GridType::Table, true);
+
+    guiThings.addHeader(definition, {
+            headerCell(VectorParametersColumns::Position, "Position", true, proto::DataType::double_type),
+            headerCell(VectorParametersColumns::Mkt, "Mkt", true, proto::DataType::double_type),
+            headerCell(VectorParametersColumns::STF, "STF", true, proto::DataType::double_type),
+            headerCell(VectorParametersColumns::LTF, "LTF", false, proto::DataType::double_type),
+            headerCell(VectorParametersColumns::MaxPos, "MaxPos", false, proto::DataType::signed_type),
+            headerCell(VectorParametersColumns::Range, "Range", false, proto::DataType::double_type),
+            headerCell(VectorParametersColumns::EMA_ON, "EmaOn", false, proto::DataType::bool_type),
+            headerCell(VectorParametersColumns::EMA_Time, "EmaSeconds", false, proto::DataType::unsigned_type),
+            headerCell(VectorParametersColumns::EMA_On_Time, "EmaOnTime", false, proto::DataType::enum_type, "ema_on_time"),
+            headerCell(VectorParametersColumns::EMA_Off_Time, "EmaOffTime", false, proto::DataType::enum_type, "ema_off_time"),
+            headerCell(VectorParametersColumns::SetToMarket, "SetToMarket", true, proto::DataType::bool_type),
+            headerCell(VectorParametersColumns::Hedged, "Hedged", true, proto::DataType::bool_type),
+            headerCell(VectorParametersColumns::STF_To_Market, "STFToMarket", false, proto::DataType::button),
+            headerCell(VectorParametersColumns::LTF_Delta, "LTFDelta", false, proto::DataType::double_type),
+            headerCell(VectorParametersColumns::Increment_LTF, "+LTFDelta", false, proto::DataType::value_increment_button, "", toUInt(VectorParametersColumns::LTF), toUInt(VectorParametersColumns::LTF_Delta)),
+            headerCell(VectorParametersColumns::Decrement_LTF, "-LTFDelta", false, proto::DataType::value_decrement_button, "", toUInt(VectorParametersColumns::LTF), toUInt(VectorParametersColumns::LTF_Delta)),
+    });
+
+    for (uint32_t vectorIndex = 0; vectorIndex < _viperConfig._vectorConfigs.size(); ++vectorIndex) {
+        VectorConfig& config = _viperConfig._vectorConfigs[vectorIndex];
+        guiThings.addRowHeaderCell(WindowIds::VectorParameters, rowHeader, vectorIndex, config._vectorName);
+        guiThings.addCells(cells, vectorIndex, {
+                Cell(VectorParametersColumns::Position, std::to_string(_positionsInVector.getValue(vectorIndex))),
+                Cell(VectorParametersColumns::Mkt, std::to_string(_currentVectorMarketPrices->getValue(vectorIndex))),
+                Cell(VectorParametersColumns::STF, std::to_string(_shortTermFairsInVector.getValue(vectorIndex))),
+                Cell(VectorParametersColumns::LTF, std::to_string(_longTermFairsInVector.getValue(vectorIndex))),
+                Cell(VectorParametersColumns::MaxPos, std::to_string(config._maxPos)),
+                Cell(VectorParametersColumns::Range, std::to_string(config._range)),
+                Cell(VectorParametersColumns::EMA_ON, std::to_string(config._useEMA)),
+                Cell(VectorParametersColumns::EMA_Time, std::to_string(config._EMALength)),
+                Cell(VectorParametersColumns::EMA_On_Time, std::to_string(config._EMAOn)),
+                Cell(VectorParametersColumns::EMA_Off_Time, std::to_string(config._EMAOff)),
+                Cell(VectorParametersColumns::SetToMarket, std::to_string(config._setToMarket)),
+                Cell(VectorParametersColumns::Hedged, std::to_string(config._hedged)),
+                Cell(VectorParametersColumns::STF_To_Market, std::string(config._vectorName), toUInt(Color::TRANSPARENT)),
+                Cell(VectorParametersColumns::LTF_Delta, std::to_string(config._ltfDelta)),
+                Cell(VectorParametersColumns::Increment_LTF, "+", toUInt(Color::TRANSPARENT)),
+                Cell(VectorParametersColumns::Decrement_LTF, "-", toUInt(Color::TRANSPARENT)),
+        });
+    }
+    auto buttons = definition->mutable_buttons();
+    guiThings.addButton(buttons, toUInt(STF_TO_MARKET), "STF to Market", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_SubmitId, GUIThings::RequiresConfirmation::NO);
+    guiThings.addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, GUIThings::RequiresConfirmation::NO);
 }
 
 void RelativeValue::populatePricingMatrix(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) const {
@@ -255,98 +387,11 @@ void RelativeValue::sendStateToGUI(std::function<void(proto::GridUpdate&, Window
 proto::GridUpdate RelativeValue::getParametersUpdate() const {
     proto::GridUpdate message;
     bool checkForCross = (state() == SystemState::CheckQuotes);
-    auto crossedColor = [](YesNoType ynt) { return ynt == YesNoType::Yes ? toUInt(Color::TRANSPARENT_RED) : ynt == YesNoType::No ? toUInt(Color::TRANSPARENT_GREEN) : toUInt(Color::TRANSPARENT); };
     message.set_gridid(toUInt(WindowIds::ContractParametersRv));
     message.set_updatetype(proto::GridUpdateType::CellsType);
     auto cells = message.mutable_cells();
     for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
-        const RvContract& contract = _contracts[contractIndex];
-        if (contract._traded) {
-            const Quote& bid = contract._quotes[BID];
-            if (bid._bestPrice != hf::NULL_PRICE) {
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalPrice, std::to_string(bid._bestPrice));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalQty, std::to_string(bid._bestSize));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalPrice, std::to_string(bid._externalPrice));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, std::to_string(bid._externalSize));
-                const RvContract& bidBestLean = _contracts[bid._bestLeanIndex];
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, std::to_string(bidBestLean._definition._internalId));
-                LeanType leanType = LeanType::None;
-                if (bid._leans.getNumberOfLeans() > 0) {
-                    const Lean& bidLean = bid._leans._leans[0];
-                    if (!bidLean._isExternal) {
-                        leanType = static_cast<LeanType>(bidLean._marketIndex);
-                    } else {
-                        leanType = LeanType::External;
-                    }
-                }
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(leanType)));
-                YesNoType bidCrossed = YesNoType::Unknown;
-                if (checkForCross && bid._externalPrice != hf::NULL_PRICE && contract.externalMarket<ASK>().getPrice() != hf::NULL_PRICE) {
-                    bidCrossed = bid._externalPrice >= contract.externalMarket<ASK>().getPrice() ? YesNoType::Yes : YesNoType::No;
-                }
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(bidCrossed)), crossedColor(bidCrossed));
-            }
-            else {
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidLean, GUIThings::NO_VALUE_ID);
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidLeanType, std::to_string(toUInt(LeanType::None)));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidCross, std::to_string(toUInt(YesNoType::Unknown)));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalPrice, std::to_string(hf::NULL_PRICE));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidInternalQty, "0");
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalPrice, std::to_string(hf::NULL_PRICE));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::BidExternalQty, "0");
-            }
-            const Quote& ask = contract._quotes[ASK];
-            if (ask._bestPrice != hf::NULL_PRICE) {
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(ask._bestPrice));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalQty, std::to_string(ask._bestSize));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalPrice, std::to_string(ask._externalPrice));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, std::to_string(ask._externalSize));
-                const RvContract& askBestLean = _contracts[ask._bestLeanIndex];
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, std::to_string(askBestLean._definition._internalId));
-                LeanType leanType = LeanType::None;
-                if (ask._leans.getNumberOfLeans() > 0) {
-                    const Lean& askLean = ask._leans._leans[0];
-                    if (!askLean._isExternal) {
-                        leanType = static_cast<LeanType>(askLean._marketIndex);
-                    } else {
-                        leanType = LeanType::External;
-                    }
-                }
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskLeanType, std::to_string(toUInt(leanType)));
-                YesNoType askCrossed = YesNoType::Unknown;
-                if (checkForCross && ask._externalPrice != hf::NULL_PRICE && contract.externalMarket<BID>().getPrice() != hf::NULL_PRICE) {
-                    askCrossed = ask._externalPrice <= contract.externalMarket<BID>().getPrice() ? YesNoType::Yes : YesNoType::No;
-                }
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(askCrossed)), crossedColor(askCrossed));
-            }
-            else {
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskLean, GUIThings::NO_VALUE_ID);
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskLeanType, std::to_string(toUInt(LeanType::None)));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskCross, std::to_string(toUInt(YesNoType::Unknown)));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalPrice, std::to_string(hf::NULL_PRICE));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskInternalQty, "0");
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalPrice, std::to_string(hf::NULL_PRICE));
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::AskExternalQty, "0");
-            }
-
-            {
-                hf::price_t price = 0;
-                if (contract._definition._legs.size() > 1) {
-                    double sum = 0;
-                    for (const auto& leg : contract._definition._legs) {
-                        sum += _overdeterminedPrices.getValue(0, leg._index) * leg._ratio;
-                    }
-                    price = ToRhonePrice(sum);
-                } else {
-                    price = ToRhonePrice(_overdeterminedPrices.getValue(0, contractIndex));
-                }
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::Mkt, std::to_string(price));
-            }
-            {
-                hf::price_t stf = _shortTermFairsForContracts.getRef(contractIndex)._fair;
-                guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::STF, std::to_string(stf));
-            }
-        }
+        populateVectorParameterCells(cells, contractIndex, checkForCross);
     }
     return message;
 }

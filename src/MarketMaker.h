@@ -62,6 +62,8 @@ public:
     bool isContractQuoteExternal(uint32_t contractId) const noexcept override;
 
 private:
+    void populateStateParameterCells(::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >* cells,
+                                     uint32_t internalId, const SimpleMarketMaker& mm) const;
     // Fill processing
     void onFill(const FillMessage& fill);
 

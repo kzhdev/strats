@@ -78,7 +78,6 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
         }
         guiThings.addCells(cells, internalId, {
                 Cell(MarketMakerParametersColumns::MinInternalPriceChange, std::to_string(config._minInternalPriceChange)),
-                Cell(MarketMakerParametersColumns::EstablishedLevel, std::to_string(config._establishedLevel)),
                 Cell(MarketMakerParametersColumns::EstLevelEMASeconds, std::to_string(config._estLevelEMASeconds)),
                 Cell(MarketMakerParametersColumns::EstLevelPctEMA, std::to_string(config._estLevelPctEMA)),
                 Cell(MarketMakerParametersColumns::HedgeOffset, std::to_string(config._hedgeOffset)),
@@ -90,27 +89,37 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
                 Cell(MarketMakerParametersColumns::MaxPosInterrnal, std::to_string(config._maxPosInternal)),
                 Cell(MarketMakerParametersColumns::MaxPosExternal, std::to_string(config._maxPosExternal)),
                 Cell(MarketMakerParametersColumns::Commission, std::to_string(config._commission)),
-                Cell(MarketMakerParametersColumns::InternalPosition, "0"),
-                Cell(MarketMakerParametersColumns::ExternalPosition, "0"),
-                Cell(MarketMakerParametersColumns::BidInternalPrice, "0"),
-                Cell(MarketMakerParametersColumns::AskInternalPrice, "0"),
-                Cell(MarketMakerParametersColumns::BidInternalQty, "0"),
-                Cell(MarketMakerParametersColumns::AskInternalQty, "0"),
-                Cell(MarketMakerParametersColumns::BidExternalPrice, "0"),
-                Cell(MarketMakerParametersColumns::AskExternalPrice, "0"),
-                Cell(MarketMakerParametersColumns::BidExternalQty, "0"),
-                Cell(MarketMakerParametersColumns::AskExternalQty, "0"),
-                Cell(MarketMakerParametersColumns::MidPoint, "0"),
-                Cell(MarketMakerParametersColumns::BidHedgeExternalPrice, "0"),
-                Cell(MarketMakerParametersColumns::BidHedgeInternalPrice, "0"),
-                Cell(MarketMakerParametersColumns::BidHedgeSize, "0"),
-                Cell(MarketMakerParametersColumns::AskHedgeExternalPrice, "0"),
-                Cell(MarketMakerParametersColumns::AskHedgeInternalPrice, "0"),
-                Cell(MarketMakerParametersColumns::AskHedgeSize, "0"),
                 Cell(MarketMakerParametersColumns::WorsenPayupCondPercent, std::to_string(config._worsenPayupCondPercent)),
                 Cell(MarketMakerParametersColumns::QueueImportance, std::to_string(config._queueImportance)),
         });
+        populateStateParameterCells(cells, internalId, _marketMakers[internalId]);
     }
+}
+
+void MarketMaker::populateStateParameterCells(::google::protobuf::RepeatedPtrField<::Python::proto::GridCell>* cells, uint32_t internalId, const SimpleMarketMaker& mm) const {
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::MidPoint, std::to_string(mm._midPoint));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::InternalPosition, std::to_string(mm._internallyInitiatedPosition));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::ExternalPosition, std::to_string(mm._externallyInitiatedPosition));
+    auto& bidQuote = mm._quotes[BID];
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::BidInternalPrice, std::to_string(bidQuote._internalPrice));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::BidInternalQty, std::to_string(bidQuote._internalSize + bidQuote._externalSize));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::BidExternalPrice, std::to_string(bidQuote._externalPrice));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::BidExternalQty, std::to_string(bidQuote._externalSize));
+    auto& askQuote = mm._quotes[ASK];
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::AskInternalPrice, std::to_string(askQuote._internalPrice));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::AskInternalQty, std::to_string(askQuote._internalSize + askQuote._externalSize));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::AskExternalPrice, std::to_string(askQuote._externalPrice));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::AskExternalQty, std::to_string(askQuote._externalSize));
+    auto& bidHedge = mm._hedges[BID];
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::BidHedgeInternalPrice, std::to_string(bidHedge._internalPrice));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::BidHedgeExternalPrice, std::to_string(bidHedge._externalPrice));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::BidHedgeSize, std::to_string(bidHedge._sizeToQuote));
+    auto& askHedge = mm._hedges[ASK];
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeInternalPrice, std::to_string(askHedge._internalPrice));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeExternalPrice, std::to_string(askHedge._externalPrice));
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::AskHedgeSize, std::to_string(askHedge._sizeToQuote));
+    _viperConfig._marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel = mm._emaEstLevel;
+    guiThings.setCell(cells, internalId, MarketMakerParametersColumns::EstablishedLevel, std::to_string(_viperConfig._marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel));
 }
 
 void MarketMaker::sendStateToGUI(std::function<void(proto::GridUpdate&, WindowIds)>&& send, std::function<bool(WindowIds)>&& hasSubscription) const {
@@ -128,29 +137,7 @@ proto::GridUpdate MarketMaker::getStateUpdate() const {
     for (uint32_t contractIndex = 0; contractIndex < _viperConfig._allContracts.size(); ++contractIndex) {
         const auto& mm = _marketMakers[contractIndex];
         if (mm._contract._toMarketMake) {
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::MidPoint, std::to_string(mm._midPoint));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::InternalPosition, std::to_string(mm._internallyInitiatedPosition));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::ExternalPosition, std::to_string(mm._externallyInitiatedPosition));
-            auto& bidQuote = mm._quotes[BID];
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidInternalPrice, std::to_string(bidQuote._internalPrice));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidInternalQty, std::to_string(bidQuote._internalSize + bidQuote._externalSize));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidExternalPrice, std::to_string(bidQuote._externalPrice));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidExternalQty, std::to_string(bidQuote._externalSize));
-            auto& askQuote = mm._quotes[ASK];
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskInternalPrice, std::to_string(askQuote._internalPrice));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskInternalQty, std::to_string(askQuote._internalSize + askQuote._externalSize));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalPrice, std::to_string(askQuote._externalPrice));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskExternalQty, std::to_string(askQuote._externalSize));
-            auto& bidHedge = mm._hedges[BID];
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeInternalPrice, std::to_string(bidHedge._internalPrice));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeExternalPrice, std::to_string(bidHedge._externalPrice));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::BidHedgeSize, std::to_string(bidHedge._sizeToQuote));
-            auto& askHedge = mm._hedges[ASK];
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeInternalPrice, std::to_string(askHedge._internalPrice));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeExternalPrice, std::to_string(askHedge._externalPrice));
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::AskHedgeSize, std::to_string(askHedge._sizeToQuote));
-            _viperConfig._marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel = mm._emaEstLevel;
-            guiThings.setCell(cells, contractIndex, MarketMakerParametersColumns::EstablishedLevel, std::to_string(_viperConfig._marketMakerConfigs[mm._contract._marketMakeIndex]._establishedLevel));
+            populateStateParameterCells(cells, contractIndex, mm);
         }
     }
     return message;

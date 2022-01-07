@@ -29,9 +29,9 @@ inline RowCellT Cell(EnumType col, std::string&& value, uint32_t colorId = UINT3
 }
 
 class GUIThings {
+public:
     enum class RequiresConfirmation : bool { NO = false, YES = true };
 
-public:
     static GUIThings& get() {
         static GUIThings instance;
         return instance;
@@ -444,7 +444,6 @@ public:
         }
         populateLeanMatrix(definitions->Add());
         populatePricingConfig(definitions->Add());
-        populateVectorParametersDefinition(definitions);
         populateManualFillsEntry(definitions->Add());
         populateFills(definitions->Add());
         populateGatewayStatuses(definitions->Add());
@@ -1313,56 +1312,6 @@ public:
         }
 
         addSubmitButton(definition);
-    }
-
-    void populateVectorParametersDefinition(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
-        auto [definition, rowHeader, cells] = 
-                addWindow(definitions, WindowIds::VectorParameters, "Factor Parameters", proto::GridType::Table, true);
-
-        addHeader(definition, {
-                headerCell(VectorParametersColumns::Position, "Position", true, proto::DataType::double_type),
-                headerCell(VectorParametersColumns::Mkt, "Mkt", true, proto::DataType::double_type),
-                headerCell(VectorParametersColumns::STF, "STF", true, proto::DataType::double_type),
-                headerCell(VectorParametersColumns::LTF, "LTF", false, proto::DataType::double_type),
-                headerCell(VectorParametersColumns::MaxPos, "MaxPos", false, proto::DataType::signed_type),
-                headerCell(VectorParametersColumns::Range, "Range", false, proto::DataType::double_type),
-                headerCell(VectorParametersColumns::EMA_ON, "EmaOn", false, proto::DataType::bool_type),
-                headerCell(VectorParametersColumns::EMA_Time, "EmaSeconds", false, proto::DataType::unsigned_type),
-                headerCell(VectorParametersColumns::EMA_On_Time, "EmaOnTime", false, proto::DataType::enum_type, "ema_on_time"),
-                headerCell(VectorParametersColumns::EMA_Off_Time, "EmaOffTime", false, proto::DataType::enum_type, "ema_off_time"),
-                headerCell(VectorParametersColumns::SetToMarket, "SetToMarket", true, proto::DataType::bool_type),
-                headerCell(VectorParametersColumns::Hedged, "Hedged", true, proto::DataType::bool_type),
-                headerCell(VectorParametersColumns::STF_To_Market, "STFToMarket", false, proto::DataType::button),
-                headerCell(VectorParametersColumns::LTF_Delta, "LTFDelta", false, proto::DataType::double_type),
-                headerCell(VectorParametersColumns::Increment_LTF, "+LTFDelta", false, proto::DataType::value_increment_button, "", toUInt(VectorParametersColumns::LTF), toUInt(VectorParametersColumns::LTF_Delta)),
-                headerCell(VectorParametersColumns::Decrement_LTF, "-LTFDelta", false, proto::DataType::value_decrement_button, "", toUInt(VectorParametersColumns::LTF), toUInt(VectorParametersColumns::LTF_Delta)),
-        });
-        
-        for (uint32_t vectorIndex = 0; vectorIndex < _config->_vectorConfigs.size(); ++vectorIndex) {
-            VectorConfig& config = _config->_vectorConfigs[vectorIndex];
-            addRowHeaderCell(WindowIds::VectorParameters, rowHeader, vectorIndex, config._vectorName);
-            addCells(cells, vectorIndex, {
-                    Cell(VectorParametersColumns::Position, "0"),
-                    Cell(VectorParametersColumns::Mkt, "0"),
-                    Cell(VectorParametersColumns::STF, "0"),
-                    Cell(VectorParametersColumns::LTF, std::to_string(config._longTermFair)),
-                    Cell(VectorParametersColumns::MaxPos, std::to_string(config._maxPos)),
-                    Cell(VectorParametersColumns::Range, std::to_string(config._range)),
-                    Cell(VectorParametersColumns::EMA_ON, std::to_string(config._useEMA)),
-                    Cell(VectorParametersColumns::EMA_Time, std::to_string(config._EMALength)),
-                    Cell(VectorParametersColumns::EMA_On_Time, std::to_string(config._EMAOn)),
-                    Cell(VectorParametersColumns::EMA_Off_Time, std::to_string(config._EMAOff)),
-                    Cell(VectorParametersColumns::SetToMarket, std::to_string(config._setToMarket)),
-                    Cell(VectorParametersColumns::Hedged, std::to_string(config._hedged)),
-                    Cell(VectorParametersColumns::STF_To_Market, std::string(config._vectorName), toUInt(Color::TRANSPARENT)),
-                    Cell(VectorParametersColumns::LTF_Delta, std::to_string(config._ltfDelta)),
-                    Cell(VectorParametersColumns::Increment_LTF, "+", toUInt(Color::TRANSPARENT)),
-                    Cell(VectorParametersColumns::Decrement_LTF, "-", toUInt(Color::TRANSPARENT)),
-            });
-        }
-        auto buttons = definition->mutable_buttons();
-        addButton(buttons, toUInt(STF_TO_MARKET), "STF to Market", proto::ButtonFrontBehavior_Nothing, proto::ButtonBackBehavior_SubmitId, RequiresConfirmation::NO);
-        addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
     void populateLoggingLevel(proto::GridDefinition* definition) {

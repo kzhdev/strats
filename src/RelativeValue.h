@@ -3059,6 +3059,8 @@ public:
 
 private:
     void populateParametersGrid(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
+    void populateVectorParameters(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
+    void populateVectorParameterCells(::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >* cells, uint32_t contractId, bool checkForCross) const;
     void populatePricingMatrix(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
     void populateRiskMatrix(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
     void populateHedgeRatios(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
