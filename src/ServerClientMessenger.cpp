@@ -68,9 +68,7 @@ bool ServerClientMessenger::doSendClientLoginReject(ClientConnection& traderConn
 bool ServerClientMessenger::doSendClientLogin(ClientConnection& traderConnection, message_id_t messageID, uint32_t heartbeatIntervalInMilliseconds, const char* trader) {
     proto::ClientConnected response;
     response.set_messageid(messageID);
-    response.set_version(boost::str(boost::format("Viper - %1% Hash:%2% RhoneHash:%3%")
-                                    % Python::ViperVersion % Python::ViperGitHash
-                                    % Python::RhonePublicGitHash));
+    response.set_version(boost::str(boost::format("Viper - %1%") % Python::ViperVersion));
     response.set_trader(trader);
     response.set_heartbeatinterval(heartbeatIntervalInMilliseconds);
     return sendMessageToClient(traderConnection, proto::SERVER_MESSAGE_TYPE::SERVER_MESSAGE_TYPE_CLIENT_CONNECTED, response);
