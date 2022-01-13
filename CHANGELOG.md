@@ -1,3 +1,6 @@
+#Version 1.55.1
+- Fix sending larg chart histories cause internla heatbeats timed out
+
 #Version 1.55.0
 - Allow multiple connections.
 - Set shift only when the first client connected
