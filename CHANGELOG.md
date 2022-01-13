@@ -1,3 +1,6 @@
+#Version 1.55.1
+- Fix sending large chart histories cause internal heartbeats timed out
+
 #Version 1.55.0
 - Allow multiple connections.
 - Set shift only when the first client connected
