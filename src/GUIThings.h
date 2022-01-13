@@ -355,7 +355,7 @@ public:
         double edgeStf = 0;
         double width = 0;
         if (fill._strategy == StrategyId::RelativeValue) {
-            if(fill._rvStf != hf::NULL_PRICE) {
+            if (fill._rvStf != hf::NULL_PRICE) {
                 width = ToDollars(relativeValue->_contractWidths.getValue(fill._contractId));
                 if (width != 0) {
                     edgeStf = ToDollars(fill._side == BID ? fill._rvStf - fill._price : fill._price - fill._rvStf) / width;
@@ -389,10 +389,6 @@ public:
         ++_fillNumber;
 
         return std::make_tuple(time, edgeStf, edgeMkt);
-    }
-
-    void populateVectorGridUpdate(proto::GridUpdate& message, const RelativeValue* relativeValue) const {
-
     }
 
     void populateChartDataPoints(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {

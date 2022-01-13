@@ -273,10 +273,10 @@ public:
         while (BOOST_LIKELY(!hf::Service::isExitAll())) {
             _clientAcceptor->runIteration();
             processOutgoingMessages();
-            refreshThings();
             uint64_t heartbeatTimestamp = clockUtil::GetCycles();
             checkInternalHeartbeats(heartbeatTimestamp);
             sendGUIHeartbeat(heartbeatTimestamp);
+            refreshThings();
         }
 
         if (_chartHistories.is_open()) {
@@ -1462,6 +1462,7 @@ public:
 
     ErrorMessage createErrorMessage(const std::string& message, ErrorType type) const {
         BOOST_ASSERT(message.size() < CRITICAL_MESSAGE_MAX_SIZE);
+        assert(!message.empty());
         ErrorMessage em;
         auto strlen = std::min<decltype(CRITICAL_MESSAGE_MAX_SIZE)>(message.size(), CRITICAL_MESSAGE_MAX_SIZE);
         memcpy(em._message, message.c_str(), strlen);
@@ -1968,8 +1969,7 @@ public:
                 auto& connection = *connIter->second;
                 proto::GUIInitialization m;
                 _guiThings.populateGUIInitialization(m, _strategies, _executor);
-                _clientAcceptor->handleLoginAccepted(m,
-                                                     GetMillisFromCycles(_guiHeartbeatInterval, _frequency),
+                _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency),
                                                      connection, _viperConfig._traders[_viperConfig._currentTrader].c_str());
                 _newLogins.emplace_back(clockUtil::GetCycles(), connection.m_fd);
 
@@ -2144,12 +2144,14 @@ public:
     }
 
     void sendChartHistories(int32_t connectionId) {
+        auto begin = TimeUtils::clock_gettime();
         for (auto& replay : _dataPoints) {
             if (!replay.sets_size()) {
                 break;
             }
             _clientAcceptor->sendChartHistories(replay, connectionId);
         }
+        logging::GetLogger().logInfo(boost::str(boost::format("Sent chart histories. timespan=%1% ns") % (TimeUtils::clock_gettime() - begin)));
     }
 
     void onSubscribeGridUpdate(const std::shared_ptr<ClientConnection>& connection, uint32_t gridId) {
