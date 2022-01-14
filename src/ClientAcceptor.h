@@ -79,7 +79,7 @@ public:
 
     void sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted);
     void sendGridChangeReply(proto::GridUpdate& message, ClientConnection* connection = nullptr);
-    void sendGridUpdate(proto::GridUpdate& data, ClientConnection* connection = nullptr);
+    void sendGridUpdate(proto::GridUpdate& data, ClientConnection* connection);
     void sendGridUpdate(proto::GridUpdate& data, int32_t connectionId = -1);
     void sendChartDataPoints(proto::DataSeriesPointSet& data, std::ostringstream& streamMessage);
     void sendChartHistories(proto::DataSeriesReplay& data, int32_t connectionId);

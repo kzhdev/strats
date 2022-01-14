@@ -13,7 +13,7 @@ inline uint32_t crossedColor(YesNoType ynt) {
 }
 
 void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) {
-    auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderParameters, "Arbie Spreader Parameter", proto::GridType::Table, true);
+    auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderParameters, "Arbie Spreader Parameter", proto::GridType::Table);
 
     guiThings.addHeader(definition, {
         headerCell(ArbieSpreaderParameterColumns::Enabled, "Enabled", false, proto::DataType::bool_type),
@@ -54,7 +54,7 @@ void ArbieSpreader::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
         populateParameterCells(cells, _contracts[internalId]);
     }
 
-    auto [pathsDefinition, pathsRowHeader, pathsCells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderPaths, "Arbie Spreader Paths", proto::GridType::Table, true);
+    auto [pathsDefinition, pathsRowHeader, pathsCells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ArbieSpreaderPaths, "Arbie Spreader Paths", proto::GridType::Table);
     guiThings.addHeader(pathsDefinition, {
             headerCell(ArbieSpreaderPathsColumns::Commission, "Commission", false, proto::DataType::double_type),
             headerCell(ArbieSpreaderPathsColumns::Enabled, "Enabled", false, proto::DataType::bool_type),

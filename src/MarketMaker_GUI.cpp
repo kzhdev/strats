@@ -8,7 +8,7 @@ auto& guiThings = GUIThings::get();
 }
 
 void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
-    auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::MarketMakerParameters, "Market Maker Parameters", proto::GridType::Table, true);
+    auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::MarketMakerParameters, "Market Maker Parameters", proto::GridType::Table);
     guiThings.addHeader(definition, {
             headerCell(MarketMakerParametersColumns::QuoteExternal, "QuoteExternal", false, proto::DataType::bool_type),
             headerCell(MarketMakerParametersColumns::QuoteSize, "QuoteSize", false, proto::DataType::unsigned_type),
