@@ -2081,7 +2081,7 @@ public:
     template<uint32_t Side>
     void quote(hf::price_t price, hf::qty_t size, bool goThruAllLevels) {
         auto dollarPrice = ToDollars(price);
-        LOG(0, "OM {C[i1]}. Set Quote target Side={i2} Price={d1} Size={i3}", getContractName(), Side, dollarPrice, size)
+        LOG(0, "OM {C[i1]}. Set Quote target Side={i2} Price={d1} Size={i3} goThruAllLevels={i4}", getContractName(), Side, dollarPrice, size, (int32_t)goThruAllLevels)
         if (BOOST_UNLIKELY(size < 0)) {
             //This should theoretically never happen.  But in practice it does.
             size = 0;
@@ -2126,17 +2126,16 @@ public:
             if (updated | !_inMarket | goThruAllLevels) {
                 if (_nLevels > 0) {
                     Level* level = _topLevel->after;
-                    uint32_t i = 0;
                     while (IsPriceBetterOrEqual<Side>(level->_price, _bottomLevel->_price) &&
                            (level->updateOnlyOneLevel(getStackSize(), TargetType::Stack) | goThruAllLevels)) {
-                        ++i;
                         level = level->after;
                     }
 
                     // On economic number, nLevels set to 0, the _bottomLevel will be same as _topLevel.
                     // In this case we need to rebuild the stacks
-                    if (i < _nLevels) {
-                        while (i++ < _nLevels) {
+                    auto numLevels = std::abs(_bottomLevel->_price - _topLevel->_price) / _contract._tickSize;
+                    if (numLevels < _nLevels) {
+                        while (numLevels++ < _nLevels) {
                             level->updateOnlyOneLevel(getStackSize(), TargetType::Stack);
                             level = level->after;
                         }
