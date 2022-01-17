@@ -744,11 +744,11 @@ public:
                 addWindow(definitions, WindowIds::PositionInOutrights, "Positions", proto::GridType::Table);
 
         addHeader(definition, {
-                headerCell(PositionsColumns::RV, "RV", false, proto::DataType::signed_type),
-                headerCell(PositionsColumns::AS, "AS", false, proto::DataType::signed_type),
-                headerCell(PositionsColumns::MMInternal, "MMInternal", false, proto::DataType::signed_type),
-                headerCell(PositionsColumns::MMExternal, "MMExternal", false, proto::DataType::signed_type),
-                headerCell(PositionsColumns::Total, "Total", false, proto::DataType::signed_type),
+                headerCell(PositionsColumns::RV, "RV", true, proto::DataType::signed_type),
+                headerCell(PositionsColumns::AS, "AS", true, proto::DataType::signed_type),
+                headerCell(PositionsColumns::MMInternal, "MMInternal", true, proto::DataType::signed_type),
+                headerCell(PositionsColumns::MMExternal, "MMExternal", true, proto::DataType::signed_type),
+                headerCell(PositionsColumns::Total, "Total", true, proto::DataType::signed_type),
         });
         
         std::map<uint32_t, Position> positions;
