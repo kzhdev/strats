@@ -161,7 +161,7 @@ public:
         message.set_gridid(toUInt(WindowIds::MessagesCounts));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
-        auto total = _config->_marketMakerConfigs.size();
+        auto total = _config->_allContracts.size();
         uint32_t inserts = 0;
         uint32_t modifies = 0;
         uint32_t cancels = 0;
@@ -815,7 +815,6 @@ public:
                 headerCell(MessageCountsColumns::FillsRatio, "FillsRatio", true, proto::DataType::double_type),
         });
 
-        auto total = _config->_marketMakerConfigs.size();
         for (auto& config : _config->_marketMakerConfigs) {
             uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::MessagesCounts, rowHeader,internalId, config._contract);
@@ -829,6 +828,16 @@ public:
                     Cell(MessageCountsColumns::FillsRatio, "0"),
             });
         }
+
+        auto total = _config->_allContracts.size();
+        addRowHeaderCell(WindowIds::MessagesCounts, rowHeader,total, "Total");
+        setCell(cells, total, MessageCountsColumns::Inserts, "0");
+        setCell(cells, total, MessageCountsColumns::Modifies, "0");
+        setCell(cells, total, MessageCountsColumns::Cancels, "0");
+        setCell(cells, total, MessageCountsColumns::CancelRejects, "0");
+        setCell(cells, total, MessageCountsColumns::ModifyRejects, "0");
+        setCell(cells, total, MessageCountsColumns::Fills, "0");
+        setCell(cells, total, MessageCountsColumns::FillsRatio, "0");
     }
 
     void populatePnlDetail(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
