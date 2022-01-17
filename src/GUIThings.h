@@ -741,7 +741,7 @@ public:
 
     void populatePositionInOutrights(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
         auto [definition, rowHeader, cells] = 
-                addWindow(definitions, WindowIds::PositionInOutrights, "Positions", proto::GridType::Table, true);
+                addWindow(definitions, WindowIds::PositionInOutrights, "Positions", proto::GridType::Table);
 
         addHeader(definition, {
                 headerCell(PositionsColumns::RV, "RV", false, proto::DataType::signed_type),
@@ -804,7 +804,7 @@ public:
     }
 
     void populateMessageCounts(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
-        auto [definition, rowHeader, cells] = addWindow(definitions, WindowIds::MessagesCounts, "Message Counts", proto::GridType::Table, true);
+        auto [definition, rowHeader, cells] = addWindow(definitions, WindowIds::MessagesCounts, "Message Counts", proto::GridType::Table);
         addHeader(definition, {
                 headerCell(MessageCountsColumns::Inserts, "Insert", true, proto::DataType::unsigned_type),
                 headerCell(MessageCountsColumns::Modifies, "Modify", true, proto::DataType::unsigned_type),
@@ -832,7 +832,7 @@ public:
     }
 
     void populatePnlDetail(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
-        auto [definition, rowHeader, cells] = addWindow(definitions, WindowIds::PnlDetail, "PNL Detail", proto::GridType::Table, true);
+        auto [definition, rowHeader, cells] = addWindow(definitions, WindowIds::PnlDetail, "PNL Detail", proto::GridType::Table);
 
         addHeader(definition, {
                 headerCell(PnlDetailColumns::MMOpen, "MM Open", true, proto::DataType::rhone_price),
@@ -894,7 +894,7 @@ public:
     }
 
     void populatePNL(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
-        auto [definition, rowHeader, cells] = addWindowWithSubmitButton(definitions, WindowIds::PNL, "PNL", proto::GridType::Table, true);
+        auto [definition, rowHeader, cells] = addWindowWithSubmitButton(definitions, WindowIds::PNL, "PNL", proto::GridType::Table);
         addHeader(definition, {
                 headerCell(PNLColumns::Open, "Open", true, proto::DataType::rhone_price),
                 headerCell(PNLColumns::Closed, "Closed", true, proto::DataType::rhone_price),

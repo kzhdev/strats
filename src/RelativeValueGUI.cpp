@@ -23,7 +23,7 @@ void RelativeValue::populateGUIInitialization(::google::protobuf::RepeatedPtrFie
 }
 
 void RelativeValue::populateParametersGrid(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const {
-    auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ContractParametersRv, "Relative Value Parameters", proto::GridType::Table, true);
+    auto [definition, rowHeader, cells] = guiThings.addWindowWithSubmitButton(definitions, WindowIds::ContractParametersRv, "Relative Value Parameters", proto::GridType::Table);
     guiThings.addHeader(definition, {
             headerCell(ContractParameterRVColumns::BidLean, "BidLean", true, proto::DataType::enum_type, "contracts"),
             headerCell(ContractParameterRVColumns::AskLean, "AskLean", true, proto::DataType::enum_type, "contracts"),
@@ -165,7 +165,7 @@ void RelativeValue::populateVectorParameterCells(::google::protobuf::RepeatedPtr
 
 void RelativeValue::populateVectorParameters(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) const {
     auto [definition, rowHeader, cells] =
-        guiThings.addWindow(definitions, WindowIds::VectorParameters, "Factor Parameters", proto::GridType::Table, true);
+        guiThings.addWindow(definitions, WindowIds::VectorParameters, "Factor Parameters", proto::GridType::Table);
 
     guiThings.addHeader(definition, {
             headerCell(VectorParametersColumns::Position, "Position", true, proto::DataType::double_type),
@@ -253,7 +253,7 @@ void RelativeValue::populateRiskMatrix(::google::protobuf::RepeatedPtrField<::Py
 }
 
 void RelativeValue::populateHedgeRatios(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) const {
-    auto [definition, rowHeader, cells] = guiThings.addWindow(definitions, WindowIds::HedgeRatios, "Hedge Ratios", proto::GridType::Matrix, true);
+    auto [definition, rowHeader, cells] = guiThings.addWindow(definitions, WindowIds::HedgeRatios, "Hedge Ratios", proto::GridType::Matrix);
 
     for (uint32_t index = _viperConfig._indexOfFirstTradedContract; index < _viperConfig._allContracts.size(); ++index) {
         ConfigContract& contract = _viperConfig._allContracts[index];
@@ -267,7 +267,7 @@ void RelativeValue::populateHedgeRatios(::google::protobuf::RepeatedPtrField<::P
 }
 
 void RelativeValue::populateFactorHedged(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) const {
-    auto [definition, rowHeader, cells] = guiThings.addWindow(definitions, WindowIds::FactorHedged, "Factor hedged", proto::GridType::Matrix, true);
+    auto [definition, rowHeader, cells] = guiThings.addWindow(definitions, WindowIds::FactorHedged, "Factor hedged", proto::GridType::Matrix);
 
     for (uint32_t index = _viperConfig._indexOfFirstTradedContract; index < _viperConfig._allContracts.size(); ++index) {
         ConfigContract& contract = _viperConfig._allContracts[index];
@@ -280,7 +280,7 @@ void RelativeValue::populateFactorHedged(::google::protobuf::RepeatedPtrField<::
 }
 
 void RelativeValue::populateQuoteSizes(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) const {
-    auto [definition, rowHeader, cells] = guiThings.addWindow(definitions, WindowIds::QuoteSizes, "Quote sizes", proto::GridType::Matrix, true);
+    auto [definition, rowHeader, cells] = guiThings.addWindow(definitions, WindowIds::QuoteSizes, "Quote sizes", proto::GridType::Matrix);
     for (uint32_t index = _viperConfig._indexOfFirstTradedContract; index < _viperConfig._allContracts.size(); ++index) {
         ConfigContract& contract = _viperConfig._allContracts[index];
         guiThings.addColumnHeaderCell(WindowIds::QuoteSizes, definition->mutable_columnheader(), index, contract._name, true, proto::DataType::double_type);
@@ -292,7 +292,7 @@ void RelativeValue::populateQuoteSizes(::google::protobuf::RepeatedPtrField<::Py
 }
 
 void RelativeValue::populateCommissions(::google::protobuf::RepeatedPtrField<::Python::proto::GridDefinition>* definitions) const {
-    auto [definition, rowHeader, cells] = guiThings.addWindow(definitions, WindowIds::Commissions, "Commissions", proto::GridType::Matrix, true);
+    auto [definition, rowHeader, cells] = guiThings.addWindow(definitions, WindowIds::Commissions, "Commissions", proto::GridType::Matrix);
 
     for (uint32_t index = _viperConfig._indexOfFirstTradedContract; index < _viperConfig._allContracts.size(); ++index) {
         ConfigContract& contract = _viperConfig._allContracts[index];

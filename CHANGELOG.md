@@ -1,3 +1,6 @@
+#Version 1.55.2
+- Disable subscription based GUI updates
+
 #Version 1.55.1
 - Fix sending large chart histories cause internal heartbeats timed out
 

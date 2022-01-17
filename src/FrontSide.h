@@ -347,11 +347,13 @@ public:
 
     void sendStrategyState(ViperStrategyBase* strategy) {
         strategy->sendStateToGUI([this](proto::GridUpdate& message, WindowIds windowId) {
-            for (auto& subscription : _updateSubscriptions[toUInt(windowId)]) {
-                _clientAcceptor->sendGridUpdate(message, subscription.get());
-            }
+//            for (auto& subscription : _updateSubscriptions[toUInt(windowId)]) {
+//                _clientAcceptor->sendGridUpdate(message, subscription.get());
+//            }
+            _clientAcceptor->sendGridUpdate(message);
         }, [this](WindowIds windowId) {
-            return !_updateSubscriptions[toUInt(windowId)].empty();
+//            return !_updateSubscriptions[toUInt(windowId)].empty();
+            return true;
         });
     }
 
@@ -430,13 +432,14 @@ public:
     }
 
     void sendPositionsToGui() {
-        if (!_updateSubscriptions[toUInt(WindowIds::PositionInOutrights)].empty()) {
+//        if (!_updateSubscriptions[toUInt(WindowIds::PositionInOutrights)].empty()) {
             proto::GridUpdate message;
             _guiThings.updatePositions(message);
-            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::PositionInOutrights)]) {
-                _clientAcceptor->sendGridUpdate(message, subscription.get());
-            }
-        }
+//            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::PositionInOutrights)]) {
+//                _clientAcceptor->sendGridUpdate(message, subscription.get());
+//            }
+            _clientAcceptor->sendGridUpdate(message);
+//        }
     }
 
     bool checkAndActOnPnlForStrategy(StrategyId strategyID, bool onFill, bool onParamUpdate, bool checkTotalLimitsRequired, bool& strategyPnlBreached) {
@@ -514,18 +517,19 @@ public:
                 hf::price_t price = getOverdeterminedPrice(contractIndex);
                 if (_pnlCalculator.hasDifferentMarkPrice(contractIndex, price)) {
                     _pnlCalculator.recalculateOpenPnl(contractIndex, price);
-                    if (!_updateSubscriptions[toUInt(WindowIds::PnlDetail)].empty()) {
+//                    if (!_updateSubscriptions[toUInt(WindowIds::PnlDetail)].empty()) {
                         for (auto* strategy : _strategies) {
                             sendPnlDataToGui(contractIndex, strategy->strategyId());
                         }
-                    }
+//                    }
                     checkAndActOnPnl(false);
                     _canSendPnl = true;
                 }
             }
         }
 
-        if (!_updateSubscriptions[toUInt(WindowIds::PNL)].empty() && (globalUpdatesNeeded | (sendPnlPending & _canSendPnl))) {
+        if (/*!_updateSubscriptions[toUInt(WindowIds::PNL)].empty() && */
+            (globalUpdatesNeeded | (sendPnlPending & _canSendPnl))) {
             sendAggregatePnLDataToGui();
         }
     }
@@ -719,27 +723,29 @@ public:
                     break;
                 }
                 case ViperMessageType::AuctionMDUpdate: {
-                    if (!_updateSubscriptions[toUInt(WindowIds::GTCManagement)].empty()) {
+//                    if (!_updateSubscriptions[toUInt(WindowIds::GTCManagement)].empty()) {
                         const AuctionMDUpdate& auctionMDUpdate = reinterpret_cast<AuctionMDUpdate &>(message._data[0]);
                         proto::GridUpdate gridUpdate;
                         if(_guiThings.tryPopulateAuctionMDUpdate(auctionMDUpdate, gridUpdate)) {
-                            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::GTCManagement)]) {
-                                _clientAcceptor->sendGridUpdate(gridUpdate, subscription.get());
-                            }
+//                            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::GTCManagement)]) {
+//                                _clientAcceptor->sendGridUpdate(gridUpdate, subscription.get());
+//                            }
+                            _clientAcceptor->sendGridUpdate(gridUpdate);
                         }
-                    }
+//                    }
                     break;
                 }
                 case ViperMessageType::NumGTCUpdate: {
-                    if (!_updateSubscriptions[toUInt(WindowIds::GTCManagement)].empty()) {
+//                    if (!_updateSubscriptions[toUInt(WindowIds::GTCManagement)].empty()) {
                         const GenericMessage& numGTCs = reinterpret_cast<GenericMessage&>(message._data[0]);
                         proto::GridUpdate gridUpdate;
                         if (_guiThings.tryPopulateNumGTCUpdate(numGTCs, gridUpdate)) {
-                            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::GTCManagement)]) {
-                                _clientAcceptor->sendGridUpdate(gridUpdate, subscription.get());
-                            }
+//                            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::GTCManagement)]) {
+//                                _clientAcceptor->sendGridUpdate(gridUpdate, subscription.get());
+//                            }
+                            _clientAcceptor->sendGridUpdate(gridUpdate);
                         }
-                    }
+//                    }
                     break;
                 }
                 case ViperMessageType::ChangeUseGTC: {
@@ -972,36 +978,41 @@ public:
 
     void sendQuoteSizesToGUI() {
         auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
-        if (!_updateSubscriptions[toUInt(WindowIds::QuoteSizes)].empty()) {
+//        if (!_updateSubscriptions[toUInt(WindowIds::QuoteSizes)].empty()) {
             proto::GridUpdate message = relativeValue->getQuoteSizeUpdate();
-            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::QuoteSizes)]) {
-                _clientAcceptor->sendGridUpdate(message, subscription.get());
-            }
-        }
-        if (!_updateSubscriptions[toUInt(WindowIds::HedgeRatios)].empty()) {
+//            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::QuoteSizes)]) {
+//                _clientAcceptor->sendGridUpdate(message, subscription.get());
+//            }
+            _clientAcceptor->sendGridUpdate(message);
+//        }
+//        if (!_updateSubscriptions[toUInt(WindowIds::HedgeRatios)].empty()) {
             proto::GridUpdate hedgeRatios = relativeValue->getHedgeRatiosUpdate();
-            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::HedgeRatios)]) {
-                _clientAcceptor->sendGridUpdate(hedgeRatios, subscription.get());
-            }
-        }
-        if (!_updateSubscriptions[toUInt(WindowIds::FactorHedged)].empty()) {
+//            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::HedgeRatios)]) {
+//                _clientAcceptor->sendGridUpdate(hedgeRatios, subscription.get());
+//            }
+            _clientAcceptor->sendGridUpdate(hedgeRatios);
+//        }
+//        if (!_updateSubscriptions[toUInt(WindowIds::FactorHedged)].empty()) {
             proto::GridUpdate factorHedged = relativeValue->getFactorHedgedUpdate();
-            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::FactorHedged)]) {
-                _clientAcceptor->sendGridUpdate(factorHedged, subscription.get());
-            }
-        }
-        if (!_updateSubscriptions[toUInt(WindowIds::ContractParametersRv)].empty()) {
+//            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::FactorHedged)]) {
+//                _clientAcceptor->sendGridUpdate(factorHedged, subscription.get());
+//            }
+            _clientAcceptor->sendGridUpdate(factorHedged);
+//        }
+//        if (!_updateSubscriptions[toUInt(WindowIds::ContractParametersRv)].empty()) {
             proto::GridUpdate rvParameters = relativeValue->getExtraContractWidth_PctStfMove_MaxTicksThroughMarket_Update();
-            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::ContractParametersRv)]) {
-                _clientAcceptor->sendGridUpdate(rvParameters, subscription.get());
-            }
-        }
-        if (!_updateSubscriptions[toUInt(WindowIds::Commissions)].empty()) {
+//            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::ContractParametersRv)]) {
+//                _clientAcceptor->sendGridUpdate(rvParameters, subscription.get());
+//            }
+            _clientAcceptor->sendGridUpdate(rvParameters);
+//        }
+//        if (!_updateSubscriptions[toUInt(WindowIds::Commissions)].empty()) {
             proto::GridUpdate commission = relativeValue->getCommissionUpdate();
-            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::Commissions)]) {
-                _clientAcceptor->sendGridUpdate(commission, subscription.get());
-            }
-        }
+//            for (auto& subscription: _updateSubscriptions[toUInt(WindowIds::Commissions)]) {
+//                _clientAcceptor->sendGridUpdate(commission, subscription.get());
+//            }
+            _clientAcceptor->sendGridUpdate(commission);
+//        }
     }
 
     void sendPlaySound(SoundId id) {
@@ -1324,12 +1335,12 @@ public:
         }
 
         if (BOOST_LIKELY(fill._type != FillType::Phantom)) {
-            if (!_updateSubscriptions[toUInt(WindowIds::PNL)].empty()) {
+//            if (!_updateSubscriptions[toUInt(WindowIds::PNL)].empty()) {
                 sendAggregatePnLDataToGui(fill._strategy);
-            }
-            if (!_updateSubscriptions[toUInt(WindowIds::PnlDetail)].empty()) {
+//            }
+//            if (!_updateSubscriptions[toUInt(WindowIds::PnlDetail)].empty()) {
                 sendPnlDataToGui(fill._contractId, fill._strategy);
-            }
+//            }
         }
 
         _fillRateChecker.expireEntries(now);
@@ -1375,9 +1386,10 @@ public:
 
     void sendAggregatePnLDataToGui() {
         auto message = createAggregatePnlUpdate();
-        for (auto connection : _updateSubscriptions[toUInt(WindowIds::PNL)]) {
-            _clientAcceptor->sendGridUpdate(message, connection.get());
-        }
+//        for (auto connection : _updateSubscriptions[toUInt(WindowIds::PNL)]) {
+//            _clientAcceptor->sendGridUpdate(message, connection.get());
+//        }
+        _clientAcceptor->sendGridUpdate(message);
     }
 
     void sendAggregatePnLDataToGui(ClientConnection* connection) {
@@ -1396,9 +1408,10 @@ public:
     void sendPnlToGui(StrategyId strategy, const Pnl& pnl, const Pnl& totalPnl) {
         proto::GridUpdate pnlMessage;
         _guiThings.populatePnlUpdate(pnlMessage, strategy, pnl, totalPnl);
-        for (auto connection : _updateSubscriptions[toUInt(WindowIds::PNL)]) {
-            _clientAcceptor->sendGridUpdate(pnlMessage, connection.get());
-        }
+//        for (auto connection : _updateSubscriptions[toUInt(WindowIds::PNL)]) {
+//            _clientAcceptor->sendGridUpdate(pnlMessage, connection.get());
+//        }
+        _clientAcceptor->sendGridUpdate(pnlMessage);
     }
 
     void sendPnlToGui(StrategyId strategy, const Pnl& pnl, const Pnl& totalPnl, ClientConnection* connection) {
@@ -1410,9 +1423,10 @@ public:
     void sendPnlDetailToGui(StrategyId id, uint32_t contractIndex, Pnl& pnl, hf::price_t totalPnl) {
         proto::GridUpdate pnlDetailMessage;
         _guiThings.populatePnlDetailUpdate(pnlDetailMessage, id, contractIndex, pnl, totalPnl);
-        for (auto connection : _updateSubscriptions[toUInt(WindowIds::PnlDetail)]) {
-            _clientAcceptor->sendGridUpdate(pnlDetailMessage, connection.get());
-        }
+//        for (auto connection : _updateSubscriptions[toUInt(WindowIds::PnlDetail)]) {
+//            _clientAcceptor->sendGridUpdate(pnlDetailMessage, connection.get());
+//        }
+        _clientAcceptor->sendGridUpdate(pnlDetailMessage);
     }
 
     void sendPnlDetailToGui(StrategyId id, uint32_t contractIndex, Pnl& pnl, hf::price_t totalPnl, ClientConnection* connection) {
@@ -1428,13 +1442,14 @@ public:
     }
 
     void sendMessageCountsToGui() {
-        if (!_updateSubscriptions[toUInt(WindowIds::MessagesCounts)].empty()) {
+//        if (!_updateSubscriptions[toUInt(WindowIds::MessagesCounts)].empty()) {
             proto::GridUpdate message;
             _guiThings.populateMessageCountsUpdate(message, _executor);
-            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::MessagesCounts)]) {
-                _clientAcceptor->sendGridUpdate(message, subscription.get());
-            }
-        }
+//            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::MessagesCounts)]) {
+//                _clientAcceptor->sendGridUpdate(message, subscription.get());
+//            }
+            _clientAcceptor->sendGridUpdate(message);
+//        }
     }
 
     void sendErrorMessage(ErrorMessage& m, int32_t connectionId = -1) {
@@ -2136,11 +2151,12 @@ public:
         gu._oldValues.push_back(*cell);
         cell->set_value(std::to_string(isOn));
         sendChangeToAudit(toUInt(WindowIds::VectorParameters), gu);
-        if (!_updateSubscriptions[toUInt(WindowIds::VectorParameters)].empty()) {
-            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::VectorParameters)]) {
-                _clientAcceptor->sendGridUpdate(gu._update, subscription.get());
-            }
-        }
+//        if (!_updateSubscriptions[toUInt(WindowIds::VectorParameters)].empty()) {
+//            for (auto& subscription : _updateSubscriptions[toUInt(WindowIds::VectorParameters)]) {
+//                _clientAcceptor->sendGridUpdate(gu._update, subscription.get());
+//            }
+        _clientAcceptor->sendGridUpdate(gu._update);
+//        }
     }
 
     void sendChartHistories(int32_t connectionId) {
@@ -2155,6 +2171,10 @@ public:
     }
 
     void onSubscribeGridUpdate(const std::shared_ptr<ClientConnection>& connection, uint32_t gridId) {
+        LOG(0, "Something wrong. Grid subscription should have turned off. Client {i1} gridId={i2}", connection->m_fd, gridId)
+        sendErrorMessage(boost::str(boost::format("Something wrong. Grid subscription should have turned off. Client: %1% gridId=%2%") % connection->getUserName() % gridId), ErrorType::Critical, connection.get());
+        return;
+
         LOG(0, "Client {i1} subscribe grid update. gridId={i2}", connection->m_fd, gridId)
         _updateSubscriptions[gridId].emplace(connection);
         switch (gridId) {
@@ -2228,6 +2248,8 @@ public:
     }
 
     void onUnsubscribeGridUpdate(const std::shared_ptr<ClientConnection>& connection, uint32_t gridId) {
+        return;
+
         LOG(0, "Client {i1} unsubscribe grid update. gridId={i2}", connection->m_fd, gridId)
         auto& subscriptionWindows = _guiThings.subscriptionWindows();
         for (auto iter = subscriptionWindows.begin(); iter != subscriptionWindows.end(); ++iter) {
