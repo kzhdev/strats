@@ -1,5 +1,7 @@
 #Version 1.55.2
 - Disable subscription based GUI updates
+- Changed Position grid cells to readonly
+- Fix an issue where slack levels are lost when stacker quote quantity change on same price, which left orders unmanaged
 
 #Version 1.55.1
 - Fix sending large chart histories cause internal heartbeats timed out
