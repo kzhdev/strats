@@ -742,7 +742,7 @@ public:
             if (std::abs(vectorPosition) > limit) {
                 sendErrorMessage(boost::str(boost::format(
                         "RV - not within vector position limits. Vector=%1%, Position=%2%, Limit=%3%")
-                        % getVectorName(vectorIndex) % vectorPosition % limit), ErrorType::Critical);
+                        % _vectorNames[vectorIndex] % vectorPosition % limit), ErrorType::Critical);
                 LOG(0, "Vector position not within limits. Vector={V[i1]} Position={d1} Limit={d2}", getVectorName(vectorIndex), vectorPosition, limit)
                 withinLimits = false;
             }
