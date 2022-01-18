@@ -311,7 +311,8 @@ public:
             } else if ((now_in_cycles - _pendingShutdown) >= GetCyclesFromSeconds(30, _frequency)) {
                 killProcess();
             }
-        } else {
+        } else if (_pendingShutdown) {
+            _resourceNotResponsive.reset();
             _pendingShutdown = 0;
         }
     }
@@ -337,10 +338,11 @@ public:
         if (last > 0) {
             uint64_t elapsed = now - last;
             breach = elapsed > _maxInternalHeartbeatTime;
-            if (breach & !_pendingShutdown) {
+            if (breach & !_resourceNotResponsive.test(id)) {
                 std::string message = boost::str(boost::format("%1% not responsive.") % toString(static_cast<ResourceId>(id)));
                 sendErrorMessage(message, ErrorType::Critical);
                 logging::GetLogger().logError(message);
+                _resourceNotResponsive.set(id);
             }
         }
         return breach;
@@ -2327,6 +2329,7 @@ public:
     uint64_t _guiHeartbeatInterval;
     uint64_t _guiHeartbeatTime = 0;
     uint64_t _pendingShutdown = 0;
+    std::bitset<toUInt(ResourceId::FrontSide)> _resourceNotResponsive;
 
     struct LoginInfo {
         uint64_t _loginTime = 0;
