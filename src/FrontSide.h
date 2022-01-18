@@ -306,8 +306,13 @@ public:
                         % l.q % ToDollars(l.pr) % l.ext.implied.impliedQtyNotTrackedByQueuePosition));
                 }
             }
-            sleep(10);
-            killProcess();
+            if (!_pendingShutdown) {
+                _pendingShutdown = now_in_cycles;
+            } else if ((now_in_cycles - _pendingShutdown) >= GetCyclesFromSeconds(30, _frequency)) {
+                killProcess();
+            }
+        } else {
+            _pendingShutdown = 0;
         }
     }
 
@@ -1991,10 +1996,8 @@ public:
                 // set shift dependent values correctly
                 auto shift = toUInt(_viperConfig._currentShift);
                 if (_firstLogin) {
-                    if (_clientAcceptor->getNumberConnection() == 1) {
-                        sendGenericMessageToExecutor(ViperMessageType::Login, _viperConfig._currentTrader, shift);
-                        _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, shift);
-                    }
+                    sendGenericMessageToExecutor(ViperMessageType::Login, _viperConfig._currentTrader, shift);
+                    _pnlLimitsChecker.changeLimitsOnShiftChanged(_viperConfig, shift);
                     _firstLogin = false;
                 }
                 switchGlobalConfigAndSendUpdateToGUI(shift, &connection);
@@ -2019,7 +2022,10 @@ public:
     }
 
     void onGuiInitializationAccepted() {
-        sendGuiInitialized();
+        if (!_guiInitialized) {
+            sendGuiInitialized();
+            _guiInitialized = false;
+        }
     }
 
     void onGuiInitializationRejected() {
@@ -2320,6 +2326,7 @@ public:
     static constexpr int DEFAULT_GUI_HEARTBEAT_INTERVAL_IN_MS = 900;
     uint64_t _guiHeartbeatInterval;
     uint64_t _guiHeartbeatTime = 0;
+    uint64_t _pendingShutdown = 0;
 
     struct LoginInfo {
         uint64_t _loginTime = 0;
@@ -2333,6 +2340,7 @@ public:
 
     bool _canSendPnl = false;
     bool _firstLogin = true;
+    bool _guiInitialized = false;
 
     std::unordered_map<uint32_t, uint32_t> _internalIdToMarketMakerConfigOffset;
 
