@@ -1,3 +1,7 @@
+#Version 1.55.2.1
+- If any component is not responsive, kill viper after 5 minutes to give us some time to attach gdb
+- FrontSide sends GUIInitialized event to Executor only when the first GUI connected
+
 #Version 1.55.2
 - Disable subscription based GUI updates
 - Changed Position grid cells to readonly
