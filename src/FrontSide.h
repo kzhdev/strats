@@ -337,7 +337,7 @@ public:
         if (last > 0) {
             uint64_t elapsed = now - last;
             breach = elapsed > _maxInternalHeartbeatTime;
-            if (breach) {
+            if (breach & !_pendingShutdown) {
                 std::string message = boost::str(boost::format("%1% not responsive.") % toString(static_cast<ResourceId>(id)));
                 sendErrorMessage(message, ErrorType::Critical);
                 logging::GetLogger().logError(message);
