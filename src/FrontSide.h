@@ -312,6 +312,9 @@ public:
                 killProcess();
             }
         } else if (_pendingShutdown) {
+            std::string message = "All components are responsive";
+            sendErrorMessage(message, ErrorType::Critical);
+            logging::GetLogger().logError(message);
             _resourceNotResponsive.reset();
             _pendingShutdown = 0;
         }
@@ -2026,7 +2029,7 @@ public:
     void onGuiInitializationAccepted() {
         if (!_guiInitialized) {
             sendGuiInitialized();
-            _guiInitialized = false;
+            _guiInitialized = true;
         }
     }
 
