@@ -172,18 +172,18 @@ void ClientsAcceptor::runIteration() {
                 continue;
             }
 
-            (m_monitor.m_traderConnections[fd] = std::make_shared<ClientConnection>(fd));
+            (ServerClientMessenger::instance()->m_traderConnections[fd] = std::make_shared<ClientConnection>(fd));
             LOG_INFO(boost::format("Socket %1% created") % fd);
             continue;
         }
 
         const auto fd = event.data.fd;
-        BOOST_ASSERT(m_monitor.m_traderConnections.find(fd) != std::end(m_monitor.m_traderConnections));
+        BOOST_ASSERT(ServerClientMessenger::instance()->m_traderConnections.find(fd) != std::end(ServerClientMessenger::instance()->m_traderConnections));
 
         //_LOG_DEBUG(boost::format("clientSocketFD=%1%") % fd);
 
-        auto it = m_monitor.m_traderConnections.find(fd);
-        if (it == std::end(m_monitor.m_traderConnections)) {
+        auto it = ServerClientMessenger::instance()->m_traderConnections.find(fd);
+        if (it == std::end(ServerClientMessenger::instance()->m_traderConnections)) {
             ::close(fd);
             BOOST_ASSERT(false);
             continue;
@@ -358,31 +358,6 @@ void ClientsAcceptor::runIteration() {
                 break;
         }
     }
-    //doHeartBeats();
-}
-
-
-void ClientsAcceptor::doHeartBeats() {
-    uint64_t now = clockUtil::GetCycles();
-    for (auto iter = m_monitor.m_traderConnections.begin(); iter != m_monitor.m_traderConnections.end();) {
-        ClientConnection& conn = *iter->second;
-        if (conn._beatToSend._nextTime < now) {
-            sendHeartBeat(conn);
-            conn._beatToSend._nextTime = now + conn._beatToSend._interval;
-        }
-        if (conn._beatToReceive._nextTime + conn._beatToReceive._tolerance < now) {
-            LOG_INFO(boost::str(boost::format("GUI timed out. connectionId=%1%") % conn.m_fd));
-            onConnectionError(iter);
-        } else {
-            ++iter;
-        }
-    }
-}
-
-void ClientsAcceptor::sendHeartBeat(ClientConnection& conn) {
-    proto::EmptyMessage message;
-    message.set_messageid(0);
-    ServerClientMessenger::instance()->sendMessageToClient(conn, proto::SERVER_MESSAGE_TYPE_HEARTBEAT, message);
 }
 
 void ClientsAcceptor::sendOtherRequest(ViperMessageType mt, uint32_t messageID, ClientConnectionIterT& iter) {
@@ -398,7 +373,7 @@ void ClientsAcceptor::onConnectionError(ClientConnectionIterT& iter) {
 void ClientsAcceptor::removeTraderConnection(ClientConnectionIterT& iter) {
     _frontSide->onRemoveClientConnection(iter->second);
     int fd = iter->second->getFileDescriptor();
-    iter = m_monitor.m_traderConnections.erase(iter);
+    iter = ServerClientMessenger::instance()->m_traderConnections.erase(iter);
     ::close(fd);
     LOG_INFO(boost::format("Socket %1% erased") % fd);
     if (!hasConnection()) {
@@ -418,19 +393,13 @@ void ClientsAcceptor::onDecodeMessageError(ClientConnectionIterT& it, proto::GUI
 }
 
 bool ClientsAcceptor::hasConnection() const noexcept {
-    return !m_monitor.m_traderConnections.empty();
+    return !ServerClientMessenger::instance()->m_traderConnections.empty();
 }
 
 void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data, ClientConnection* connection) {
     if (hasConnection()) {
         data.set_messageid(0);
-        if (!connection) {
-            sendMessageToAllConnection([&data](ClientConnection* connection) {
-                ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
-            });
-        } else {
-            ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
-        }
+        ServerClientMessenger::instance()->sendMessageToClient(connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send GridUpdate but do not have connection. %1%") %  data.ShortDebugString()));
     }
@@ -439,17 +408,7 @@ void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data, ClientConnection* 
 void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data, int32_t connectionId) {
     if (hasConnection()) {
         data.set_messageid(0);
-        if (connectionId < 0) {
-            sendMessageToAllConnection([&data](ClientConnection* connection) {
-                ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
-            });
-        } else {
-            auto iter = m_monitor.m_traderConnections.find(connectionId);
-            if (iter != m_monitor.m_traderConnections.end()) {
-                auto& connection = *iter->second;
-                ServerClientMessenger::instance()->sendMessageToClient(connection, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
-            }
-        }
+        ServerClientMessenger::instance()->sendMessageToClient(connectionId, proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, data);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send GridUpdate but do not have connection. %1%") %  data.ShortDebugString()));
     }
@@ -457,29 +416,21 @@ void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data, int32_t connection
 
 void ClientsAcceptor::sendChartDataPoints(proto::DataSeriesPointSet& data, std::ostringstream& streamMessage) {
     if (hasConnection()) {
-        sendMessageToAllConnection([&data, &streamMessage](ClientConnection* connection) {
-            ServerClientMessenger::instance()->sendMessageToClient(*connection,
-                                                                   proto::SERVER_MESSAGE_TYPE_DATA_POINT_SET,
-                                                                   data, streamMessage);
-        });
+        ServerClientMessenger::instance()->sendMessageToClient(nullptr,
+                                                               proto::SERVER_MESSAGE_TYPE_DATA_POINT_SET,
+                                                               data, streamMessage);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send ChartDataPoint but do not have connection. %1%") % data.ShortDebugString()));
     }
 }
 
 void ClientsAcceptor::sendChartHistories(proto::DataSeriesReplay& data, int32_t connectionId) {
-    auto iter = m_monitor.m_traderConnections.find(connectionId);
-    if (iter != m_monitor.m_traderConnections.end()) {
-        ServerClientMessenger::instance()->sendMessageToClient(*iter->second, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY, data);
-    }
+    ServerClientMessenger::instance()->sendMessageToClient(connectionId, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY, data);
 }
 
 void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
     if (hasConnection()) {
-        sendMessageToAllConnection([strategy, action, &value, gridId, accepted](ClientConnection* connection) {
-            ServerClientMessenger::instance()->sendSwitchChangeReply(*connection, strategy, action, value, gridId,
-                                                                     accepted);
-        });
+        ServerClientMessenger::instance()->sendSwitchChangeReply(strategy, action, value, gridId, accepted);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send SwitchReply but do not have connection. ")));
     }
@@ -497,8 +448,8 @@ void ClientsAcceptor::handleLoginAccepted(proto::GUIInitialization& m, uint64_t 
 
 void ClientsAcceptor::handleLoginRejected(int32_t connectionId) {
     if (hasConnection()) {
-        auto iter = m_monitor.m_traderConnections.find(connectionId);
-        if (BOOST_LIKELY(iter != m_monitor.m_traderConnections.end())) {
+        auto iter = ServerClientMessenger::instance()->m_traderConnections.find(connectionId);
+        if (BOOST_LIKELY(iter != ServerClientMessenger::instance()->m_traderConnections.end())) {
             ClientConnection* connection = iter->second.get();
             ServerClientMessenger::instance()->doSendClientLoginReject(*connection, proto::ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN, "strategies reject", 0);
         } else {
@@ -520,17 +471,9 @@ void ClientsAcceptor::handleLoggedOut(ClientConnectionIterT& connIter) {
 
 void ClientsAcceptor::sendGridChangeReply(proto::GridUpdate& message, ClientConnection* connection) {
     if (hasConnection()) {
-        if (!connection) {
-            sendMessageToAllConnection([&message](ClientConnection* connection) {
-                ServerClientMessenger::instance()->sendMessageToClient(*connection,
-                                                                       proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED,
-                                                                       message);
-            });
-        } else {
-            ServerClientMessenger::instance()->sendMessageToClient(*connection,
-                                                                   proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED,
-                                                                   message);
-        }
+        ServerClientMessenger::instance()->sendMessageToClient(connection,
+                                                               proto::SERVER_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED,
+                                                               message);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send GridChangeReply but do not have connection. ")));
     }
@@ -540,10 +483,8 @@ void ClientsAcceptor::sendPlaySound(uint32_t id) {
     if (hasConnection()) {
         proto::PlaySound message;
         message.set_id(id);
-        sendMessageToAllConnection([&message](ClientConnection* connection) {
-            ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_PLAY_SOUND,
-                                                                   message);
-        });
+        ServerClientMessenger::instance()->sendMessageToClient(nullptr, proto::SERVER_MESSAGE_TYPE_PLAY_SOUND,
+                                                               message);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send PlaySound but do not have connection. ")));
     }
@@ -553,10 +494,8 @@ void ClientsAcceptor::sendTraderUpdate(const char* trader) {
     if (hasConnection()) {
         proto::TraderChanged message;
         message.set_trader(trader);
-        sendMessageToAllConnection([&message](ClientConnection* connection) {
-            ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_TRADER_CHANGED,
-                                                                   message);
-        });
+        ServerClientMessenger::instance()->sendMessageToClient(nullptr, proto::SERVER_MESSAGE_TYPE_TRADER_CHANGED,
+                                                               message);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send PlaySound but do not have connection. ")));
     }
@@ -565,8 +504,8 @@ void ClientsAcceptor::sendTraderUpdate(const char* trader) {
 void ClientsAcceptor::sendClients() {
     if (hasConnection()) {
         std::string clients;
-        size_t sz = m_monitor.m_traderConnections.size();
-        for (const auto& kvp : m_monitor.m_traderConnections) {
+        size_t sz = ServerClientMessenger::instance()->m_traderConnections.size();
+        for (const auto& kvp : ServerClientMessenger::instance()->m_traderConnections) {
             clients.append(kvp.second->getUserName());
             if (--sz > 0) {
                 clients.append(",");
@@ -574,10 +513,8 @@ void ClientsAcceptor::sendClients() {
         }
         proto::Clients message;
         message.set_clients(clients);
-        sendMessageToAllConnection([&message](ClientConnection* connection) {
-            ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_CLIENT_COUNT,
-                                                                   message);
-        });
+        ServerClientMessenger::instance()->sendMessageToClient(nullptr, proto::SERVER_MESSAGE_TYPE_CLIENT_COUNT,
+                                                               message);
     }
 }
 
@@ -585,15 +522,13 @@ void ClientsAcceptor::sendGuiHeartbeat(uint64_t utc_ts_in_nanos) {
     if(hasConnection()) {
         proto::HeartBeatMessage heartBeatMessage;
         heartBeatMessage.set_timestamp(utc_ts_in_nanos);
-        sendMessageToAllConnection([&heartBeatMessage](ClientConnection* connection) {
-            ServerClientMessenger::instance()->sendMessageToClient(*connection, proto::SERVER_MESSAGE_TYPE_HEARTBEAT,
-                                                                   heartBeatMessage);
-        });
+        ServerClientMessenger::instance()->sendMessageToClient(nullptr, proto::SERVER_MESSAGE_TYPE_HEARTBEAT,
+                                                               heartBeatMessage);
     }
 }
 
 void ClientsAcceptor::checkConnectionHealth() {
-    for (auto iter = m_monitor.m_traderConnections.begin(); iter != m_monitor.m_traderConnections.end();) {
+    for (auto iter = ServerClientMessenger::instance()->m_traderConnections.begin(); iter != ServerClientMessenger::instance()->m_traderConnections.end();) {
         auto connection = iter->second.get();
         if (connection->isLoggedIn() && connection->isDisconnected()) {
             onConnectionError(iter);
@@ -604,15 +539,15 @@ void ClientsAcceptor::checkConnectionHealth() {
 }
 
 const char* const ClientsAcceptor::getConnectionUserName(int32_t connectionId) const noexcept {
-    auto iter = m_monitor.m_traderConnections.find(connectionId);
-    if (iter == m_monitor.m_traderConnections.end()) {
+    auto iter = ServerClientMessenger::instance()->m_traderConnections.find(connectionId);
+    if (iter == ServerClientMessenger::instance()->m_traderConnections.end()) {
         return nullptr;
     }
     return iter->second->getUserName().c_str();
 }
 
 uint32_t ClientsAcceptor::getNumberConnection() const noexcept {
-    return m_monitor.m_traderConnections.size();
+    return ServerClientMessenger::instance()->m_traderConnections.size();
 }
 
 }
