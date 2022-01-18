@@ -68,7 +68,7 @@ private:
     std::string _userName;
 };
 
-using ClientConnectionIterT = std::map<int, std::shared_ptr<ClientConnection>>::iterator;
+using ClientConnectionIterT = std::unordered_map<int, std::shared_ptr<ClientConnection>>::iterator;
 
 class ClientsAcceptor {
 public:
@@ -101,16 +101,7 @@ private:
     void removeTraderConnection(ClientConnectionIterT& traderConnection);
     void onConnectionError(ClientConnectionIterT& traderConnection);
     void sendOtherRequest(ViperMessageType mt, uint32_t messageID, ClientConnectionIterT& connection);
-    void sendHeartBeat(ClientConnection& conn);
     bool hasConnection() const noexcept;
-
-    template<typename SendFunc>
-    void sendMessageToAllConnection(SendFunc&& send) {
-        for (auto& kvp : m_monitor.m_traderConnections) {
-            ClientConnection* connection = kvp.second.get();
-            send(connection);
-        }
-    }
 
     struct epoll_event events[100]{};
 
@@ -121,7 +112,6 @@ private:
         int port = 0;
         int epollFD = -1;
         int listenFD = -1;
-        std::map<int, std::shared_ptr<ClientConnection>> m_traderConnections;
     } m_monitor;
 
     FrontSide* _frontSide;

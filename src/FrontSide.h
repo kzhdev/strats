@@ -312,6 +312,7 @@ public:
                 killProcess();
             }
         } else if (_pendingShutdown) {
+            sendErrorMessage("All components are not responsive.", ErrorType::Critical);
             _resourceNotResponsive.reset();
             _pendingShutdown = 0;
         }
