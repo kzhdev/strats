@@ -70,7 +70,7 @@ private:
     // MD handing
     void onMDUpdate(const md::MDUpdateEvent& event, uint32_t internalId, hf::batch_id_t bid);
     void onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent& event, uint32_t internalId);
-    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId);
+    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId, hf::batch_id_t bid);
     void handleUncommonMDEvent(const md::MDEvent& event, const md::MDBatch& batch, uint32_t internalId) {}
     void onEndMDBatch(hf::batch_id_t bid);
 

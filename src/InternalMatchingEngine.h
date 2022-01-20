@@ -2131,6 +2131,12 @@ public:
         _om[Side].template onMDUpdate<Side>(book, priceChangeIndex, qtyChangeIndex);
     }
 
+    template<typename BookT>
+    void tryConstructStackLevels(BookT& books) {
+        _om[BID].template constructStackLevels<BID>(books);
+        _om[ASK].template constructStackLevels<ASK>(books);
+    }
+
 #ifdef IS_DEV
     std::string getContractName() {
         return _name;

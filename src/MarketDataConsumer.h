@@ -115,7 +115,7 @@ public:
                     }
                     case md::MDEvent::TYPE::STATUS: {
                         const auto& event = static_cast<const md::MDStatusEvent&> (mde);
-                        underlying().onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId);
+                        underlying().onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId, batch.bid);
                         _mdUpdated.emplace(internalId);
                         break;
                     }
