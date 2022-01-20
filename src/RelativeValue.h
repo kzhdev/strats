@@ -1635,7 +1635,7 @@ public:
         }
     }
 
-    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId) {
+    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId, hf::batch_id_t bid) {
         RvContract& contract = _contracts[internalId];
         switch (event.statusType) {
             case md::MDStatusEvent::TYPE::RECOVERING:

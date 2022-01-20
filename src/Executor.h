@@ -33,6 +33,7 @@
 #include "FillRateChecker.h"
 #include <thread>
 #include "RhoneRouter.h"
+#include "TimeUtils.h"
 
 namespace Python {
 
@@ -1953,7 +1954,17 @@ public:
     void onMDLevelOverlay(const md::MDLevelOverlayEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDLimitPrice(const md::MDLimitPriceEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDVolumes(const md::MDVolumesEvent &/*event*/, const md::MDBatch &/*batch*/) {}
-    void onMDSettlementPublished(const md::MDSettlementPublishedEvent &/*event*/, const md::MDBatch &/*batch*/) {}
+
+    void onMDSettlementPublished(const md::MDSettlementPublishedEvent &event, const md::MDBatch &batch) {
+        const uint32_t internalId = sidToInternalId(event.sid);
+        if (BOOST_UNLIKELY(internalId == INVALID_INTERNAL_ID)) {
+            return;
+        }
+        const volatile auto &top = this->context().getSymbolTop(batch.venue, event.sid);
+        auto& state = _contractStates[internalId];
+        logging::GetLogger().logInfo(boost::str(boost::format("onMDSettlementPublished: %1% settlement=%2%, settle_date=%3% settlement_flag=%4% bid=%5%") % state._contract._name % event.settlementPrice % event.settlementDate % event.settlementFlags % batch.bid));
+    }
+
     void onMDChannelStateChange(const md::MDChannelStateChangeEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDTransactionEvent(const md::MDTransactionEvent &/*event*/, const md::MDBatch &/*batch*/) {}
     void onMDFirmOrderExecutionEventBeforeFillArbitration(const md::MDFirmOrderExecutionEvent& event, const om::strategy_order_t& order, const md::MDBatch& /*batch*/) {}
@@ -2178,7 +2189,7 @@ public:
             return;
         }
 
-        onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId);
+        onMDStatus(batch.venue, batch.extSequenceNumber, event, internalId, batch.bid);
         _mdUpdated.emplace(internalId);
     }
 
@@ -2198,7 +2209,7 @@ public:
         }
     }
 
-    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId) {
+    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId, hf::batch_id_t bid) {
         ContractState& state = _contractStates[internalId];
         if (!state._contract._toMarketMake) {
             if(event.statusType == md::MDStatusEvent::TYPE::RECOVERED) {
@@ -2235,6 +2246,19 @@ public:
                 state._ime._contractCanTrade = true;
                 state._ime._contractCanCancel = true;
                 LOG(0, "Contract {C[i1]} market data recovered.", getContract(internalId))
+
+                const volatile auto &top = this->context().getSymbolTop(venue, event.sid);
+                state._contract._settlement = top.last_settle;
+                uint64_t settle_date = 0;
+                if (venue == hf::VENUE::ICE) {
+                    settle_date = top.ice.valuation_date_time / (TimeUtils::SECONDS_PER_DAY * 1000);
+                }
+                else if (venue == hf::VENUE::CME) {
+                    settle_date = top.cme.last_settle_refdate;
+                }
+                logging::GetLogger().logInfo(boost::str(boost::format("%1% settlement=%2%, settle_date=%3% settlement_flag=%4% bid=%5%") % state._contract._name % top.last_settle % settle_date % top.last_settle_flags %bid));
+
+                state._ime.tryConstructStackLevels(state._books);
                 break;
             }
             case md::MDStatusEvent::TYPE::TRADING_STATUS: {

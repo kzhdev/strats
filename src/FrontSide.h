@@ -128,7 +128,7 @@ public:
         _guiThings.init(&_viperConfig);
 
         const auto internalHeartbeat = hf::ConfigManager::getULong(config, "internal_heartbeat");
-        uint64_t internalHeartbeatPeriod = GetCyclesFromMilliSeconds(internalHeartbeat, _frequency);
+        _internalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat, _frequency);
 
         auto guiHeartbeatInMs = DEFAULT_GUI_HEARTBEAT_INTERVAL_IN_MS;
         if(config.exists("send_gui_heartbeat_interval_in_ms")) {
@@ -167,12 +167,13 @@ public:
 
         _internalHeartbeatTimestamps.resize(toUInt(ResourceId::FrontSide), 0);
         for (auto strategy : _strategies) {
-            strategy->init(_frequency, internalHeartbeatPeriod, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
+            strategy->init(_frequency, _internalHeartbeatTime, std::bind(&FrontSide::isPnlWithinLimits, this, std::placeholders::_1));
         }
 
-        _executor->init(_frequency, internalHeartbeatPeriod, transactionCapacity, _iid, economicNumberCsv);
+        _executor->init(_frequency, _internalHeartbeatTime, transactionCapacity, _iid, economicNumberCsv);
 
-        _maxInternalHeartbeatTime = GetCyclesFromMilliSeconds(internalHeartbeat * 2, _frequency);
+        auto maxInitialInternalHeartbeatMultiplier = hf::ConfigManager::getULong(config, "initial_max_internal_heartbeat_multiplier", 5);
+        _maxInternalHeartbeatTime = _internalHeartbeatTime * maxInitialInternalHeartbeatMultiplier;
 
         uint32_t clips = boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(NEGATIVE_SCALP_CLIPS));
         hf::price_t dollars = ToRhonePrice(boost::lexical_cast<uint32_t>(_viperConfig.getGlobal(NEGATIVE_SCALP_DOLLARS)));
@@ -2028,6 +2029,7 @@ public:
 
     void onGuiInitializationAccepted() {
         if (!_guiInitialized) {
+            _maxInternalHeartbeatTime = _internalHeartbeatTime * 2;
             sendGuiInitialized();
             _guiInitialized = true;
         }
@@ -2327,6 +2329,7 @@ public:
 
     std::vector<uint64_t> _internalHeartbeatTimestamps;
     uint64_t _maxInternalHeartbeatTime;
+    uint64_t _internalHeartbeatTime;
 
     static constexpr int DEFAULT_GUI_HEARTBEAT_INTERVAL_IN_MS = 900;
     uint64_t _guiHeartbeatInterval;

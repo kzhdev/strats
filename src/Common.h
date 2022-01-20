@@ -1700,7 +1700,7 @@ void HandleDebugStatusEvents(const DebugStatusEvents& dses, MDConsumer* mdConsum
         if(dse->_cmeSecurityTradingEvent != std::numeric_limits<decltype(dse->_cmeSecurityTradingEvent)>::max()){
             status.ext2.cme.securityTradingEvent = dse->_cmeSecurityTradingEvent;
         }
-        mdConsumer->onMDStatus(dse->_venue, dse->_extSeqNum, status, mdConsumer->sidToInternalId(dse->_sid));
+        mdConsumer->onMDStatus(dse->_venue, dse->_extSeqNum, status, mdConsumer->sidToInternalId(dse->_sid), 0);
         ++dse;
     }
 }

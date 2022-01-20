@@ -41,7 +41,7 @@ void MarketMaker::onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent& ev
     }
 }
 
-void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId) {
+void MarketMaker::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId, hf::batch_id_t bid) {
     auto& mm = _marketMakers[internalId];
     if (!mm._contract._toMarketMake) {
         return;

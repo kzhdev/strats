@@ -2090,7 +2090,10 @@ public:
         _overfillProtection._lastSize = size;
 
         if (BOOST_UNLIKELY(_topLevel == nullptr)) {
-            createFirstStack<Side>(price, size, false);
+            if (!createFirstStack<Side>(price, size, false)) {
+                handleInvalidTickSize(price);
+                return;
+            }
         } else if (BOOST_UNLIKELY(_bottomLevel == nullptr)) {
             // hedge was called first, _bottomLevel has not been set yet
             auto topLevel = findLevel<Side>(price);
@@ -2319,13 +2322,14 @@ public:
 
     template<uint32_t Side>
     Level* findLevel(hf::price_t price) {
-        BOOST_ASSERT(_topLevel != nullptr);
-        Level *level = _topLevel;
+        Level *level = _topLevel ? _topLevel : _stackerStart;
+        int newLevelCreated = 0;
         if (IsBetter(price, level->_price, _side)) {
             while (IsBetter(price, level->_price, _side)) {
                 if (level->before == nullptr) {
                     level->before = new Level(this, GetNextPrice<Side>(level->_price, _contract._tickSize));
                     level->before->after = level;
+                    newLevelCreated = 1;
                 }
                 level = level->before;
             }
@@ -2334,12 +2338,35 @@ public:
                 if (level->after == nullptr) {
                     level->after = new Level(this, GetPriorPrice<Side>(level->_price, _contract._tickSize));
                     level->after->before = level;
+                    newLevelCreated = 2;
                 }
                 level = level->after;
             }
         }
+
+        if (level->_price == price) {
+            if (BOOST_UNLIKELY(newLevelCreated)) {
+                // Add extra buffers on the last created level
+                if (newLevelCreated == 1) {
+                    for (auto i = 0; i < 200; ++i) {
+                        assert(level->before == nullptr);
+                        level->before = new Level(this, GetNextPrice<Side>(level->_price, _contract._tickSize));
+                        level->before->after = level;
+                        level = level->before;
+                    }
+                } else {
+                    for (auto i = 0; i < 200; ++i) {
+                        assert(level->after == nullptr);
+                        level->after = new Level(this, GetPriorPrice<Side>(level->_price, _contract._tickSize));
+                        level->after->before = level;
+                        level = level->after;
+                    }
+                }
+            }
+            return level;
+        }
         // if _tickSize is wrong, level->_price might not equals price
-        return level->_price == price ? level : nullptr;
+        return nullptr;
     }
 
     void quoteAfterPotentialOverfillConditionCleared() {
@@ -2360,9 +2387,44 @@ public:
         }
     }
 
+    template<const uint32_t Side, typename BookT>
+    void constructStackLevels(BookT& book) {
+        if (BOOST_UNLIKELY(_stackerStart == nullptr)) {
+            hf::price_t price = hf::NULL_PRICE;
+            if (book[Side].l[0].pr != hf::NULL_PRICE) {
+                price = book[Side].l[0].pr;
+            } else if (book[GetOtherSide<Side>()].l[0].pr != hf::NULL_PRICE) {
+                price = book[GetOtherSide<Side>()].l[0].pr;
+            }
+            // TODO: use settlement price if it is stable
+//            else {
+//                price = _contract._settlement;
+//            }
+
+            if (price == hf::NULL_PRICE) {
+                return;
+            }
+
+            LOG(0, "OM {C[i1]}. ConstructStack price={d1}", getContractName(), ToDollars(price))
+            const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
+            ContiguousAllocator<Level, 100 + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1> allocator;
+
+            Level* level = allocator.createObject(this, price + GetFirstPriceOffset<Side>(_contract._tickSize));
+            _stackerStart = level;
+
+            for (uint32_t levelIndex = 1; levelIndex < totalNumberOfLevel; ++levelIndex) {
+                Level* nextLevel = allocator.createObject(this, GetPriorPrice<Side>(level->_price, _contract._tickSize));
+                level->after = nextLevel;
+                nextLevel->before = level;
+                level = nextLevel;
+            }
+        }
+    }
+
     template<uint32_t Side>
-    void createFirstStack(hf::price_t price, hf::qty_t size, bool isHedge) {
-        if (_stackerStart == nullptr) {
+    bool createFirstStack(hf::price_t price, hf::qty_t size, bool isHedge) {
+        if (BOOST_UNLIKELY(_stackerStart == nullptr)) {
+            // If a market is empty and no settlement price, we will end up here
             LOG(0, "OM {C[i1]}. createFirstStack price={d1} size={i2} isHedge={i3}", getContractName(), ToDollars(price), size, isHedge)
             const uint32_t totalNumberOfLevel = _nLevels + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1;
             ContiguousAllocator<Level, 100 + 2 * NUMBER_OF_PRE_CREATED_LEVELS + 1> allocator;
@@ -2417,9 +2479,37 @@ public:
                 }
                 level = nextLevel;
             }
-        } else {
-            BOOST_ASSERT(false);
+            return true;
         }
+
+        _topLevel = findLevel<Side>(price);
+        if (BOOST_UNLIKELY(!_topLevel)) {
+            LOG(0, "OM {C[i1]}. createFirstStack Level {d1} not found", getContractName(), ToDollars(price))
+            return false;
+        }
+
+        auto& gtc = getGTCs(_topLevel->_price);
+        _topLevel->updateOnlyOneLevel(size, gtc, isHedge);
+        _topLevel->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, _topLevel->_price);
+        auto nextLevel = _topLevel->after;
+        if (!isHedge) {
+            _bottomLevel = _topLevel;
+            for (uint32_t levelIndex = 0; levelIndex < _nLevels + _maxSlackSize; ++levelIndex) {
+                nextLevel->_marketQty = _ime->_executor->getMarketQty(_side, _contract._internalId, nextLevel->_price);
+                auto& gtc = getGTCs(nextLevel->_price);
+                if (levelIndex >= _nLevels) {
+                    if (!gtc.empty()) {
+                        nextLevel->updateOnlyOneLevel(getStackSize(), gtc, false);
+                        _bottomLevel = nextLevel;
+                    }
+                } else {
+                    nextLevel->updateOnlyOneLevel(getStackSize(), gtc, false);
+                    _bottomLevel = nextLevel;
+                }
+                nextLevel = nextLevel->after;
+            }
+        }
+        return true;
     }
 
     void cancel(om::order_t* order) {

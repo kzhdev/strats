@@ -434,7 +434,7 @@ public:
     COLD void onEndOfManualFills();
     bool onGlobalConfigsUpdate(GridUpdate& update);
 
-    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent &event, uint32_t internalId);
+    void onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent &event, uint32_t internalId, hf::batch_id_t bid);
 
     // GUI update
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) override;

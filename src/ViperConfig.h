@@ -79,6 +79,7 @@ struct ConfigContract {
     std::vector<ConfigLeg> _legs;
     uint32_t _marketMakeIndex;
     int32_t _orderIncrementQty;
+    hf::price_t _settlement = hf::NULL_PRICE;
     bool _toMarketMake = false;
     bool* _useGTC;
 

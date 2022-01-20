@@ -56,7 +56,7 @@ void ArbieSpreader::onMDTrade(const md::MDBatch& batch, const md::MDTradeEvent &
     }
 }
 
-void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId) {
+void ArbieSpreader::onMDStatus(hf::VENUE venue, uint64_t extSeqNum, const md::MDStatusEvent& event, uint32_t internalId, hf::batch_id_t bid) {
     auto& contract = _contracts[internalId];
     if (!contract._usedInPath && !contract._usedInQuoting) {
         return;
