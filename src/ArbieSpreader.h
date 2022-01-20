@@ -800,7 +800,7 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
             // apply commission to external market
             if (bestHedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL && marketPrice != hf::NULL_PRICE) {
                 // apply commission to external market
-                marketPrice = applyPriceOffset<Side>(marketPrice, -pathContract._contract->_extCommission);
+                marketPrice = applyPriceOffset(marketPrice, -pathContract._contract->_extCommission, bestHedgeMarket->getSide());
             }
 
             if (marketPrice == hf::NULL_PRICE) {
@@ -1005,11 +1005,7 @@ bool ArbieSpreader::Path::canHedge(hf::qty_t size, hf::price_t& pathPrice, std::
             }
 
             if (market->getId() == MarketIds::MARKET_ID_EXTERNAL) {
-                if (market->getSide() == BID) {
-                    price = applyPriceOffset<BID>(price, -pathContract._contract->_extCommission);
-                } else {
-                    price = applyPriceOffset<ASK>(price, -pathContract._contract->_extCommission);
-                }
+                price = applyPriceOffset(price, -pathContract._contract->_extCommission, market->getSide());
             }
             pathPrice += pathContract._multiplier * price;
         }
