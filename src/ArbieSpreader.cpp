@@ -134,7 +134,7 @@ void ArbieSpreader::initializeContracts() {
                 if (!pathShortTermFares.empty()) {
                     std::string stfId;
                     for (const auto& kvp : pathShortTermFares) {
-                        stfId.append(std::to_string(kvp.second._ratio)).append("*").append(std::to_string(kvp.first));
+                        stfId.append(std::to_string(kvp.second._ratio)).append("*").append(_viperConfig._allContracts[kvp.first]._name);
                     }
 
                     stfIter = std::find_if(contract._shortTermFairOffsets.begin(),
@@ -222,6 +222,12 @@ void ArbieSpreader::initializeContracts() {
 
                     getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, contract._def._internalId);
 
+                    // [GTM-1753] all path contracts need to subscribe to STF even though it is not used in path STF offset calculation
+                    // the STF is needed in ASToRV fill transfer
+                    for (const auto& pathContract : pathContracts) {
+                        getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::SubscribeSTFUpdate, pathContract._internalId);
+                    }
+
                     calculateRVSTFMove(contract, *stfIter);
                 }
 
@@ -290,24 +296,13 @@ void ArbieSpreader::calculateRVSTFMove(Contract& quoteContract, ShortTermFairOff
 //#endif
     }
 
-#ifdef IS_DEV
-    std::string path;
-#endif
     double stfMove = 0.;
     for (auto& stf : stfOffset._shortTermFairs) {
-#ifdef IS_DEV
-        auto& contract = _viperConfig._allContracts[stf._contractId];
-        path.append(std::to_string(stf._ratio)).append("*").append(contract._name);
-#endif
         stfMove += stf._ratio * contractSTFMove[stf._contractId];
     }
     stfOffset._rvSTFMove = ToRhonePrice(stfMove / 2);
 
-#ifdef IS_DEV
-    LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), path, stfMove)
-#else
-    LOG(0, "{C[i1]} rv stf move for path {i2} = {d1}", quoteContract.name(), (*stfOffset._paths.begin())->_id, stfMove)
-#endif
+    logging::GetLogger().logInfo(boost::str(boost::format("%1% rv stf move for path %2% = %3%") % quoteContract._def._name % stfOffset._id % stfMove));
 }
 
 void ArbieSpreader::registerOrderClient() {
