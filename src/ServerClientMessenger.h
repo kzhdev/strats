@@ -65,7 +65,7 @@ bool ServerClientMessenger::sendMessageToClient(int32_t connectionId,  proto::SE
 
     auto iter = m_traderConnections.find(connectionId);
     if (iter != m_traderConnections.end()) {
-        sendMessageToClient(iter->second.get(), proto::SERVER_MESSAGE_TYPE_GRID_STATE_CHANGE, message);
+        sendMessageToClient(iter->second.get(), responseType, message);
     }
     return true;
 }
@@ -73,9 +73,7 @@ bool ServerClientMessenger::sendMessageToClient(int32_t connectionId,  proto::SE
 template<typename T>
 bool ServerClientMessenger::sendMessageToClient(ClientConnection* traderConnection,  proto::SERVER_MESSAGE_TYPE responseType, T &message, std::ostringstream& streamMessage) {
     message.SerializeToOstream(&streamMessage);
-    streamMessage.seekp(0, std::ios::end);
-    auto length = streamMessage.tellp();
-    return sendMessageToClientCommon(traderConnection, responseType, streamMessage, length);
+    return sendMessageToClientCommon(traderConnection, responseType, streamMessage, message.ByteSize());
 }
 
 
