@@ -1,5 +1,10 @@
 #Version 1.55.3
 - Serialize GUI messages only once
+- Pre-create stack levels when MD recovered
+- AS subscribes STF update from RV for all switch path contracts
+- Add log message to log settlement price
+- Use bigger internal heartbeat timeout value during initialization. Change back to normal value after first GUI initialized
+- [bugfix] Apply AS extCommission based on the lean market side
 
 #Version 1.55.2.2
 - Add log message
