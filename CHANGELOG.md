@@ -1,3 +1,6 @@
+#Version 1.55.4
+- Added OrderPlexer service
+
 #Version 1.55.3
 - Serialize GUI messages only once
 - Pre-create stack levels when MD recovered

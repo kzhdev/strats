@@ -34,6 +34,7 @@
 #include <thread>
 #include "RhoneRouter.h"
 #include "TimeUtils.h"
+#include "OrderPlexerSvc.h"
 
 namespace Python {
 
@@ -146,6 +147,12 @@ public:
         if (!_killScript.empty() && _killScript[_killScript.size() - 1] != '&') {
             _killScript.append(" &");
         }
+
+        _orderPlexer = dynamic_cast<OrderPlexerSvc*>(hf::ResourceManager::getResourceP("OrderPlexer"));
+        if (!_orderPlexer) {
+            logging::GetLogger().logErrorAndThrow("OrderPlexer not found.");
+        }
+        _orderPlexer->init(_tradeName, &_viperConfig);
 
         if (config.exists("md-queues")) {
             const auto& queuesConfig = config["md-queues"];
@@ -894,6 +901,7 @@ public:
                 sendErrorMessage("Need to cancel GTCs due to unknown symbol.  However this version of Rhone does not support that functionality.  oid=" + std::to_string(order->oid.value()), ErrorType::Critical);
             }
         }
+        _orderPlexer->notifyOrderRecovered();
     }
 
     COLD NEVER_INLINE
@@ -3640,6 +3648,8 @@ public:
     bool _rhoneLimitsReady = false;
     bool _shutdownMDAndGateway = false;
     std::string _killScript;
+
+    OrderPlexerSvc* _orderPlexer = nullptr;
 
     //Only used by b3 heartbeat mechanism
     struct {
