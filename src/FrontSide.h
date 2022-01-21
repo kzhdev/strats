@@ -621,7 +621,7 @@ public:
                 case ViperMessageType::ErrorMessage: {
                     ErrorMessage& m = reinterpret_cast<ErrorMessage&> (message._data[0]);
                     sendErrorMessage(m);
-                    sendPlaySound((m._type == ErrorType::Critical ? SoundId::CriticalMessage : SoundId::NormalMessage));
+                    sendPlaySound<0>((m._type == ErrorType::Critical ? SoundId::CriticalMessage : SoundId::NormalMessage));
                     break;
                 }
                 case ViperMessageType::QuoteSizesUpdate: {
@@ -670,7 +670,7 @@ public:
                     sendMarketMakerEnabled(id, enabled);
                     if (!enabled) {
                         disableMMInViperConfig(id);
-                        sendPlaySound(SoundId::Disable);
+                        sendPlaySound<1>(SoundId::Disable);
                     }
                     break;
                 }
@@ -853,7 +853,7 @@ public:
             cell->set_col(toUInt(StackerParametersColumns::UseGTC));
             cell->set_value("0");
             _clientAcceptor->sendGridUpdate(message, nullptr);
-            sendPlaySound(SoundId::Disable);
+            sendPlaySound<2>(SoundId::Disable);
         }
     }
 
@@ -951,7 +951,7 @@ public:
         cell->set_col(toUInt(MarketMakerParametersColumns::Enabled));
         cell->set_value(std::to_string(false));
         _clientAcceptor->sendGridUpdate(message, nullptr);
-        sendPlaySound(SoundId::Disable);
+        sendPlaySound<3>(SoundId::Disable);
     }
 
     void sendStatckerUseGTCChangeForInstrument(uint32_t internal_id, bool enabled) {
@@ -965,22 +965,22 @@ public:
         cell->set_value(std::to_string(enabled));
         _clientAcceptor->sendGridUpdate(message, nullptr);
         if (enabled) {
-            sendPlaySound(SoundId::Enabled);
+            sendPlaySound<4>(SoundId::Enabled);
         } else {
-            sendPlaySound(SoundId::Disable);
+            sendPlaySound<4>(SoundId::Disable);
         }
     }
 
     void sendSwitchSound(uint32_t state) {
         switch (state) {
             case proto::SystemState::SystemStateEnabled:
-                sendPlaySound(SoundId::Enabled);
+                sendPlaySound<5>(SoundId::Enabled);
                 break;
             case proto::SystemState::SystemStateDisabled:
-                sendPlaySound(SoundId::Disable);
+                sendPlaySound<5>(SoundId::Disable);
                 break;
             case proto::SystemState::SystemStateHardShutdown:
-                sendPlaySound(SoundId::Shutdown);
+                sendPlaySound<5>(SoundId::Shutdown);
                 break;
             default:
                 break;
@@ -1026,7 +1026,11 @@ public:
 //        }
     }
 
+    template<uint32_t source>
     void sendPlaySound(SoundId id) {
+        if (logging::loggingLevel() == logging::LOG_LEVEL::DEBUG) {
+            logging::GetLogger().logInfo(boost::str(boost::format("Sound source %1%. id: %2%") % source % toUInt(id)));
+        }
         _clientAcceptor->sendPlaySound(static_cast<uint32_t>(id));
     }
 
@@ -1242,7 +1246,7 @@ public:
             if (fill._source != FillSource::AsToRv) {
                 auto now = clockUtil::GetCycles();
                 if (now >= _nextFillSoundTime) {
-                    sendPlaySound(SoundId::Fill);
+                    sendPlaySound<6>(SoundId::Fill);
                     _nextFillSoundTime = now + _fillSoundThreshold;
                 }
             }

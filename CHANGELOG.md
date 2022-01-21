@@ -1,6 +1,3 @@
-#Version 1.55.4
-- Added OrderPlexer service
-
 #Version 1.55.3
 - Serialize GUI messages only once
 - Pre-create stack levels when MD recovered
@@ -8,6 +5,8 @@
 - Add log message to log settlement price
 - Use bigger internal heartbeat timeout value during initialization. Change back to normal value after first GUI initialized
 - [bugfix] Apply AS extCommission based on the lean market side
+- Added OrderPlexer service
+- Added a debug logging to log sound source
 
 #Version 1.55.2.2
 - Add log message
