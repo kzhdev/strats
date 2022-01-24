@@ -464,7 +464,6 @@ public:
         bool maxTickWideAlreadyBreached = _maxTicksWideStopExtQuotingBreached;
         if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _maxTicksWideStopExtQuoting)) {
             if (!_maxTicksWideStopExtQuotingBreached) {
-                _marketMaker->sendGenericMessageToExecutor(ViperMessageType::ChangeUseGTC, _contract._internalId, false);
                 std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
                 _quoteExternalBeforeMaxTicksWideStopQuotingBreached = disableExternalQuotingAndUseGTC(msg, true, false);
                 _maxTicksWideStopExtQuotingBreached = true;
