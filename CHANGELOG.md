@@ -7,6 +7,7 @@
 - [bugfix] Apply AS extCommission based on the lean market side
 - Added OrderPlexer service
 - Added a debug logging to log sound source
+- Fixed mysterious disable sound
 
 #Version 1.55.2.2
 - Add log message
