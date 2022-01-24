@@ -323,9 +323,13 @@ public:
                 }
                 auto *const batchPtr = static_cast<om::OMBatch *> (&q->getPool().getBatch(idx));
                 if (batchPtr == nullptr || batchPtr->count == 0) {
+                    asm volatile("mfence":::"memory");
+                    q->incrementReadCount(idx);
                     continue;
                 }
                 onOMBatchL(*batchPtr);
+                asm volatile("mfence":::"memory");
+                q->incrementReadCount(idx);
             }
             omq.replyPeekIndex = w;
         }
