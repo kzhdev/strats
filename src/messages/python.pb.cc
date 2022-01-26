@@ -496,12 +496,11 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeries));
   DataSeriesPoint_descriptor_ = file->message_type(21);
-  static const int DataSeriesPoint_offsets_[5] = {
+  static const int DataSeriesPoint_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, chartid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, dataseriesid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, time_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, value_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, ishistory_),
   };
   DataSeriesPoint_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -515,9 +514,8 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeriesPoint));
   DataSeriesPointSet_descriptor_ = file->message_type(22);
-  static const int DataSeriesPointSet_offsets_[2] = {
+  static const int DataSeriesPointSet_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPointSet, points_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPointSet, ishistory_),
   };
   DataSeriesPointSet_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -866,85 +864,84 @@ void protobuf_AddDesc_python_2eproto() {
     "\n\n\002id\030\002 \002(\r\022\035\n\025numberOfDecimalPlaces\030\003 \002"
     "(\r\022(\n\006series\030\004 \003(\0132\030.Python.proto.DataSe"
     "ries\"7\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002"
-    " \002(\r\022\017\n\007colorId\030\003 \001(\r\"h\n\017DataSeriesPoint"
+    " \002(\r\022\017\n\007colorId\030\003 \001(\r\"U\n\017DataSeriesPoint"
     "\022\017\n\007chartId\030\001 \002(\r\022\024\n\014dataSeriesId\030\002 \002(\r\022"
-    "\014\n\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\022\021\n\tisHistor"
-    "y\030\005 \001(\010\"V\n\022DataSeriesPointSet\022-\n\006points\030"
-    "\001 \003(\0132\035.Python.proto.DataSeriesPoint\022\021\n\t"
-    "isHistory\030\002 \001(\010\" \n\020DataSeriesReplay\022\014\n\004s"
-    "ets\030\001 \003(\014\"(\n\023DataSeriesReplayEnd\022\021\n\tmess"
-    "ageID\030\001 \002(\r\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r\"\232\001\n"
-    "\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005fro"
-    "nt\030\003 \002(\0162!.Python.proto.ButtonFrontBehav"
-    "ior\022.\n\004back\030\004 \002(\0162 .Python.proto.ButtonB"
-    "ackBehavior\022\024\n\014confirmation\030\005 \002(\010\"+\n\017Col"
-    "orDefinition\022\n\n\002id\030\001 \002(\r\022\014\n\004argb\030\002 \002(\t\"\032"
-    "\n\007Clients\022\017\n\007clients\030\001 \002(\t\"%\n\023SubscribeG"
-    "ridUpdate\022\016\n\006gridId\030\001 \002(\r\"\'\n\025Unsubscribe"
-    "GridUpdate\022\016\n\006gridId\030\001 \002(\r*\037\n\020PROTOCOL_V"
-    "ERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_UN"
-    "KNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n"
-    "\013VENUE_EUREX\020\003*\247\003\n\020GUI_MESSAGE_TYPE\022!\n\035G"
-    "UI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_ME"
-    "SSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESSAG"
-    "E_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE"
-    "_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_INI"
-    "TIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_TY"
-    "PE_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GUI_"
-    "MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036GU"
-    "I_MESSAGE_TYPE_SWITCH_CHANGE\020\010\022*\n&GUI_ME"
-    "SSAGE_TYPE_SUBSCRIBE_GRID_UPDATE\020\t\022,\n(GU"
-    "I_MESSAGE_TYPE_UNSUBSCRIBE_GRID_UPDATE\020\n"
-    "*\364\006\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MESSA"
-    "GE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MES"
-    "SAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_ME"
-    "SSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_MES"
-    "SAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SER"
-    "VER_MESSAGE_TYPE_HEARTBEAT\020\"\0220\n,SERVER_M"
-    "ESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED\020#\022*"
-    "\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZATION"
-    "\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_CHA"
-    "NGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHAN"
-    "GE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWI"
-    "TCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAGE_"
-    "TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0S"
-    "ERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_R"
-    "EJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_"
-    "ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SOUN"
-    "D\020,\022&\n\"SERVER_MESSAGE_TYPE_DATA_POINT_SE"
-    "T\020-\022\"\n\036SERVER_MESSAGE_TYPE_DATA_POINT\020.\022"
-    "&\n\"SERVER_MESSAGE_TYPE_TRADER_CHANGED\020/\022"
-    ")\n%SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY"
-    "\0200\022$\n SERVER_MESSAGE_TYPE_CLIENT_COUNT\0201"
-    "\022-\n)SERVER_MESSAGE_TYPE_DATA_POINT_REPLA"
-    "Y_END\0202*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DEC"
-    "ODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CO"
-    "DE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&"
-    "ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375"
-    "\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNA"
-    "ME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NO"
-    "T_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GAT"
-    "EWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADE"
-    "R_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*G\n\016Gri"
-    "dUpdateType\022\r\n\tCellsType\020\001\022\022\n\016GridButton"
-    "Type\020\002\022\022\n\016CellButtonType\020\003*L\n\010GridType\022\t"
-    "\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013MainC"
-    "ontrol\020\004\022\016\n\nEntryTable\020\005*[\n\013SystemState\022"
-    "\033\n\027SystemStateHardShutdown\020\000\022\026\n\022SystemSt"
-    "ateEnabled\020\001\022\027\n\023SystemStateDisabled\020\002*\323\001"
-    "\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\runsigned_"
-    "type\020\001\022\017\n\013double_type\020\002\022\017\n\013string_type\020\003"
-    "\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbool"
-    "_type\020\006\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010\022\032\n\026v"
-    "alue_increment_button\020\t\022\032\n\026value_decreme"
-    "nt_button\020\n*\233\001\n\023ButtonFrontBehavior\022\036\n\032B"
-    "uttonFrontBehavior_Revert\020\001\022$\n ButtonFro"
-    "ntBehavior_CommitValues\020\002\022\037\n\033ButtonFront"
-    "Behavior_Nothing\020\003\022\035\n\031ButtonFrontBehavio"
-    "r_Clear\020\004*r\n\022ButtonBackBehavior\022\033\n\027Butto"
-    "nBackBehavior_Send\020\001\022\036\n\032ButtonBackBehavi"
-    "or_Nothing\020\002\022\037\n\033ButtonBackBehavior_Submi"
-    "tId\020\003", 5125);
+    "\014\n\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\"C\n\022DataSeri"
+    "esPointSet\022-\n\006points\030\001 \003(\0132\035.Python.prot"
+    "o.DataSeriesPoint\" \n\020DataSeriesReplay\022\014\n"
+    "\004sets\030\001 \003(\014\"(\n\023DataSeriesReplayEnd\022\021\n\tme"
+    "ssageID\030\001 \002(\r\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r\"\232"
+    "\001\n\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005f"
+    "ront\030\003 \002(\0162!.Python.proto.ButtonFrontBeh"
+    "avior\022.\n\004back\030\004 \002(\0162 .Python.proto.Butto"
+    "nBackBehavior\022\024\n\014confirmation\030\005 \002(\010\"+\n\017C"
+    "olorDefinition\022\n\n\002id\030\001 \002(\r\022\014\n\004argb\030\002 \002(\t"
+    "\"\032\n\007Clients\022\017\n\007clients\030\001 \002(\t\"%\n\023Subscrib"
+    "eGridUpdate\022\016\n\006gridId\030\001 \002(\r\"\'\n\025Unsubscri"
+    "beGridUpdate\022\016\n\006gridId\030\001 \002(\r*\037\n\020PROTOCOL"
+    "_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_"
+    "UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022"
+    "\017\n\013VENUE_EUREX\020\003*\247\003\n\020GUI_MESSAGE_TYPE\022!\n"
+    "\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_"
+    "MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESS"
+    "AGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TY"
+    "PE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_I"
+    "NITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_"
+    "TYPE_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GU"
+    "I_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036"
+    "GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010\022*\n&GUI_"
+    "MESSAGE_TYPE_SUBSCRIBE_GRID_UPDATE\020\t\022,\n("
+    "GUI_MESSAGE_TYPE_UNSUBSCRIBE_GRID_UPDATE"
+    "\020\n*\364\006\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MES"
+    "SAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_M"
+    "ESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_"
+    "MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_M"
+    "ESSAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035S"
+    "ERVER_MESSAGE_TYPE_HEARTBEAT\020\"\0220\n,SERVER"
+    "_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED\020#"
+    "\022*\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZATI"
+    "ON\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_C"
+    "HANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CH"
+    "ANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_S"
+    "WITCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAG"
+    "E_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n"
+    "0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE"
+    "_REJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMA"
+    "T_ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SO"
+    "UND\020,\022&\n\"SERVER_MESSAGE_TYPE_DATA_POINT_"
+    "SET\020-\022\"\n\036SERVER_MESSAGE_TYPE_DATA_POINT\020"
+    ".\022&\n\"SERVER_MESSAGE_TYPE_TRADER_CHANGED\020"
+    "/\022)\n%SERVER_MESSAGE_TYPE_DATA_POINT_REPL"
+    "AY\0200\022$\n SERVER_MESSAGE_TYPE_CLIENT_COUNT"
+    "\0201\022-\n)SERVER_MESSAGE_TYPE_DATA_POINT_REP"
+    "LAY_END\0202*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_D"
+    "ECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_"
+    "CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223"
+    "\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN"
+    "\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USER"
+    "NAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_"
+    "NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_G"
+    "ATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRA"
+    "DER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*G\n\016G"
+    "ridUpdateType\022\r\n\tCellsType\020\001\022\022\n\016GridButt"
+    "onType\020\002\022\022\n\016CellButtonType\020\003*L\n\010GridType"
+    "\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013Mai"
+    "nControl\020\004\022\016\n\nEntryTable\020\005*[\n\013SystemStat"
+    "e\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022System"
+    "StateEnabled\020\001\022\027\n\023SystemStateDisabled\020\002*"
+    "\323\001\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\runsigne"
+    "d_type\020\001\022\017\n\013double_type\020\002\022\017\n\013string_type"
+    "\020\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbo"
+    "ol_type\020\006\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010\022\032\n"
+    "\026value_increment_button\020\t\022\032\n\026value_decre"
+    "ment_button\020\n*\233\001\n\023ButtonFrontBehavior\022\036\n"
+    "\032ButtonFrontBehavior_Revert\020\001\022$\n ButtonF"
+    "rontBehavior_CommitValues\020\002\022\037\n\033ButtonFro"
+    "ntBehavior_Nothing\020\003\022\035\n\031ButtonFrontBehav"
+    "ior_Clear\020\004*r\n\022ButtonBackBehavior\022\033\n\027But"
+    "tonBackBehavior_Send\020\001\022\036\n\032ButtonBackBeha"
+    "vior_Nothing\020\002\022\037\n\033ButtonBackBehavior_Sub"
+    "mitId\020\003", 5087);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "python.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -7752,7 +7749,6 @@ const int DataSeriesPoint::kChartIdFieldNumber;
 const int DataSeriesPoint::kDataSeriesIdFieldNumber;
 const int DataSeriesPoint::kTimeFieldNumber;
 const int DataSeriesPoint::kValueFieldNumber;
-const int DataSeriesPoint::kIsHistoryFieldNumber;
 #endif  // !_MSC_VER
 
 DataSeriesPoint::DataSeriesPoint()
@@ -7775,7 +7771,6 @@ void DataSeriesPoint::SharedCtor() {
   dataseriesid_ = 0u;
   time_ = GOOGLE_ULONGLONG(0);
   value_ = 0;
-  ishistory_ = false;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -7815,7 +7810,6 @@ void DataSeriesPoint::Clear() {
     dataseriesid_ = 0u;
     time_ = GOOGLE_ULONGLONG(0);
     value_ = 0;
-    ishistory_ = false;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -7886,22 +7880,6 @@ bool DataSeriesPoint::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(40)) goto parse_isHistory;
-        break;
-      }
-
-      // optional bool isHistory = 5;
-      case 5: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_isHistory:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
-                 input, &ishistory_)));
-          set_has_ishistory();
-        } else {
-          goto handle_uninterpreted;
-        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -7944,11 +7922,6 @@ void DataSeriesPoint::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteDouble(4, this->value(), output);
   }
 
-  // optional bool isHistory = 5;
-  if (has_ishistory()) {
-    ::google::protobuf::internal::WireFormatLite::WriteBool(5, this->ishistory(), output);
-  }
-
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -7975,11 +7948,6 @@ void DataSeriesPoint::SerializeWithCachedSizes(
   // required double value = 4;
   if (has_value()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(4, this->value(), target);
-  }
-
-  // optional bool isHistory = 5;
-  if (has_ishistory()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(5, this->ishistory(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -8017,11 +7985,6 @@ int DataSeriesPoint::ByteSize() const {
     // required double value = 4;
     if (has_value()) {
       total_size += 1 + 8;
-    }
-
-    // optional bool isHistory = 5;
-    if (has_ishistory()) {
-      total_size += 1 + 1;
     }
 
   }
@@ -8063,9 +8026,6 @@ void DataSeriesPoint::MergeFrom(const DataSeriesPoint& from) {
     if (from.has_value()) {
       set_value(from.value());
     }
-    if (from.has_ishistory()) {
-      set_ishistory(from.ishistory());
-    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -8094,7 +8054,6 @@ void DataSeriesPoint::Swap(DataSeriesPoint* other) {
     std::swap(dataseriesid_, other->dataseriesid_);
     std::swap(time_, other->time_);
     std::swap(value_, other->value_);
-    std::swap(ishistory_, other->ishistory_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
@@ -8114,7 +8073,6 @@ void DataSeriesPoint::Swap(DataSeriesPoint* other) {
 
 #ifndef _MSC_VER
 const int DataSeriesPointSet::kPointsFieldNumber;
-const int DataSeriesPointSet::kIsHistoryFieldNumber;
 #endif  // !_MSC_VER
 
 DataSeriesPointSet::DataSeriesPointSet()
@@ -8133,7 +8091,6 @@ DataSeriesPointSet::DataSeriesPointSet(const DataSeriesPointSet& from)
 
 void DataSeriesPointSet::SharedCtor() {
   _cached_size_ = 0;
-  ishistory_ = false;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -8168,9 +8125,6 @@ DataSeriesPointSet* DataSeriesPointSet::New() const {
 }
 
 void DataSeriesPointSet::Clear() {
-  if (_has_bits_[1 / 32] & (0xffu << (1 % 32))) {
-    ishistory_ = false;
-  }
   points_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -8193,22 +8147,6 @@ bool DataSeriesPointSet::MergePartialFromCodedStream(
           goto handle_uninterpreted;
         }
         if (input->ExpectTag(10)) goto parse_points;
-        if (input->ExpectTag(16)) goto parse_isHistory;
-        break;
-      }
-
-      // optional bool isHistory = 2;
-      case 2: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_isHistory:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
-                 input, &ishistory_)));
-          set_has_ishistory();
-        } else {
-          goto handle_uninterpreted;
-        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -8237,11 +8175,6 @@ void DataSeriesPointSet::SerializeWithCachedSizes(
       1, this->points(i), output);
   }
 
-  // optional bool isHistory = 2;
-  if (has_ishistory()) {
-    ::google::protobuf::internal::WireFormatLite::WriteBool(2, this->ishistory(), output);
-  }
-
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -8257,11 +8190,6 @@ void DataSeriesPointSet::SerializeWithCachedSizes(
         1, this->points(i), target);
   }
 
-  // optional bool isHistory = 2;
-  if (has_ishistory()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(2, this->ishistory(), target);
-  }
-
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -8272,13 +8200,6 @@ void DataSeriesPointSet::SerializeWithCachedSizes(
 int DataSeriesPointSet::ByteSize() const {
   int total_size = 0;
 
-  if (_has_bits_[1 / 32] & (0xffu << (1 % 32))) {
-    // optional bool isHistory = 2;
-    if (has_ishistory()) {
-      total_size += 1 + 1;
-    }
-
-  }
   // repeated .Python.proto.DataSeriesPoint points = 1;
   total_size += 1 * this->points_size();
   for (int i = 0; i < this->points_size(); i++) {
@@ -8313,11 +8234,6 @@ void DataSeriesPointSet::MergeFrom(const ::google::protobuf::Message& from) {
 void DataSeriesPointSet::MergeFrom(const DataSeriesPointSet& from) {
   GOOGLE_CHECK_NE(&from, this);
   points_.MergeFrom(from.points_);
-  if (from._has_bits_[1 / 32] & (0xffu << (1 % 32))) {
-    if (from.has_ishistory()) {
-      set_ishistory(from.ishistory());
-    }
-  }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
@@ -8344,7 +8260,6 @@ bool DataSeriesPointSet::IsInitialized() const {
 void DataSeriesPointSet::Swap(DataSeriesPointSet* other) {
   if (other != this) {
     points_.Swap(&other->points_);
-    std::swap(ishistory_, other->ishistory_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
