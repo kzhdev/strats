@@ -34,7 +34,6 @@ void ArbieSpreader::initializeContracts() {
     _contracts.resize(numContracts);
     _lastOrderRequests.resize(numContracts);
     _affected_markets.reserve(numContracts * 2);
-    _delayedBestMarketUpdate.reserve(numContracts);
     _allPaths.reserve(65536);
     if (_viperConfig._allContracts.size() > _contractUpdatedFlag.size()) {
         logging::GetLogger().logErrorAndThrow(boost::str(boost::format("Number of contracts > %1%") % _contractUpdatedFlag.size()));
@@ -423,16 +422,11 @@ void ArbieSpreader::pushUpdatedContract(Contract* contract) {
     _updatedContracts.publish(index);
 }
 
-void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate, uint64_t banEnd,
-                                      Path* banException) {
+void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket, uint64_t banEnd, Path* banException) {
     if (updatedMarket->getSide() == BID) {
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<BID>();
         if (contract.updateBestMarket<BID>(updatedMarket)) {
-            if (!delayPathUpdate) {
-                contract.updateAffectedPathsBestMarket<BID>(oldBestPrice, banEnd, banException);
-            } else {
-                _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
-            }
+            contract.updateAffectedPathsBestMarket<BID>(oldBestPrice, banEnd, banException);
         }
         if (banEnd && contract._usedInQuoting) {
             contract._banExpiresAt[ASK] = banEnd;
@@ -442,11 +436,7 @@ void ArbieSpreader::markContractDirty(Contract& contract, Market* updatedMarket,
     } else {
         auto oldBestPrice = contract.getExtCommissionAdjustedBestPrice<ASK>();
         if (contract.updateBestMarket<ASK>(updatedMarket)) {
-            if (!delayPathUpdate) {
-                contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice, banEnd, banException);
-            } else {
-                _delayedBestMarketUpdate[updatedMarket] =  oldBestPrice;
-            }
+            contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice, banEnd, banException);
         }
         if (banEnd && contract._usedInQuoting) {
             contract._banExpiresAt[BID] = banEnd;
@@ -504,18 +494,4 @@ void ArbieSpreader::sendHedgeOrder(uint32_t internalId,
             hedgeContractId, orderId(StrategyId::ArbieSpreader, Order::Type::Hedging), side, internalPrice,
             externalPrice, size, external, false, 0, 0, marketId, hedgeId);
     _orderRequestMgr.notifyOrderRequest(hedgeContractId, StrategyId::ArbieSpreader, _lastOrderRequests[hedgeContractId]);
-}
-
-void ArbieSpreader::processDelayedBestMarketUpdate() {
-    for (auto& marketOldPricePair : _delayedBestMarketUpdate) {
-        auto market = marketOldPricePair.first;
-        auto& contract = _contracts[market->getContractId()];
-        auto oldBestPrice = marketOldPricePair.second;
-        if (market->getSide() == BID) {
-            contract.updateAffectedPathsBestMarket<BID>(oldBestPrice);
-        } else {
-            contract.updateAffectedPathsBestMarket<ASK>(oldBestPrice);
-        }
-    }
-    _delayedBestMarketUpdate.clear();
 }

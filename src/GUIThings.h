@@ -1331,7 +1331,12 @@ public:
         addRowHeaderCell(WindowIds::LoggingLevel, rowHeader, 0, "LoggingLevel: ");
 
         auto cells = definition->mutable_cells();
+
+#ifdef IS_DEV
+        setCell(cells, 0, LoggingLevelColumns::LoggingLevel, std::to_string(toUInt(logging::LOG_LEVEL::TRACE)));
+#else
         setCell(cells, 0, LoggingLevelColumns::LoggingLevel, std::to_string(toUInt(logging::LOG_LEVEL::INFO)));
+#endif
 
         addSubmitButton(definition);
     }
