@@ -166,8 +166,6 @@ void ArbieSpreader::handleSTFUpdate(const STFUpdate& msg) {
                 stfOffset->onSTFUpdate(stf->_contractId, stf->_fair);
                 _updatedSTFOffsets.emplace(stfOffset);
             }
-        } else {
-            logging::GetLogger().logInfo(boost::str(boost::format("AS %1%. Not in ShortTermFairOffset map. contractId=%2%") % configContract._name % configContract._internalId));
         }
 
         if (!configContract._legs.empty()) {

@@ -400,7 +400,6 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::unordered_set<Market*> _affected_markets;
     std::unordered_set<ShortTermFairOffset*> _updatedSTFOffsets;
     std::unordered_multimap<uint32_t, ShortTermFairOffset*> _mapShortTermFairOffset;
-    std::unordered_map<Market*, hf::price_t> _delayedBestMarketUpdate;
     std::unordered_set<Contract*> _bannedContracts;
     std::unordered_set<Path*> _bannedPaths;
     Matrix _riskMatrix; // x,y - vectors - square
@@ -538,7 +537,7 @@ private:
     void handleFakDone(uint32_t side, uint32_t internalId, om::strategy_order_id_t::value_type orderId);
     void handleInternalHedgeDone(const InternalHedgeDone& message);
     void handleASInternalMatchingDone(uint32_t contractId, hf::qty_t bidFills, hf::qty_t askFills);
-    void markContractDirty(Contract& contract, Market* updatedMarket, bool delayPathUpdate = false, uint64_t banEnd = 0, Path* banException = nullptr);
+    void markContractDirty(Contract& contract, Market* updatedMarket, uint64_t banEnd = 0, Path* banException = nullptr);
     void handleSTFUpdate(const STFUpdate& msg);
 
     template<uint32_t Side>
@@ -548,7 +547,6 @@ private:
     void onEconomicNumberEnded(EconomicNumber::Color color);
     void onShiftUpdate(uint32_t shift);
     void handleVectorParameterUpdate(const VectorParameterUpdate& msg);
-    void processDelayedBestMarketUpdate();
     void checkBans(uint64_t now);
 };
 
@@ -571,23 +569,23 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::price_t fillPrice
     constexpr auto otherSide = GetOtherSide<Side>();
     if (isInternal) {
         if (contract._markets[Side][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
-            markContractDirty(contract, &contract._markets[Side][Market::Internal], true);
+            markContractDirty(contract, &contract._markets[Side][Market::Internal]);
         }
 
         // If AS internally crossed, side AS Quote will be unadjusted when ASK fill received
         // this could cause bid hedge switch path. We will try to undo AS quote on both side
         if (contract._markets[Side][Market::External].getASQuoteAdjustment() &&
             contract._markets[Side][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[Side][Market::External].getASQuoteAdjustment()), _affected_markets)) {
-            markContractDirty(contract, &contract._markets[Side][Market::External], true);
+            markContractDirty(contract, &contract._markets[Side][Market::External]);
         }
     }
     if (contract._markets[otherSide][Market::External].getASQuoteAdjustment() &&
         contract._markets[otherSide][Market::External].undoAsQuoteAdjustment(std::min<hf::qty_t>(qty, contract._markets[otherSide][Market::External].getASQuoteAdjustment()), _affected_markets)) {
-        markContractDirty(contract, &contract._markets[otherSide][Market::External], true);
+        markContractDirty(contract, &contract._markets[otherSide][Market::External]);
     }
 
     for (auto market : _affected_markets) {
-        markContractDirty(_contracts[market->getContractId()], market, true);
+        markContractDirty(_contracts[market->getContractId()], market);
     }
     _affected_markets.clear();
 
@@ -597,7 +595,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::price_t fillPrice
     bool canHedge = false;
     hf::price_t pathPrice = hf::NULL_PRICE;
     if (!(canHedge = pBest->canHedge<Side>(qty, pathPrice, _temporarilyInvalidatedPaths, true))) {
-        processDelayedBestMarketUpdate();
         do {
             pPreviousBest = pBest;
             pathCount = 0;
@@ -723,8 +720,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::price_t fillPrice
                     }, dataSize);
         }
 
-        processDelayedBestMarketUpdate();
-
         // Adjust FAK in separate loop so that the hedges are sent out ASAP.
         for (const auto& hedgeContract : pBest->_leanContracts) {
             auto* hedgeMarket = hedgeContract.bestMarket();
@@ -734,7 +729,6 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::price_t fillPrice
         }
         return true;
     }
-    processDelayedBestMarketUpdate();
     ADD_PERF_POINT_END(PerfId::AS_UpdateHedge);
     LOG(0, "AS {C[i1]}. {i2} Unable to hedge. No valid path.", contract.name(), Side)
     for (auto path : contract._paths[Side]) {
@@ -797,15 +791,16 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
             auto bestHedgeMarket = pathContract.bestMarket();
             _leanOnRV |= bestHedgeMarket->getId() == MarketIds::Market_ID_RV_QUOTE;
             auto marketPrice = bestHedgeMarket->getPrice();
-            // apply commission to external market
-            if (bestHedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL && marketPrice != hf::NULL_PRICE) {
-                // apply commission to external market
-                marketPrice = applyPriceOffset(marketPrice, -pathContract._contract->_extCommission, bestHedgeMarket->getSide());
-            }
 
             if (marketPrice == hf::NULL_PRICE) {
                 _priceSize.reset();
                 break;
+            }
+
+            // apply commission to external market
+            if (bestHedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL) {
+                // apply commission to external market
+                marketPrice = applyPriceOffset(marketPrice, -pathContract._contract->_extCommission, bestHedgeMarket->getSide());
             }
 
             auto size = bestHedgeMarket->getAdjustedSize();
@@ -1005,7 +1000,7 @@ bool ArbieSpreader::Path::canHedge(hf::qty_t size, hf::price_t& pathPrice, std::
             }
 
             if (market->getId() == MarketIds::MARKET_ID_EXTERNAL) {
-                price = applyPriceOffset(price, -pathContract._contract->_extCommission, market->getSide());
+                price = applyPriceOffset(price, -pathContract._contract->_extCommission, side);
             }
             pathPrice += pathContract._multiplier * price;
         }
@@ -1103,7 +1098,7 @@ inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, P
             }
 
             for (auto market : _affected_markets) {
-                markContractDirty(_contracts[market->getContractId()], market, false, banExpireTime, path);
+                markContractDirty(_contracts[market->getContractId()], market, banExpireTime, path);
             }
             _affected_markets.clear();
         }
