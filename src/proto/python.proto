@@ -226,10 +226,12 @@ message DataSeriesPoint {
     required uint32 dataSeriesId = 2;
     required uint64 time = 3;
     required double value = 4;
+    optional bool isHistory = 5;
 }
 
 message DataSeriesPointSet {
     repeated DataSeriesPoint points = 1;
+    optional bool isHistory = 2;
 }
 
 message DataSeriesReplay {

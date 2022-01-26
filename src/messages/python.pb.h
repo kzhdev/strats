@@ -2695,6 +2695,13 @@ class DataSeriesPoint : public ::google::protobuf::Message {
   inline double value() const;
   inline void set_value(double value);
 
+  // optional bool isHistory = 5;
+  inline bool has_ishistory() const;
+  inline void clear_ishistory();
+  static const int kIsHistoryFieldNumber = 5;
+  inline bool ishistory() const;
+  inline void set_ishistory(bool value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesPoint)
  private:
   inline void set_has_chartid();
@@ -2705,6 +2712,8 @@ class DataSeriesPoint : public ::google::protobuf::Message {
   inline void clear_has_time();
   inline void set_has_value();
   inline void clear_has_value();
+  inline void set_has_ishistory();
+  inline void clear_has_ishistory();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -2712,9 +2721,10 @@ class DataSeriesPoint : public ::google::protobuf::Message {
   ::google::protobuf::uint32 dataseriesid_;
   ::google::protobuf::uint64 time_;
   double value_;
+  bool ishistory_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(5 + 31) / 32];
 
   friend void  protobuf_AddDesc_python_2eproto();
   friend void protobuf_AssignDesc_python_2eproto();
@@ -2791,15 +2801,25 @@ class DataSeriesPointSet : public ::google::protobuf::Message {
   inline ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint >*
       mutable_points();
 
+  // optional bool isHistory = 2;
+  inline bool has_ishistory() const;
+  inline void clear_ishistory();
+  static const int kIsHistoryFieldNumber = 2;
+  inline bool ishistory() const;
+  inline void set_ishistory(bool value);
+
   // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesPointSet)
  private:
+  inline void set_has_ishistory();
+  inline void clear_has_ishistory();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint > points_;
+  bool ishistory_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
 
   friend void  protobuf_AddDesc_python_2eproto();
   friend void protobuf_AssignDesc_python_2eproto();
@@ -5973,6 +5993,28 @@ inline void DataSeriesPoint::set_value(double value) {
   value_ = value;
 }
 
+// optional bool isHistory = 5;
+inline bool DataSeriesPoint::has_ishistory() const {
+  return (_has_bits_[0] & 0x00000010u) != 0;
+}
+inline void DataSeriesPoint::set_has_ishistory() {
+  _has_bits_[0] |= 0x00000010u;
+}
+inline void DataSeriesPoint::clear_has_ishistory() {
+  _has_bits_[0] &= ~0x00000010u;
+}
+inline void DataSeriesPoint::clear_ishistory() {
+  ishistory_ = false;
+  clear_has_ishistory();
+}
+inline bool DataSeriesPoint::ishistory() const {
+  return ishistory_;
+}
+inline void DataSeriesPoint::set_ishistory(bool value) {
+  set_has_ishistory();
+  ishistory_ = value;
+}
+
 // -------------------------------------------------------------------
 
 // DataSeriesPointSet
@@ -6000,6 +6042,28 @@ DataSeriesPointSet::points() const {
 inline ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint >*
 DataSeriesPointSet::mutable_points() {
   return &points_;
+}
+
+// optional bool isHistory = 2;
+inline bool DataSeriesPointSet::has_ishistory() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void DataSeriesPointSet::set_has_ishistory() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void DataSeriesPointSet::clear_has_ishistory() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void DataSeriesPointSet::clear_ishistory() {
+  ishistory_ = false;
+  clear_has_ishistory();
+}
+inline bool DataSeriesPointSet::ishistory() const {
+  return ishistory_;
+}
+inline void DataSeriesPointSet::set_ishistory(bool value) {
+  set_has_ishistory();
+  ishistory_ = value;
 }
 
 // -------------------------------------------------------------------
