@@ -83,6 +83,7 @@ public:
     void sendGridUpdate(proto::GridUpdate& data, int32_t connectionId = -1);
     void sendChartDataPoints(proto::DataSeriesPointSet& data, std::ostringstream& streamMessage);
     void sendChartHistories(proto::DataSeriesReplay& data, int32_t connectionId);
+    void sendChartHistoriesEnd(int32_t connectionId);
     void sendGuiHeartbeat(uint64_t utc_ts_in_nanos);
     void sendPlaySound(uint32_t id);
     void sendTraderUpdate(const char* trader);
@@ -90,7 +91,6 @@ public:
     void handleLoginAccepted(proto::GUIInitialization& m, uint64_t heartbeatIntervalInMilliseconds, ClientConnection& connection, const char* trader);
     void handleLoginRejected(int32_t connectionId);
     void handleLoggedOut(ClientConnectionIterT& connIter);
-    void doHeartBeats();
     void checkConnectionHealth();
     const char* const getConnectionUserName(int32_t connectionId) const noexcept;
     uint32_t getNumberConnection() const noexcept;

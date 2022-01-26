@@ -45,6 +45,7 @@ enum SERVER_MESSAGE_TYPE {
     SERVER_MESSAGE_TYPE_TRADER_CHANGED = 47;
     SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY = 48;
     SERVER_MESSAGE_TYPE_CLIENT_COUNT = 49;
+    SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY_END = 50;
 }
 
 enum ERROR_CODE {
@@ -233,6 +234,10 @@ message DataSeriesPointSet {
 
 message DataSeriesReplay {
     repeated bytes sets = 1;
+}
+
+message DataSeriesReplayEnd {
+    required uint32 messageID = 1;
 }
 
 message PlaySound {

@@ -428,6 +428,12 @@ void ClientsAcceptor::sendChartHistories(proto::DataSeriesReplay& data, int32_t 
     ServerClientMessenger::instance()->sendMessageToClient(connectionId, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY, data);
 }
 
+void ClientsAcceptor::sendChartHistoriesEnd(int32_t connectionId) {
+    proto::DataSeriesReplayEnd data;
+    data.set_messageid(0);
+    ServerClientMessenger::instance()->sendMessageToClient(connectionId, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY_END, data);
+}
+
 void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
     if (hasConnection()) {
         ServerClientMessenger::instance()->sendSwitchChangeReply(strategy, action, value, gridId, accepted);

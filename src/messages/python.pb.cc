@@ -93,6 +93,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* DataSeriesReplay_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   DataSeriesReplay_reflection_ = NULL;
+const ::google::protobuf::Descriptor* DataSeriesReplayEnd_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  DataSeriesReplayEnd_reflection_ = NULL;
 const ::google::protobuf::Descriptor* PlaySound_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   PlaySound_reflection_ = NULL;
@@ -540,7 +543,22 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeriesReplay));
-  PlaySound_descriptor_ = file->message_type(24);
+  DataSeriesReplayEnd_descriptor_ = file->message_type(24);
+  static const int DataSeriesReplayEnd_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesReplayEnd, messageid_),
+  };
+  DataSeriesReplayEnd_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      DataSeriesReplayEnd_descriptor_,
+      DataSeriesReplayEnd::default_instance_,
+      DataSeriesReplayEnd_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesReplayEnd, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesReplayEnd, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(DataSeriesReplayEnd));
+  PlaySound_descriptor_ = file->message_type(25);
   static const int PlaySound_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlaySound, id_),
   };
@@ -555,7 +573,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(PlaySound));
-  Button_descriptor_ = file->message_type(25);
+  Button_descriptor_ = file->message_type(26);
   static const int Button_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Button, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Button, id_),
@@ -574,7 +592,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Button));
-  ColorDefinition_descriptor_ = file->message_type(26);
+  ColorDefinition_descriptor_ = file->message_type(27);
   static const int ColorDefinition_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColorDefinition, id_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColorDefinition, argb_),
@@ -590,7 +608,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ColorDefinition));
-  Clients_descriptor_ = file->message_type(27);
+  Clients_descriptor_ = file->message_type(28);
   static const int Clients_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Clients, clients_),
   };
@@ -605,7 +623,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Clients));
-  SubscribeGridUpdate_descriptor_ = file->message_type(28);
+  SubscribeGridUpdate_descriptor_ = file->message_type(29);
   static const int SubscribeGridUpdate_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SubscribeGridUpdate, gridid_),
   };
@@ -620,7 +638,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(SubscribeGridUpdate));
-  UnsubscribeGridUpdate_descriptor_ = file->message_type(29);
+  UnsubscribeGridUpdate_descriptor_ = file->message_type(30);
   static const int UnsubscribeGridUpdate_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(UnsubscribeGridUpdate, gridid_),
   };
@@ -707,6 +725,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     DataSeriesReplay_descriptor_, &DataSeriesReplay::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    DataSeriesReplayEnd_descriptor_, &DataSeriesReplayEnd::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     PlaySound_descriptor_, &PlaySound::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     Button_descriptor_, &Button::default_instance());
@@ -771,6 +791,8 @@ void protobuf_ShutdownFile_python_2eproto() {
   delete DataSeriesPointSet_reflection_;
   delete DataSeriesReplay::default_instance_;
   delete DataSeriesReplay_reflection_;
+  delete DataSeriesReplayEnd::default_instance_;
+  delete DataSeriesReplayEnd_reflection_;
   delete PlaySound::default_instance_;
   delete PlaySound_reflection_;
   delete Button::default_instance_;
@@ -847,76 +869,79 @@ void protobuf_AddDesc_python_2eproto() {
     "\014\n\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\"C\n\022DataSeri"
     "esPointSet\022-\n\006points\030\001 \003(\0132\035.Python.prot"
     "o.DataSeriesPoint\" \n\020DataSeriesReplay\022\014\n"
-    "\004sets\030\001 \003(\014\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r\"\232\001\n"
-    "\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005fro"
-    "nt\030\003 \002(\0162!.Python.proto.ButtonFrontBehav"
-    "ior\022.\n\004back\030\004 \002(\0162 .Python.proto.ButtonB"
-    "ackBehavior\022\024\n\014confirmation\030\005 \002(\010\"+\n\017Col"
-    "orDefinition\022\n\n\002id\030\001 \002(\r\022\014\n\004argb\030\002 \002(\t\"\032"
-    "\n\007Clients\022\017\n\007clients\030\001 \002(\t\"%\n\023SubscribeG"
-    "ridUpdate\022\016\n\006gridId\030\001 \002(\r\"\'\n\025Unsubscribe"
-    "GridUpdate\022\016\n\006gridId\030\001 \002(\r*\037\n\020PROTOCOL_V"
-    "ERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_UN"
-    "KNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n"
-    "\013VENUE_EUREX\020\003*\247\003\n\020GUI_MESSAGE_TYPE\022!\n\035G"
-    "UI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_ME"
-    "SSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESSAG"
-    "E_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE"
-    "_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_INI"
-    "TIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_TY"
-    "PE_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GUI_"
-    "MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036GU"
-    "I_MESSAGE_TYPE_SWITCH_CHANGE\020\010\022*\n&GUI_ME"
-    "SSAGE_TYPE_SUBSCRIBE_GRID_UPDATE\020\t\022,\n(GU"
-    "I_MESSAGE_TYPE_UNSUBSCRIBE_GRID_UPDATE\020\n"
-    "*\305\006\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MESSA"
-    "GE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MES"
-    "SAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_ME"
-    "SSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_MES"
-    "SAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SER"
-    "VER_MESSAGE_TYPE_HEARTBEAT\020\"\0220\n,SERVER_M"
-    "ESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED\020#\022*"
-    "\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZATION"
-    "\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_CHA"
-    "NGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHAN"
-    "GE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWI"
-    "TCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAGE_"
-    "TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n0S"
-    "ERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE_R"
-    "EJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_"
-    "ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SOUN"
-    "D\020,\022&\n\"SERVER_MESSAGE_TYPE_DATA_POINT_SE"
-    "T\020-\022\"\n\036SERVER_MESSAGE_TYPE_DATA_POINT\020.\022"
-    "&\n\"SERVER_MESSAGE_TYPE_TRADER_CHANGED\020/\022"
-    ")\n%SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY"
-    "\0200\022$\n SERVER_MESSAGE_TYPE_CLIENT_COUNT\0201"
-    "*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECODE_MES"
-    "SAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE_WRON"
-    "G_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ERROR_C"
-    "ODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377\377\377\377\377\377"
-    "\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME\020\374\377\377\377"
-    "\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_LOGGE"
-    "D_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEWAY_DO"
-    "WN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_IS_CL"
-    "OSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*G\n\016GridUpdate"
-    "Type\022\r\n\tCellsType\020\001\022\022\n\016GridButtonType\020\002\022"
-    "\022\n\016CellButtonType\020\003*L\n\010GridType\022\t\n\005Table"
-    "\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013MainControl\020"
-    "\004\022\016\n\nEntryTable\020\005*[\n\013SystemState\022\033\n\027Syst"
-    "emStateHardShutdown\020\000\022\026\n\022SystemStateEnab"
-    "led\020\001\022\027\n\023SystemStateDisabled\020\002*\323\001\n\010DataT"
-    "ype\022\017\n\013signed_type\020\000\022\021\n\runsigned_type\020\001\022"
-    "\017\n\013double_type\020\002\022\017\n\013string_type\020\003\022\r\n\tenu"
-    "m_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbool_type\020\006"
-    "\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010\022\032\n\026value_in"
-    "crement_button\020\t\022\032\n\026value_decrement_butt"
-    "on\020\n*\233\001\n\023ButtonFrontBehavior\022\036\n\032ButtonFr"
-    "ontBehavior_Revert\020\001\022$\n ButtonFrontBehav"
-    "ior_CommitValues\020\002\022\037\n\033ButtonFrontBehavio"
-    "r_Nothing\020\003\022\035\n\031ButtonFrontBehavior_Clear"
-    "\020\004*r\n\022ButtonBackBehavior\022\033\n\027ButtonBackBe"
-    "havior_Send\020\001\022\036\n\032ButtonBackBehavior_Noth"
-    "ing\020\002\022\037\n\033ButtonBackBehavior_SubmitId\020\003", 4998);
+    "\004sets\030\001 \003(\014\"(\n\023DataSeriesReplayEnd\022\021\n\tme"
+    "ssageID\030\001 \002(\r\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r\"\232"
+    "\001\n\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005f"
+    "ront\030\003 \002(\0162!.Python.proto.ButtonFrontBeh"
+    "avior\022.\n\004back\030\004 \002(\0162 .Python.proto.Butto"
+    "nBackBehavior\022\024\n\014confirmation\030\005 \002(\010\"+\n\017C"
+    "olorDefinition\022\n\n\002id\030\001 \002(\r\022\014\n\004argb\030\002 \002(\t"
+    "\"\032\n\007Clients\022\017\n\007clients\030\001 \002(\t\"%\n\023Subscrib"
+    "eGridUpdate\022\016\n\006gridId\030\001 \002(\r\"\'\n\025Unsubscri"
+    "beGridUpdate\022\016\n\006gridId\030\001 \002(\r*\037\n\020PROTOCOL"
+    "_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_"
+    "UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022"
+    "\017\n\013VENUE_EUREX\020\003*\247\003\n\020GUI_MESSAGE_TYPE\022!\n"
+    "\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_"
+    "MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESS"
+    "AGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TY"
+    "PE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_I"
+    "NITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_"
+    "TYPE_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GU"
+    "I_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036"
+    "GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010\022*\n&GUI_"
+    "MESSAGE_TYPE_SUBSCRIBE_GRID_UPDATE\020\t\022,\n("
+    "GUI_MESSAGE_TYPE_UNSUBSCRIBE_GRID_UPDATE"
+    "\020\n*\364\006\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MES"
+    "SAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_M"
+    "ESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_"
+    "MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_M"
+    "ESSAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035S"
+    "ERVER_MESSAGE_TYPE_HEARTBEAT\020\"\0220\n,SERVER"
+    "_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED\020#"
+    "\022*\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZATI"
+    "ON\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_C"
+    "HANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CH"
+    "ANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_S"
+    "WITCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAG"
+    "E_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n"
+    "0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE"
+    "_REJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMA"
+    "T_ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SO"
+    "UND\020,\022&\n\"SERVER_MESSAGE_TYPE_DATA_POINT_"
+    "SET\020-\022\"\n\036SERVER_MESSAGE_TYPE_DATA_POINT\020"
+    ".\022&\n\"SERVER_MESSAGE_TYPE_TRADER_CHANGED\020"
+    "/\022)\n%SERVER_MESSAGE_TYPE_DATA_POINT_REPL"
+    "AY\0200\022$\n SERVER_MESSAGE_TYPE_CLIENT_COUNT"
+    "\0201\022-\n)SERVER_MESSAGE_TYPE_DATA_POINT_REP"
+    "LAY_END\0202*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_D"
+    "ECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_"
+    "CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223"
+    "\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN"
+    "\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USER"
+    "NAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_"
+    "NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_G"
+    "ATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRA"
+    "DER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*G\n\016G"
+    "ridUpdateType\022\r\n\tCellsType\020\001\022\022\n\016GridButt"
+    "onType\020\002\022\022\n\016CellButtonType\020\003*L\n\010GridType"
+    "\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013Mai"
+    "nControl\020\004\022\016\n\nEntryTable\020\005*[\n\013SystemStat"
+    "e\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022System"
+    "StateEnabled\020\001\022\027\n\023SystemStateDisabled\020\002*"
+    "\323\001\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\runsigne"
+    "d_type\020\001\022\017\n\013double_type\020\002\022\017\n\013string_type"
+    "\020\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbo"
+    "ol_type\020\006\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010\022\032\n"
+    "\026value_increment_button\020\t\022\032\n\026value_decre"
+    "ment_button\020\n*\233\001\n\023ButtonFrontBehavior\022\036\n"
+    "\032ButtonFrontBehavior_Revert\020\001\022$\n ButtonF"
+    "rontBehavior_CommitValues\020\002\022\037\n\033ButtonFro"
+    "ntBehavior_Nothing\020\003\022\035\n\031ButtonFrontBehav"
+    "ior_Clear\020\004*r\n\022ButtonBackBehavior\022\033\n\027But"
+    "tonBackBehavior_Send\020\001\022\036\n\032ButtonBackBeha"
+    "vior_Nothing\020\002\022\037\n\033ButtonBackBehavior_Sub"
+    "mitId\020\003", 5087);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "python.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -943,6 +968,7 @@ void protobuf_AddDesc_python_2eproto() {
   DataSeriesPoint::default_instance_ = new DataSeriesPoint();
   DataSeriesPointSet::default_instance_ = new DataSeriesPointSet();
   DataSeriesReplay::default_instance_ = new DataSeriesReplay();
+  DataSeriesReplayEnd::default_instance_ = new DataSeriesReplayEnd();
   PlaySound::default_instance_ = new PlaySound();
   Button::default_instance_ = new Button();
   ColorDefinition::default_instance_ = new ColorDefinition();
@@ -973,6 +999,7 @@ void protobuf_AddDesc_python_2eproto() {
   DataSeriesPoint::default_instance_->InitAsDefaultInstance();
   DataSeriesPointSet::default_instance_->InitAsDefaultInstance();
   DataSeriesReplay::default_instance_->InitAsDefaultInstance();
+  DataSeriesReplayEnd::default_instance_->InitAsDefaultInstance();
   PlaySound::default_instance_->InitAsDefaultInstance();
   Button::default_instance_->InitAsDefaultInstance();
   ColorDefinition::default_instance_->InitAsDefaultInstance();
@@ -1064,6 +1091,7 @@ bool SERVER_MESSAGE_TYPE_IsValid(int value) {
     case 47:
     case 48:
     case 49:
+    case 50:
       return true;
     default:
       return false;
@@ -8444,6 +8472,215 @@ void DataSeriesReplay::Swap(DataSeriesReplay* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = DataSeriesReplay_descriptor_;
   metadata.reflection = DataSeriesReplay_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int DataSeriesReplayEnd::kMessageIDFieldNumber;
+#endif  // !_MSC_VER
+
+DataSeriesReplayEnd::DataSeriesReplayEnd()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void DataSeriesReplayEnd::InitAsDefaultInstance() {
+}
+
+DataSeriesReplayEnd::DataSeriesReplayEnd(const DataSeriesReplayEnd& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void DataSeriesReplayEnd::SharedCtor() {
+  _cached_size_ = 0;
+  messageid_ = 0u;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+DataSeriesReplayEnd::~DataSeriesReplayEnd() {
+  SharedDtor();
+}
+
+void DataSeriesReplayEnd::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void DataSeriesReplayEnd::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* DataSeriesReplayEnd::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return DataSeriesReplayEnd_descriptor_;
+}
+
+const DataSeriesReplayEnd& DataSeriesReplayEnd::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_python_2eproto();
+  return *default_instance_;
+}
+
+DataSeriesReplayEnd* DataSeriesReplayEnd::default_instance_ = NULL;
+
+DataSeriesReplayEnd* DataSeriesReplayEnd::New() const {
+  return new DataSeriesReplayEnd;
+}
+
+void DataSeriesReplayEnd::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    messageid_ = 0u;
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool DataSeriesReplayEnd::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required uint32 messageID = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &messageid_)));
+          set_has_messageid();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void DataSeriesReplayEnd::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required uint32 messageID = 1;
+  if (has_messageid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->messageid(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* DataSeriesReplayEnd::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required uint32 messageID = 1;
+  if (has_messageid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->messageid(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int DataSeriesReplayEnd::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required uint32 messageID = 1;
+    if (has_messageid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->messageid());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void DataSeriesReplayEnd::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const DataSeriesReplayEnd* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const DataSeriesReplayEnd*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void DataSeriesReplayEnd::MergeFrom(const DataSeriesReplayEnd& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_messageid()) {
+      set_messageid(from.messageid());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void DataSeriesReplayEnd::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void DataSeriesReplayEnd::CopyFrom(const DataSeriesReplayEnd& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool DataSeriesReplayEnd::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+
+  return true;
+}
+
+void DataSeriesReplayEnd::Swap(DataSeriesReplayEnd* other) {
+  if (other != this) {
+    std::swap(messageid_, other->messageid_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata DataSeriesReplayEnd::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = DataSeriesReplayEnd_descriptor_;
+  metadata.reflection = DataSeriesReplayEnd_reflection_;
   return metadata;
 }
 
