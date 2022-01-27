@@ -59,6 +59,7 @@ class DataSeries;
 class DataSeriesPoint;
 class DataSeriesPointSet;
 class DataSeriesReplay;
+class DataSeriesReplayEnd;
 class PlaySound;
 class Button;
 class ColorDefinition;
@@ -151,11 +152,12 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_DATA_POINT = 46,
   SERVER_MESSAGE_TYPE_TRADER_CHANGED = 47,
   SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY = 48,
-  SERVER_MESSAGE_TYPE_CLIENT_COUNT = 49
+  SERVER_MESSAGE_TYPE_CLIENT_COUNT = 49,
+  SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY_END = 50
 };
 bool SERVER_MESSAGE_TYPE_IsValid(int value);
 const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MIN = SERVER_MESSAGE_TYPE_CLIENT_CONNECTED;
-const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_CLIENT_COUNT;
+const SERVER_MESSAGE_TYPE SERVER_MESSAGE_TYPE_MAX = SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY_END;
 const int SERVER_MESSAGE_TYPE_ARRAYSIZE = SERVER_MESSAGE_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* SERVER_MESSAGE_TYPE_descriptor();
@@ -2894,6 +2896,88 @@ class DataSeriesReplay : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static DataSeriesReplay* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class DataSeriesReplayEnd : public ::google::protobuf::Message {
+ public:
+  DataSeriesReplayEnd();
+  virtual ~DataSeriesReplayEnd();
+
+  DataSeriesReplayEnd(const DataSeriesReplayEnd& from);
+
+  inline DataSeriesReplayEnd& operator=(const DataSeriesReplayEnd& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DataSeriesReplayEnd& default_instance();
+
+  void Swap(DataSeriesReplayEnd* other);
+
+  // implements Message ----------------------------------------------
+
+  DataSeriesReplayEnd* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DataSeriesReplayEnd& from);
+  void MergeFrom(const DataSeriesReplayEnd& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required uint32 messageID = 1;
+  inline bool has_messageid() const;
+  inline void clear_messageid();
+  static const int kMessageIDFieldNumber = 1;
+  inline ::google::protobuf::uint32 messageid() const;
+  inline void set_messageid(::google::protobuf::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesReplayEnd)
+ private:
+  inline void set_has_messageid();
+  inline void clear_has_messageid();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 messageid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+
+  friend void  protobuf_AddDesc_python_2eproto();
+  friend void protobuf_AssignDesc_python_2eproto();
+  friend void protobuf_ShutdownFile_python_2eproto();
+
+  void InitAsDefaultInstance();
+  static DataSeriesReplayEnd* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -5964,6 +6048,32 @@ DataSeriesReplay::sets() const {
 inline ::google::protobuf::RepeatedPtrField< ::std::string>*
 DataSeriesReplay::mutable_sets() {
   return &sets_;
+}
+
+// -------------------------------------------------------------------
+
+// DataSeriesReplayEnd
+
+// required uint32 messageID = 1;
+inline bool DataSeriesReplayEnd::has_messageid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void DataSeriesReplayEnd::set_has_messageid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void DataSeriesReplayEnd::clear_has_messageid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void DataSeriesReplayEnd::clear_messageid() {
+  messageid_ = 0u;
+  clear_has_messageid();
+}
+inline ::google::protobuf::uint32 DataSeriesReplayEnd::messageid() const {
+  return messageid_;
+}
+inline void DataSeriesReplayEnd::set_messageid(::google::protobuf::uint32 value) {
+  set_has_messageid();
+  messageid_ = value;
 }
 
 // -------------------------------------------------------------------

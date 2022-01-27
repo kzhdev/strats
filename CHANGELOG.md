@@ -1,3 +1,8 @@
+#Version 1.55.4
+- Fix delayed best market update in updateHedge function might fails the MaxTicksThroughMarket
+- Send DataSeriesReplayEnd message to GUI after sending out historical data
+- Handles corrupted chart histories file
+
 #Version 1.55.3
 - Serialize GUI messages only once
 - Pre-create stack levels when MD recovered

@@ -35,10 +35,7 @@ public:
     }
 
     ~FrontSide() {
-        if (_chartHistories.is_open()) {
-            _chartHistories.flush();
-            _chartHistories.close();
-        }
+        closeChartHistoriesFile();
     }
 
     ResourceId id() const noexcept override { return ResourceId::FrontSide; }
@@ -203,11 +200,19 @@ public:
         }
 
         auto chartHistoriesFile = chartHistoriesFileName();
-        _chartHistories.open("./chart_histories_" + chartHistoriesFile, std::ios::app | std::ios::binary);
+        auto pos = loadChartHistories(chartHistoriesFile);
+        _chartHistories.open("./chart_histories_" + chartHistoriesFile, std::ios::ate | std::ios::binary | std::ios::in | std::ios::out);
         if (!_chartHistories.is_open()) {
             logging::GetLogger().logError("Failed to open chart_histories file");
+        } else if (pos != -1) {
+            try {
+                logging::GetLogger().logInfo("Set chart histories output position to " + std::to_string(pos));
+                // If the file is corrupted during crash, this will truncate the bad data
+                _chartHistories.seekp(pos);
+            } catch(const std::ios_base::failure&) {
+                logging::GetLogger().logError("Set chart histories output position throw exception. tellp=" + std::to_string(_chartHistories.tellp()));
+            }
         }
-        loadChartHistories(chartHistoriesFile);
     }
 
     static std::string chartHistoriesFileName() noexcept {
@@ -219,43 +224,53 @@ public:
         return hf::util::TimeUtils::strftime("%Y%m%d", t * 1000000000);
     }
 
-    void loadChartHistories(const std::string& chartHistoriesFile) {
+    int64_t loadChartHistories(const std::string& chartHistoriesFile) {
         std::ifstream chartHistories;
+        int64_t pos = 0;
+        int64_t total = 0;
         try {
             chartHistories.open("./chart_histories_" + chartHistoriesFile, std::ios::ate | std::ios::binary);
             if (!chartHistories.is_open()) {
-                logging::GetLogger().logError("Failed to open chart_histories file");
-                return;
+                logging::GetLogger().logInfo("No chart history data.");
+                return -1;
             }
 
-            auto size = chartHistories.tellg();
-            if (size == 0) {
-                return;
+            logging::GetLogger().logInfo("Load ChartHistories ./chart_histories_" + chartHistoriesFile);
+
+            total = chartHistories.tellg();
+            if (total == 0 || total == -1) {
+                logging::GetLogger().logInfo("No chart history data.");
+                chartHistories.close();
+                return -1;
             }
+
             chartHistories.seekg(0);
 
             size_t length;
             std::string buf;
             do {
                 if (!chartHistories.read(reinterpret_cast<char*>(&length), sizeof(length))) {
-                    logging::GetLogger().logError("Error reading DataSeriesPointSet size");
+                    logging::GetLogger().logError(boost::str(boost::format("Error reading DataSeriesPointSet size. #RecordRead=%1%, total=%2%, read=%3%") % _dataPoints.size() % pos));
                     break;
                 }
 
+                pos = chartHistories.tellg();
                 buf.resize(length);
                 if (chartHistories.read(buf.data(), length)) {
                     cacheDataPointSets(buf);
-                    size -= length;
-                }
-
-                if (size && size < static_cast<long int>(length)) {
-                    logging::GetLogger().logError(chartHistoriesFile + " corrupted?");
-                    assert(false);
+                    pos = chartHistories.tellg();
+                } else {
+                    pos -= sizeof(length);
+                    logging::GetLogger().logError(boost::str(boost::format("Error reading series data. #RecordRead=%1%, total=%2%, read=%3%") % _dataPoints.size() % total % pos));
                     break;
                 }
-            } while (!chartHistories.eof());
-        } catch(...) {}
+            } while (!chartHistories.eof() && pos < total);
+            logging::GetLogger().logInfo(boost::str(boost::format("Load ChartHistories. #RecordRead=%1%, total=%2%, read=%3% tellg=%4%") % _dataPoints.size() % total % pos % chartHistories.tellg()));
+        } catch(...) {
+            logging::GetLogger().logError(boost::str(boost::format("Load ChartHistories. Exception Occurred, #RecordRead=%1%, total=%2%, read=%3% tellg=%4%") % _dataPoints.size() % total % pos % chartHistories.tellg()));
+        }
         chartHistories.close();
+        return pos == total ? -1 : pos;
     }
 
     bool isPnlWithinLimits(uint32_t id) {
@@ -280,10 +295,7 @@ public:
             refreshThings();
         }
 
-        if (_chartHistories.is_open()) {
-            _chartHistories.flush();
-            _chartHistories.close();
-        }
+        closeChartHistoriesFile();
     }
 
     void checkInternalHeartbeats(uint64_t now_in_cycles) {
@@ -328,7 +340,15 @@ public:
         }
     }
 
+    void closeChartHistoriesFile() {
+        if (_chartHistories.is_open()) {
+            _chartHistories.flush();
+            _chartHistories.close();
+        }
+    }
+
     void killProcess() {
+        closeChartHistoriesFile();
 #define VIPER_GENERATE_CORE_ON_KILL
 #ifdef VIPER_GENERATE_CORE_ON_KILL
         ::raise(SIGABRT);
@@ -2177,14 +2197,17 @@ public:
     }
 
     void sendChartHistories(int32_t connectionId) {
-        auto begin = TimeUtils::clock_gettime();
-        for (auto& replay : _dataPoints) {
-            if (!replay.sets_size()) {
-                break;
+        if (!_dataPoints.empty()) {
+            auto begin = TimeUtils::clock_gettime();
+            for (auto& replay : _dataPoints) {
+                if (!replay.sets_size()) {
+                    break;
+                }
+                _clientAcceptor->sendChartHistories(replay, connectionId);
             }
-            _clientAcceptor->sendChartHistories(replay, connectionId);
+            _clientAcceptor->sendChartHistoriesEnd(connectionId);
+            logging::GetLogger().logInfo(boost::str(boost::format("Sent chart histories. timespan=%1% ns") % (TimeUtils::clock_gettime() - begin)));
         }
-        logging::GetLogger().logInfo(boost::str(boost::format("Sent chart histories. timespan=%1% ns") % (TimeUtils::clock_gettime() - begin)));
     }
 
     void onSubscribeGridUpdate(const std::shared_ptr<ClientConnection>& connection, uint32_t gridId) {
@@ -2363,7 +2386,7 @@ public:
 
     std::vector<proto::DataSeriesReplay> _dataPoints;
     uint32_t _currentDataReplaySize = 0;
-    std::ofstream _chartHistories;
+    std::fstream _chartHistories;
 
     std::unordered_set<std::shared_ptr<ClientConnection>> _updateSubscriptions[toUInt(WindowIds::__WindowsIds_Last__)];
 };
