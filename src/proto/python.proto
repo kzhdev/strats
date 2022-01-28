@@ -41,7 +41,7 @@ enum SERVER_MESSAGE_TYPE {
     SERVER_MESSAGE_TYPE_FORMAT_ERROR = 43;
     SERVER_MESSAGE_TYPE_PLAY_SOUND = 44;
     SERVER_MESSAGE_TYPE_DATA_POINT_SET = 45;
-    SERVER_MESSAGE_TYPE_DATA_POINT = 46;
+    SERVER_MESSAGE_TYPE_DATA_POINT_SETS = 46;
     SERVER_MESSAGE_TYPE_TRADER_CHANGED = 47;
     SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY = 48;
     SERVER_MESSAGE_TYPE_CLIENT_COUNT = 49;
@@ -222,14 +222,18 @@ message DataSeries {
 }
 
 message DataSeriesPoint {
-    required uint32 chartId = 1;
-    required uint32 dataSeriesId = 2;
-    required uint64 time = 3;
-    required double value = 4;
+    required uint32 dataSeriesId = 1;
+    required double value = 2;
 }
 
 message DataSeriesPointSet {
-    repeated DataSeriesPoint points = 1;
+    required uint32 chartId = 1;
+    required uint64 time = 2;
+    repeated DataSeriesPoint points = 3;
+}
+
+message DataSeriesPointSets {
+    repeated DataSeriesPointSet sets = 1;
 }
 
 message DataSeriesReplay {

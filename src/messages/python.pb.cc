@@ -90,6 +90,9 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* DataSeriesPointSet_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   DataSeriesPointSet_reflection_ = NULL;
+const ::google::protobuf::Descriptor* DataSeriesPointSets_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  DataSeriesPointSets_reflection_ = NULL;
 const ::google::protobuf::Descriptor* DataSeriesReplay_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   DataSeriesReplay_reflection_ = NULL;
@@ -496,10 +499,8 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeries));
   DataSeriesPoint_descriptor_ = file->message_type(21);
-  static const int DataSeriesPoint_offsets_[4] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, chartid_),
+  static const int DataSeriesPoint_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, dataseriesid_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, time_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPoint, value_),
   };
   DataSeriesPoint_reflection_ =
@@ -514,7 +515,9 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeriesPoint));
   DataSeriesPointSet_descriptor_ = file->message_type(22);
-  static const int DataSeriesPointSet_offsets_[1] = {
+  static const int DataSeriesPointSet_offsets_[3] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPointSet, chartid_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPointSet, time_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPointSet, points_),
   };
   DataSeriesPointSet_reflection_ =
@@ -528,7 +531,22 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeriesPointSet));
-  DataSeriesReplay_descriptor_ = file->message_type(23);
+  DataSeriesPointSets_descriptor_ = file->message_type(23);
+  static const int DataSeriesPointSets_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPointSets, sets_),
+  };
+  DataSeriesPointSets_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      DataSeriesPointSets_descriptor_,
+      DataSeriesPointSets::default_instance_,
+      DataSeriesPointSets_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPointSets, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesPointSets, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(DataSeriesPointSets));
+  DataSeriesReplay_descriptor_ = file->message_type(24);
   static const int DataSeriesReplay_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesReplay, sets_),
   };
@@ -543,7 +561,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeriesReplay));
-  DataSeriesReplayEnd_descriptor_ = file->message_type(24);
+  DataSeriesReplayEnd_descriptor_ = file->message_type(25);
   static const int DataSeriesReplayEnd_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DataSeriesReplayEnd, messageid_),
   };
@@ -558,7 +576,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(DataSeriesReplayEnd));
-  PlaySound_descriptor_ = file->message_type(25);
+  PlaySound_descriptor_ = file->message_type(26);
   static const int PlaySound_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlaySound, id_),
   };
@@ -573,7 +591,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(PlaySound));
-  Button_descriptor_ = file->message_type(26);
+  Button_descriptor_ = file->message_type(27);
   static const int Button_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Button, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Button, id_),
@@ -592,7 +610,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Button));
-  ColorDefinition_descriptor_ = file->message_type(27);
+  ColorDefinition_descriptor_ = file->message_type(28);
   static const int ColorDefinition_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColorDefinition, id_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ColorDefinition, argb_),
@@ -608,7 +626,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ColorDefinition));
-  Clients_descriptor_ = file->message_type(28);
+  Clients_descriptor_ = file->message_type(29);
   static const int Clients_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Clients, clients_),
   };
@@ -623,7 +641,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Clients));
-  SubscribeGridUpdate_descriptor_ = file->message_type(29);
+  SubscribeGridUpdate_descriptor_ = file->message_type(30);
   static const int SubscribeGridUpdate_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SubscribeGridUpdate, gridid_),
   };
@@ -638,7 +656,7 @@ void protobuf_AssignDesc_python_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(SubscribeGridUpdate));
-  UnsubscribeGridUpdate_descriptor_ = file->message_type(30);
+  UnsubscribeGridUpdate_descriptor_ = file->message_type(31);
   static const int UnsubscribeGridUpdate_offsets_[1] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(UnsubscribeGridUpdate, gridid_),
   };
@@ -723,6 +741,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     DataSeriesPointSet_descriptor_, &DataSeriesPointSet::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    DataSeriesPointSets_descriptor_, &DataSeriesPointSets::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     DataSeriesReplay_descriptor_, &DataSeriesReplay::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     DataSeriesReplayEnd_descriptor_, &DataSeriesReplayEnd::default_instance());
@@ -789,6 +809,8 @@ void protobuf_ShutdownFile_python_2eproto() {
   delete DataSeriesPoint_reflection_;
   delete DataSeriesPointSet::default_instance_;
   delete DataSeriesPointSet_reflection_;
+  delete DataSeriesPointSets::default_instance_;
+  delete DataSeriesPointSets_reflection_;
   delete DataSeriesReplay::default_instance_;
   delete DataSeriesReplay_reflection_;
   delete DataSeriesReplayEnd::default_instance_;
@@ -864,84 +886,86 @@ void protobuf_AddDesc_python_2eproto() {
     "\n\n\002id\030\002 \002(\r\022\035\n\025numberOfDecimalPlaces\030\003 \002"
     "(\r\022(\n\006series\030\004 \003(\0132\030.Python.proto.DataSe"
     "ries\"7\n\nDataSeries\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002"
-    " \002(\r\022\017\n\007colorId\030\003 \001(\r\"U\n\017DataSeriesPoint"
-    "\022\017\n\007chartId\030\001 \002(\r\022\024\n\014dataSeriesId\030\002 \002(\r\022"
-    "\014\n\004time\030\003 \002(\004\022\r\n\005value\030\004 \002(\001\"C\n\022DataSeri"
-    "esPointSet\022-\n\006points\030\001 \003(\0132\035.Python.prot"
-    "o.DataSeriesPoint\" \n\020DataSeriesReplay\022\014\n"
-    "\004sets\030\001 \003(\014\"(\n\023DataSeriesReplayEnd\022\021\n\tme"
-    "ssageID\030\001 \002(\r\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r\"\232"
-    "\001\n\006Button\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005f"
-    "ront\030\003 \002(\0162!.Python.proto.ButtonFrontBeh"
-    "avior\022.\n\004back\030\004 \002(\0162 .Python.proto.Butto"
-    "nBackBehavior\022\024\n\014confirmation\030\005 \002(\010\"+\n\017C"
-    "olorDefinition\022\n\n\002id\030\001 \002(\r\022\014\n\004argb\030\002 \002(\t"
-    "\"\032\n\007Clients\022\017\n\007clients\030\001 \002(\t\"%\n\023Subscrib"
-    "eGridUpdate\022\016\n\006gridId\030\001 \002(\r\"\'\n\025Unsubscri"
-    "beGridUpdate\022\016\n\006gridId\030\001 \002(\r*\037\n\020PROTOCOL"
-    "_VERSION\022\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_"
-    "UNKNOWN\020\000\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022"
-    "\017\n\013VENUE_EUREX\020\003*\247\003\n\020GUI_MESSAGE_TYPE\022!\n"
-    "\035GUI_MESSAGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_"
-    "MESSAGE_TYPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESS"
-    "AGE_TYPE_GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TY"
-    "PE_HEARTBEAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_I"
-    "NITIALIZATION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_"
-    "TYPE_GUI_INITIALIZATION_REJECTED\020\006\022(\n$GU"
-    "I_MESSAGE_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036"
-    "GUI_MESSAGE_TYPE_SWITCH_CHANGE\020\010\022*\n&GUI_"
-    "MESSAGE_TYPE_SUBSCRIBE_GRID_UPDATE\020\t\022,\n("
-    "GUI_MESSAGE_TYPE_UNSUBSCRIBE_GRID_UPDATE"
-    "\020\n*\364\006\n\023SERVER_MESSAGE_TYPE\022(\n$SERVER_MES"
-    "SAGE_TYPE_CLIENT_CONNECTED\020\036\022\'\n#SERVER_M"
-    "ESSAGE_TYPE_CLIENT_REJECTED\020\037\022%\n!SERVER_"
-    "MESSAGE_TYPE_CLIENT_CLOSED\020 \022-\n)SERVER_M"
-    "ESSAGE_TYPE_CLIENT_CLOSE_REJECTED\020!\022!\n\035S"
-    "ERVER_MESSAGE_TYPE_HEARTBEAT\020\"\0220\n,SERVER"
-    "_MESSAGE_TYPE_GRID_CHANGE_ACKNOWLEDGED\020#"
-    "\022*\n&SERVER_MESSAGE_TYPE_GUI_INITIALIZATI"
-    "ON\020%\022)\n%SERVER_MESSAGE_TYPE_GRID_STATE_C"
-    "HANGE\020&\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CH"
-    "ANGE_ACCEPTED\020\'\022.\n*SERVER_MESSAGE_TYPE_S"
-    "WITCH_CHANGE_REJECTED\020(\0224\n0SERVER_MESSAG"
-    "E_TYPE_SYSTEM_STATE_CHANGE_ACCEPTED\020)\0224\n"
-    "0SERVER_MESSAGE_TYPE_SYSTEM_STATE_CHANGE"
-    "_REJECTED\020*\022$\n SERVER_MESSAGE_TYPE_FORMA"
-    "T_ERROR\020+\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SO"
-    "UND\020,\022&\n\"SERVER_MESSAGE_TYPE_DATA_POINT_"
-    "SET\020-\022\"\n\036SERVER_MESSAGE_TYPE_DATA_POINT\020"
-    ".\022&\n\"SERVER_MESSAGE_TYPE_TRADER_CHANGED\020"
-    "/\022)\n%SERVER_MESSAGE_TYPE_DATA_POINT_REPL"
-    "AY\0200\022$\n SERVER_MESSAGE_TYPE_CLIENT_COUNT"
-    "\0201\022-\n)SERVER_MESSAGE_TYPE_DATA_POINT_REP"
-    "LAY_END\0202*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_D"
-    "ECODE_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_"
-    "CODE_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223"
-    "\n&ERROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN"
-    "\020\375\377\377\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USER"
-    "NAME\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_"
-    "NOT_LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_G"
-    "ATEWAY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRA"
-    "DER_IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*G\n\016G"
-    "ridUpdateType\022\r\n\tCellsType\020\001\022\022\n\016GridButt"
-    "onType\020\002\022\022\n\016CellButtonType\020\003*L\n\010GridType"
-    "\022\t\n\005Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013Mai"
-    "nControl\020\004\022\016\n\nEntryTable\020\005*[\n\013SystemStat"
-    "e\022\033\n\027SystemStateHardShutdown\020\000\022\026\n\022System"
-    "StateEnabled\020\001\022\027\n\023SystemStateDisabled\020\002*"
-    "\323\001\n\010DataType\022\017\n\013signed_type\020\000\022\021\n\runsigne"
-    "d_type\020\001\022\017\n\013double_type\020\002\022\017\n\013string_type"
-    "\020\003\022\r\n\tenum_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbo"
-    "ol_type\020\006\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010\022\032\n"
-    "\026value_increment_button\020\t\022\032\n\026value_decre"
-    "ment_button\020\n*\233\001\n\023ButtonFrontBehavior\022\036\n"
-    "\032ButtonFrontBehavior_Revert\020\001\022$\n ButtonF"
-    "rontBehavior_CommitValues\020\002\022\037\n\033ButtonFro"
-    "ntBehavior_Nothing\020\003\022\035\n\031ButtonFrontBehav"
-    "ior_Clear\020\004*r\n\022ButtonBackBehavior\022\033\n\027But"
-    "tonBackBehavior_Send\020\001\022\036\n\032ButtonBackBeha"
-    "vior_Nothing\020\002\022\037\n\033ButtonBackBehavior_Sub"
-    "mitId\020\003", 5087);
+    " \002(\r\022\017\n\007colorId\030\003 \001(\r\"6\n\017DataSeriesPoint"
+    "\022\024\n\014dataSeriesId\030\001 \002(\r\022\r\n\005value\030\002 \002(\001\"b\n"
+    "\022DataSeriesPointSet\022\017\n\007chartId\030\001 \002(\r\022\014\n\004"
+    "time\030\002 \002(\004\022-\n\006points\030\003 \003(\0132\035.Python.prot"
+    "o.DataSeriesPoint\"E\n\023DataSeriesPointSets"
+    "\022.\n\004sets\030\001 \003(\0132 .Python.proto.DataSeries"
+    "PointSet\" \n\020DataSeriesReplay\022\014\n\004sets\030\001 \003"
+    "(\014\"(\n\023DataSeriesReplayEnd\022\021\n\tmessageID\030\001"
+    " \002(\r\"\027\n\tPlaySound\022\n\n\002id\030\001 \002(\r\"\232\001\n\006Button"
+    "\022\014\n\004name\030\001 \002(\t\022\n\n\002id\030\002 \002(\r\0220\n\005front\030\003 \002("
+    "\0162!.Python.proto.ButtonFrontBehavior\022.\n\004"
+    "back\030\004 \002(\0162 .Python.proto.ButtonBackBeha"
+    "vior\022\024\n\014confirmation\030\005 \002(\010\"+\n\017ColorDefin"
+    "ition\022\n\n\002id\030\001 \002(\r\022\014\n\004argb\030\002 \002(\t\"\032\n\007Clien"
+    "ts\022\017\n\007clients\030\001 \002(\t\"%\n\023SubscribeGridUpda"
+    "te\022\016\n\006gridId\030\001 \002(\r\"\'\n\025UnsubscribeGridUpd"
+    "ate\022\016\n\006gridId\030\001 \002(\r*\037\n\020PROTOCOL_VERSION\022"
+    "\013\n\007VERSION\020\001*I\n\005VENUE\022\021\n\rVENUE_UNKNOWN\020\000"
+    "\022\r\n\tVENUE_CME\020\001\022\r\n\tVENUE_ICE\020\002\022\017\n\013VENUE_"
+    "EUREX\020\003*\247\003\n\020GUI_MESSAGE_TYPE\022!\n\035GUI_MESS"
+    "AGE_TYPE_CLIENT_LOGIN\020\001\022\"\n\036GUI_MESSAGE_T"
+    "YPE_CLIENT_LOGOUT\020\002\022 \n\034GUI_MESSAGE_TYPE_"
+    "GRID_CHANGE\020\003\022\036\n\032GUI_MESSAGE_TYPE_HEARTB"
+    "EAT\020\004\0220\n,GUI_MESSAGE_TYPE_GUI_INITIALIZA"
+    "TION_ACCEPTED\020\005\0220\n,GUI_MESSAGE_TYPE_GUI_"
+    "INITIALIZATION_REJECTED\020\006\022(\n$GUI_MESSAGE"
+    "_TYPE_SYSTEM_STATE_CHANGE\020\007\022\"\n\036GUI_MESSA"
+    "GE_TYPE_SWITCH_CHANGE\020\010\022*\n&GUI_MESSAGE_T"
+    "YPE_SUBSCRIBE_GRID_UPDATE\020\t\022,\n(GUI_MESSA"
+    "GE_TYPE_UNSUBSCRIBE_GRID_UPDATE\020\n*\371\006\n\023SE"
+    "RVER_MESSAGE_TYPE\022(\n$SERVER_MESSAGE_TYPE"
+    "_CLIENT_CONNECTED\020\036\022\'\n#SERVER_MESSAGE_TY"
+    "PE_CLIENT_REJECTED\020\037\022%\n!SERVER_MESSAGE_T"
+    "YPE_CLIENT_CLOSED\020 \022-\n)SERVER_MESSAGE_TY"
+    "PE_CLIENT_CLOSE_REJECTED\020!\022!\n\035SERVER_MES"
+    "SAGE_TYPE_HEARTBEAT\020\"\0220\n,SERVER_MESSAGE_"
+    "TYPE_GRID_CHANGE_ACKNOWLEDGED\020#\022*\n&SERVE"
+    "R_MESSAGE_TYPE_GUI_INITIALIZATION\020%\022)\n%S"
+    "ERVER_MESSAGE_TYPE_GRID_STATE_CHANGE\020&\022."
+    "\n*SERVER_MESSAGE_TYPE_SWITCH_CHANGE_ACCE"
+    "PTED\020\'\022.\n*SERVER_MESSAGE_TYPE_SWITCH_CHA"
+    "NGE_REJECTED\020(\0224\n0SERVER_MESSAGE_TYPE_SY"
+    "STEM_STATE_CHANGE_ACCEPTED\020)\0224\n0SERVER_M"
+    "ESSAGE_TYPE_SYSTEM_STATE_CHANGE_REJECTED"
+    "\020*\022$\n SERVER_MESSAGE_TYPE_FORMAT_ERROR\020+"
+    "\022\"\n\036SERVER_MESSAGE_TYPE_PLAY_SOUND\020,\022&\n\""
+    "SERVER_MESSAGE_TYPE_DATA_POINT_SET\020-\022\'\n#"
+    "SERVER_MESSAGE_TYPE_DATA_POINT_SETS\020.\022&\n"
+    "\"SERVER_MESSAGE_TYPE_TRADER_CHANGED\020/\022)\n"
+    "%SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY\0200"
+    "\022$\n SERVER_MESSAGE_TYPE_CLIENT_COUNT\0201\022-"
+    "\n)SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY_"
+    "END\0202*\327\002\n\nERROR_CODE\022,\n\037ERROR_CODE_DECOD"
+    "E_MESSAGE_ERROR\020\377\377\377\377\377\377\377\377\377\001\022.\n!ERROR_CODE"
+    "_WRONG_PROTOCOL_VERSION\020\376\377\377\377\377\377\377\377\377\001\0223\n&ER"
+    "ROR_CODE_CLIENT_IS_ALREADY_LOGGED_IN\020\375\377\377"
+    "\377\377\377\377\377\377\001\022*\n\035ERROR_CODE_INCORRECT_USERNAME"
+    "\020\374\377\377\377\377\377\377\377\377\001\022/\n\"ERROR_CODE_CLIENT_IS_NOT_"
+    "LOGGED_IN\020\373\377\377\377\377\377\377\377\377\001\022$\n\027ERROR_CODE_GATEW"
+    "AY_DOWN\020\372\377\377\377\377\377\377\377\377\001\0223\n&ERROR_CODE_TRADER_"
+    "IS_CLOSED_OR_CLOSING\020\371\377\377\377\377\377\377\377\377\001*G\n\016GridU"
+    "pdateType\022\r\n\tCellsType\020\001\022\022\n\016GridButtonTy"
+    "pe\020\002\022\022\n\016CellButtonType\020\003*L\n\010GridType\022\t\n\005"
+    "Table\020\001\022\n\n\006Matrix\020\002\022\010\n\004List\020\003\022\017\n\013MainCon"
+    "trol\020\004\022\016\n\nEntryTable\020\005*[\n\013SystemState\022\033\n"
+    "\027SystemStateHardShutdown\020\000\022\026\n\022SystemStat"
+    "eEnabled\020\001\022\027\n\023SystemStateDisabled\020\002*\323\001\n\010"
+    "DataType\022\017\n\013signed_type\020\000\022\021\n\runsigned_ty"
+    "pe\020\001\022\017\n\013double_type\020\002\022\017\n\013string_type\020\003\022\r"
+    "\n\tenum_type\020\004\022\017\n\013rhone_price\020\005\022\r\n\tbool_t"
+    "ype\020\006\022\n\n\006button\020\007\022\016\n\nrhone_time\020\010\022\032\n\026val"
+    "ue_increment_button\020\t\022\032\n\026value_decrement"
+    "_button\020\n*\233\001\n\023ButtonFrontBehavior\022\036\n\032But"
+    "tonFrontBehavior_Revert\020\001\022$\n ButtonFront"
+    "Behavior_CommitValues\020\002\022\037\n\033ButtonFrontBe"
+    "havior_Nothing\020\003\022\035\n\031ButtonFrontBehavior_"
+    "Clear\020\004*r\n\022ButtonBackBehavior\022\033\n\027ButtonB"
+    "ackBehavior_Send\020\001\022\036\n\032ButtonBackBehavior"
+    "_Nothing\020\002\022\037\n\033ButtonBackBehavior_SubmitI"
+    "d\020\003", 5163);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "python.proto", &protobuf_RegisterTypes);
   Error::default_instance_ = new Error();
@@ -967,6 +991,7 @@ void protobuf_AddDesc_python_2eproto() {
   DataSeries::default_instance_ = new DataSeries();
   DataSeriesPoint::default_instance_ = new DataSeriesPoint();
   DataSeriesPointSet::default_instance_ = new DataSeriesPointSet();
+  DataSeriesPointSets::default_instance_ = new DataSeriesPointSets();
   DataSeriesReplay::default_instance_ = new DataSeriesReplay();
   DataSeriesReplayEnd::default_instance_ = new DataSeriesReplayEnd();
   PlaySound::default_instance_ = new PlaySound();
@@ -998,6 +1023,7 @@ void protobuf_AddDesc_python_2eproto() {
   DataSeries::default_instance_->InitAsDefaultInstance();
   DataSeriesPoint::default_instance_->InitAsDefaultInstance();
   DataSeriesPointSet::default_instance_->InitAsDefaultInstance();
+  DataSeriesPointSets::default_instance_->InitAsDefaultInstance();
   DataSeriesReplay::default_instance_->InitAsDefaultInstance();
   DataSeriesReplayEnd::default_instance_->InitAsDefaultInstance();
   PlaySound::default_instance_->InitAsDefaultInstance();
@@ -7745,9 +7771,7 @@ void DataSeries::Swap(DataSeries* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int DataSeriesPoint::kChartIdFieldNumber;
 const int DataSeriesPoint::kDataSeriesIdFieldNumber;
-const int DataSeriesPoint::kTimeFieldNumber;
 const int DataSeriesPoint::kValueFieldNumber;
 #endif  // !_MSC_VER
 
@@ -7767,9 +7791,7 @@ DataSeriesPoint::DataSeriesPoint(const DataSeriesPoint& from)
 
 void DataSeriesPoint::SharedCtor() {
   _cached_size_ = 0;
-  chartid_ = 0u;
   dataseriesid_ = 0u;
-  time_ = GOOGLE_ULONGLONG(0);
   value_ = 0;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
@@ -7806,9 +7828,7 @@ DataSeriesPoint* DataSeriesPoint::New() const {
 
 void DataSeriesPoint::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    chartid_ = 0u;
     dataseriesid_ = 0u;
-    time_ = GOOGLE_ULONGLONG(0);
     value_ = 0;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -7821,26 +7841,10 @@ bool DataSeriesPoint::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required uint32 chartId = 1;
+      // required uint32 dataSeriesId = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
-                 input, &chartid_)));
-          set_has_chartid();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(16)) goto parse_dataSeriesId;
-        break;
-      }
-
-      // required uint32 dataSeriesId = 2;
-      case 2: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_dataSeriesId:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
                  input, &dataseriesid_)));
@@ -7848,28 +7852,12 @@ bool DataSeriesPoint::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(24)) goto parse_time;
+        if (input->ExpectTag(17)) goto parse_value;
         break;
       }
 
-      // required uint64 time = 3;
-      case 3: {
-        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
-            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-         parse_time:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::uint64, ::google::protobuf::internal::WireFormatLite::TYPE_UINT64>(
-                 input, &time_)));
-          set_has_time();
-        } else {
-          goto handle_uninterpreted;
-        }
-        if (input->ExpectTag(33)) goto parse_value;
-        break;
-      }
-
-      // required double value = 4;
-      case 4: {
+      // required double value = 2;
+      case 2: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_FIXED64) {
          parse_value:
@@ -7902,24 +7890,14 @@ bool DataSeriesPoint::MergePartialFromCodedStream(
 
 void DataSeriesPoint::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // required uint32 chartId = 1;
-  if (has_chartid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->chartid(), output);
-  }
-
-  // required uint32 dataSeriesId = 2;
+  // required uint32 dataSeriesId = 1;
   if (has_dataseriesid()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt32(2, this->dataseriesid(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->dataseriesid(), output);
   }
 
-  // required uint64 time = 3;
-  if (has_time()) {
-    ::google::protobuf::internal::WireFormatLite::WriteUInt64(3, this->time(), output);
-  }
-
-  // required double value = 4;
+  // required double value = 2;
   if (has_value()) {
-    ::google::protobuf::internal::WireFormatLite::WriteDouble(4, this->value(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(2, this->value(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -7930,24 +7908,14 @@ void DataSeriesPoint::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* DataSeriesPoint::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // required uint32 chartId = 1;
-  if (has_chartid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->chartid(), target);
-  }
-
-  // required uint32 dataSeriesId = 2;
+  // required uint32 dataSeriesId = 1;
   if (has_dataseriesid()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(2, this->dataseriesid(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->dataseriesid(), target);
   }
 
-  // required uint64 time = 3;
-  if (has_time()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteUInt64ToArray(3, this->time(), target);
-  }
-
-  // required double value = 4;
+  // required double value = 2;
   if (has_value()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(4, this->value(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(2, this->value(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -7961,28 +7929,14 @@ int DataSeriesPoint::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required uint32 chartId = 1;
-    if (has_chartid()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::UInt32Size(
-          this->chartid());
-    }
-
-    // required uint32 dataSeriesId = 2;
+    // required uint32 dataSeriesId = 1;
     if (has_dataseriesid()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt32Size(
           this->dataseriesid());
     }
 
-    // required uint64 time = 3;
-    if (has_time()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::UInt64Size(
-          this->time());
-    }
-
-    // required double value = 4;
+    // required double value = 2;
     if (has_value()) {
       total_size += 1 + 8;
     }
@@ -8014,14 +7968,8 @@ void DataSeriesPoint::MergeFrom(const ::google::protobuf::Message& from) {
 void DataSeriesPoint::MergeFrom(const DataSeriesPoint& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_chartid()) {
-      set_chartid(from.chartid());
-    }
     if (from.has_dataseriesid()) {
       set_dataseriesid(from.dataseriesid());
-    }
-    if (from.has_time()) {
-      set_time(from.time());
     }
     if (from.has_value()) {
       set_value(from.value());
@@ -8043,16 +7991,14 @@ void DataSeriesPoint::CopyFrom(const DataSeriesPoint& from) {
 }
 
 bool DataSeriesPoint::IsInitialized() const {
-  if ((_has_bits_[0] & 0x0000000f) != 0x0000000f) return false;
+  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
 
   return true;
 }
 
 void DataSeriesPoint::Swap(DataSeriesPoint* other) {
   if (other != this) {
-    std::swap(chartid_, other->chartid_);
     std::swap(dataseriesid_, other->dataseriesid_);
-    std::swap(time_, other->time_);
     std::swap(value_, other->value_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
@@ -8072,6 +8018,8 @@ void DataSeriesPoint::Swap(DataSeriesPoint* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int DataSeriesPointSet::kChartIdFieldNumber;
+const int DataSeriesPointSet::kTimeFieldNumber;
 const int DataSeriesPointSet::kPointsFieldNumber;
 #endif  // !_MSC_VER
 
@@ -8091,6 +8039,8 @@ DataSeriesPointSet::DataSeriesPointSet(const DataSeriesPointSet& from)
 
 void DataSeriesPointSet::SharedCtor() {
   _cached_size_ = 0;
+  chartid_ = 0u;
+  time_ = GOOGLE_ULONGLONG(0);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -8125,6 +8075,10 @@ DataSeriesPointSet* DataSeriesPointSet::New() const {
 }
 
 void DataSeriesPointSet::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    chartid_ = 0u;
+    time_ = GOOGLE_ULONGLONG(0);
+  }
   points_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -8136,8 +8090,39 @@ bool DataSeriesPointSet::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // repeated .Python.proto.DataSeriesPoint points = 1;
+      // required uint32 chartId = 1;
       case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &chartid_)));
+          set_has_chartid();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(16)) goto parse_time;
+        break;
+      }
+
+      // required uint64 time = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_time:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint64, ::google::protobuf::internal::WireFormatLite::TYPE_UINT64>(
+                 input, &time_)));
+          set_has_time();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(26)) goto parse_points;
+        break;
+      }
+
+      // repeated .Python.proto.DataSeriesPoint points = 3;
+      case 3: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
          parse_points:
@@ -8146,7 +8131,7 @@ bool DataSeriesPointSet::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(10)) goto parse_points;
+        if (input->ExpectTag(26)) goto parse_points;
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -8169,10 +8154,20 @@ bool DataSeriesPointSet::MergePartialFromCodedStream(
 
 void DataSeriesPointSet::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // repeated .Python.proto.DataSeriesPoint points = 1;
+  // required uint32 chartId = 1;
+  if (has_chartid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->chartid(), output);
+  }
+
+  // required uint64 time = 2;
+  if (has_time()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt64(2, this->time(), output);
+  }
+
+  // repeated .Python.proto.DataSeriesPoint points = 3;
   for (int i = 0; i < this->points_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-      1, this->points(i), output);
+      3, this->points(i), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -8183,11 +8178,21 @@ void DataSeriesPointSet::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* DataSeriesPointSet::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // repeated .Python.proto.DataSeriesPoint points = 1;
+  // required uint32 chartId = 1;
+  if (has_chartid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->chartid(), target);
+  }
+
+  // required uint64 time = 2;
+  if (has_time()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt64ToArray(2, this->time(), target);
+  }
+
+  // repeated .Python.proto.DataSeriesPoint points = 3;
   for (int i = 0; i < this->points_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
-        1, this->points(i), target);
+        3, this->points(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -8200,7 +8205,23 @@ void DataSeriesPointSet::SerializeWithCachedSizes(
 int DataSeriesPointSet::ByteSize() const {
   int total_size = 0;
 
-  // repeated .Python.proto.DataSeriesPoint points = 1;
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required uint32 chartId = 1;
+    if (has_chartid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->chartid());
+    }
+
+    // required uint64 time = 2;
+    if (has_time()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt64Size(
+          this->time());
+    }
+
+  }
+  // repeated .Python.proto.DataSeriesPoint points = 3;
   total_size += 1 * this->points_size();
   for (int i = 0; i < this->points_size(); i++) {
     total_size +=
@@ -8234,6 +8255,14 @@ void DataSeriesPointSet::MergeFrom(const ::google::protobuf::Message& from) {
 void DataSeriesPointSet::MergeFrom(const DataSeriesPointSet& from) {
   GOOGLE_CHECK_NE(&from, this);
   points_.MergeFrom(from.points_);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_chartid()) {
+      set_chartid(from.chartid());
+    }
+    if (from.has_time()) {
+      set_time(from.time());
+    }
+  }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
@@ -8250,6 +8279,7 @@ void DataSeriesPointSet::CopyFrom(const DataSeriesPointSet& from) {
 }
 
 bool DataSeriesPointSet::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
 
   for (int i = 0; i < points_size(); i++) {
     if (!this->points(i).IsInitialized()) return false;
@@ -8259,6 +8289,8 @@ bool DataSeriesPointSet::IsInitialized() const {
 
 void DataSeriesPointSet::Swap(DataSeriesPointSet* other) {
   if (other != this) {
+    std::swap(chartid_, other->chartid_);
+    std::swap(time_, other->time_);
     points_.Swap(&other->points_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
@@ -8271,6 +8303,212 @@ void DataSeriesPointSet::Swap(DataSeriesPointSet* other) {
   ::google::protobuf::Metadata metadata;
   metadata.descriptor = DataSeriesPointSet_descriptor_;
   metadata.reflection = DataSeriesPointSet_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int DataSeriesPointSets::kSetsFieldNumber;
+#endif  // !_MSC_VER
+
+DataSeriesPointSets::DataSeriesPointSets()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void DataSeriesPointSets::InitAsDefaultInstance() {
+}
+
+DataSeriesPointSets::DataSeriesPointSets(const DataSeriesPointSets& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void DataSeriesPointSets::SharedCtor() {
+  _cached_size_ = 0;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+DataSeriesPointSets::~DataSeriesPointSets() {
+  SharedDtor();
+}
+
+void DataSeriesPointSets::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void DataSeriesPointSets::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* DataSeriesPointSets::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return DataSeriesPointSets_descriptor_;
+}
+
+const DataSeriesPointSets& DataSeriesPointSets::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_python_2eproto();
+  return *default_instance_;
+}
+
+DataSeriesPointSets* DataSeriesPointSets::default_instance_ = NULL;
+
+DataSeriesPointSets* DataSeriesPointSets::New() const {
+  return new DataSeriesPointSets;
+}
+
+void DataSeriesPointSets::Clear() {
+  sets_.Clear();
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool DataSeriesPointSets::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // repeated .Python.proto.DataSeriesPointSet sets = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_sets:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+                input, add_sets()));
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(10)) goto parse_sets;
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void DataSeriesPointSets::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // repeated .Python.proto.DataSeriesPointSet sets = 1;
+  for (int i = 0; i < this->sets_size(); i++) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      1, this->sets(i), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* DataSeriesPointSets::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // repeated .Python.proto.DataSeriesPointSet sets = 1;
+  for (int i = 0; i < this->sets_size(); i++) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        1, this->sets(i), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int DataSeriesPointSets::ByteSize() const {
+  int total_size = 0;
+
+  // repeated .Python.proto.DataSeriesPointSet sets = 1;
+  total_size += 1 * this->sets_size();
+  for (int i = 0; i < this->sets_size(); i++) {
+    total_size +=
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        this->sets(i));
+  }
+
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void DataSeriesPointSets::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const DataSeriesPointSets* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const DataSeriesPointSets*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void DataSeriesPointSets::MergeFrom(const DataSeriesPointSets& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  sets_.MergeFrom(from.sets_);
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void DataSeriesPointSets::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void DataSeriesPointSets::CopyFrom(const DataSeriesPointSets& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool DataSeriesPointSets::IsInitialized() const {
+
+  for (int i = 0; i < sets_size(); i++) {
+    if (!this->sets(i).IsInitialized()) return false;
+  }
+  return true;
+}
+
+void DataSeriesPointSets::Swap(DataSeriesPointSets* other) {
+  if (other != this) {
+    sets_.Swap(&other->sets_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata DataSeriesPointSets::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = DataSeriesPointSets_descriptor_;
+  metadata.reflection = DataSeriesPointSets_reflection_;
   return metadata;
 }
 

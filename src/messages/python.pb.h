@@ -58,6 +58,7 @@ class Chart;
 class DataSeries;
 class DataSeriesPoint;
 class DataSeriesPointSet;
+class DataSeriesPointSets;
 class DataSeriesReplay;
 class DataSeriesReplayEnd;
 class PlaySound;
@@ -149,7 +150,7 @@ enum SERVER_MESSAGE_TYPE {
   SERVER_MESSAGE_TYPE_FORMAT_ERROR = 43,
   SERVER_MESSAGE_TYPE_PLAY_SOUND = 44,
   SERVER_MESSAGE_TYPE_DATA_POINT_SET = 45,
-  SERVER_MESSAGE_TYPE_DATA_POINT = 46,
+  SERVER_MESSAGE_TYPE_DATA_POINT_SETS = 46,
   SERVER_MESSAGE_TYPE_TRADER_CHANGED = 47,
   SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY = 48,
   SERVER_MESSAGE_TYPE_CLIENT_COUNT = 49,
@@ -2667,54 +2668,34 @@ class DataSeriesPoint : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required uint32 chartId = 1;
-  inline bool has_chartid() const;
-  inline void clear_chartid();
-  static const int kChartIdFieldNumber = 1;
-  inline ::google::protobuf::uint32 chartid() const;
-  inline void set_chartid(::google::protobuf::uint32 value);
-
-  // required uint32 dataSeriesId = 2;
+  // required uint32 dataSeriesId = 1;
   inline bool has_dataseriesid() const;
   inline void clear_dataseriesid();
-  static const int kDataSeriesIdFieldNumber = 2;
+  static const int kDataSeriesIdFieldNumber = 1;
   inline ::google::protobuf::uint32 dataseriesid() const;
   inline void set_dataseriesid(::google::protobuf::uint32 value);
 
-  // required uint64 time = 3;
-  inline bool has_time() const;
-  inline void clear_time();
-  static const int kTimeFieldNumber = 3;
-  inline ::google::protobuf::uint64 time() const;
-  inline void set_time(::google::protobuf::uint64 value);
-
-  // required double value = 4;
+  // required double value = 2;
   inline bool has_value() const;
   inline void clear_value();
-  static const int kValueFieldNumber = 4;
+  static const int kValueFieldNumber = 2;
   inline double value() const;
   inline void set_value(double value);
 
   // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesPoint)
  private:
-  inline void set_has_chartid();
-  inline void clear_has_chartid();
   inline void set_has_dataseriesid();
   inline void clear_has_dataseriesid();
-  inline void set_has_time();
-  inline void clear_has_time();
   inline void set_has_value();
   inline void clear_has_value();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::google::protobuf::uint32 chartid_;
-  ::google::protobuf::uint32 dataseriesid_;
-  ::google::protobuf::uint64 time_;
   double value_;
+  ::google::protobuf::uint32 dataseriesid_;
 
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
 
   friend void  protobuf_AddDesc_python_2eproto();
   friend void protobuf_AssignDesc_python_2eproto();
@@ -2779,10 +2760,24 @@ class DataSeriesPointSet : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // repeated .Python.proto.DataSeriesPoint points = 1;
+  // required uint32 chartId = 1;
+  inline bool has_chartid() const;
+  inline void clear_chartid();
+  static const int kChartIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 chartid() const;
+  inline void set_chartid(::google::protobuf::uint32 value);
+
+  // required uint64 time = 2;
+  inline bool has_time() const;
+  inline void clear_time();
+  static const int kTimeFieldNumber = 2;
+  inline ::google::protobuf::uint64 time() const;
+  inline void set_time(::google::protobuf::uint64 value);
+
+  // repeated .Python.proto.DataSeriesPoint points = 3;
   inline int points_size() const;
   inline void clear_points();
-  static const int kPointsFieldNumber = 1;
+  static const int kPointsFieldNumber = 3;
   inline const ::Python::proto::DataSeriesPoint& points(int index) const;
   inline ::Python::proto::DataSeriesPoint* mutable_points(int index);
   inline ::Python::proto::DataSeriesPoint* add_points();
@@ -2793,10 +2788,101 @@ class DataSeriesPointSet : public ::google::protobuf::Message {
 
   // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesPointSet)
  private:
+  inline void set_has_chartid();
+  inline void clear_has_chartid();
+  inline void set_has_time();
+  inline void clear_has_time();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
+  ::google::protobuf::uint64 time_;
   ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint > points_;
+  ::google::protobuf::uint32 chartid_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+
+  friend void  protobuf_AddDesc_python_2eproto();
+  friend void protobuf_AssignDesc_python_2eproto();
+  friend void protobuf_ShutdownFile_python_2eproto();
+
+  void InitAsDefaultInstance();
+  static DataSeriesPointSet* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class DataSeriesPointSets : public ::google::protobuf::Message {
+ public:
+  DataSeriesPointSets();
+  virtual ~DataSeriesPointSets();
+
+  DataSeriesPointSets(const DataSeriesPointSets& from);
+
+  inline DataSeriesPointSets& operator=(const DataSeriesPointSets& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DataSeriesPointSets& default_instance();
+
+  void Swap(DataSeriesPointSets* other);
+
+  // implements Message ----------------------------------------------
+
+  DataSeriesPointSets* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DataSeriesPointSets& from);
+  void MergeFrom(const DataSeriesPointSets& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // repeated .Python.proto.DataSeriesPointSet sets = 1;
+  inline int sets_size() const;
+  inline void clear_sets();
+  static const int kSetsFieldNumber = 1;
+  inline const ::Python::proto::DataSeriesPointSet& sets(int index) const;
+  inline ::Python::proto::DataSeriesPointSet* mutable_sets(int index);
+  inline ::Python::proto::DataSeriesPointSet* add_sets();
+  inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPointSet >&
+      sets() const;
+  inline ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPointSet >*
+      mutable_sets();
+
+  // @@protoc_insertion_point(class_scope:Python.proto.DataSeriesPointSets)
+ private:
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPointSet > sets_;
 
   mutable int _cached_size_;
   ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
@@ -2806,7 +2892,7 @@ class DataSeriesPointSet : public ::google::protobuf::Message {
   friend void protobuf_ShutdownFile_python_2eproto();
 
   void InitAsDefaultInstance();
-  static DataSeriesPointSet* default_instance_;
+  static DataSeriesPointSets* default_instance_;
 };
 // -------------------------------------------------------------------
 
@@ -5885,37 +5971,15 @@ inline void DataSeries::set_colorid(::google::protobuf::uint32 value) {
 
 // DataSeriesPoint
 
-// required uint32 chartId = 1;
-inline bool DataSeriesPoint::has_chartid() const {
+// required uint32 dataSeriesId = 1;
+inline bool DataSeriesPoint::has_dataseriesid() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void DataSeriesPoint::set_has_chartid() {
+inline void DataSeriesPoint::set_has_dataseriesid() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void DataSeriesPoint::clear_has_chartid() {
-  _has_bits_[0] &= ~0x00000001u;
-}
-inline void DataSeriesPoint::clear_chartid() {
-  chartid_ = 0u;
-  clear_has_chartid();
-}
-inline ::google::protobuf::uint32 DataSeriesPoint::chartid() const {
-  return chartid_;
-}
-inline void DataSeriesPoint::set_chartid(::google::protobuf::uint32 value) {
-  set_has_chartid();
-  chartid_ = value;
-}
-
-// required uint32 dataSeriesId = 2;
-inline bool DataSeriesPoint::has_dataseriesid() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
-}
-inline void DataSeriesPoint::set_has_dataseriesid() {
-  _has_bits_[0] |= 0x00000002u;
-}
 inline void DataSeriesPoint::clear_has_dataseriesid() {
-  _has_bits_[0] &= ~0x00000002u;
+  _has_bits_[0] &= ~0x00000001u;
 }
 inline void DataSeriesPoint::clear_dataseriesid() {
   dataseriesid_ = 0u;
@@ -5929,37 +5993,15 @@ inline void DataSeriesPoint::set_dataseriesid(::google::protobuf::uint32 value) 
   dataseriesid_ = value;
 }
 
-// required uint64 time = 3;
-inline bool DataSeriesPoint::has_time() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
-}
-inline void DataSeriesPoint::set_has_time() {
-  _has_bits_[0] |= 0x00000004u;
-}
-inline void DataSeriesPoint::clear_has_time() {
-  _has_bits_[0] &= ~0x00000004u;
-}
-inline void DataSeriesPoint::clear_time() {
-  time_ = GOOGLE_ULONGLONG(0);
-  clear_has_time();
-}
-inline ::google::protobuf::uint64 DataSeriesPoint::time() const {
-  return time_;
-}
-inline void DataSeriesPoint::set_time(::google::protobuf::uint64 value) {
-  set_has_time();
-  time_ = value;
-}
-
-// required double value = 4;
+// required double value = 2;
 inline bool DataSeriesPoint::has_value() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
+  return (_has_bits_[0] & 0x00000002u) != 0;
 }
 inline void DataSeriesPoint::set_has_value() {
-  _has_bits_[0] |= 0x00000008u;
+  _has_bits_[0] |= 0x00000002u;
 }
 inline void DataSeriesPoint::clear_has_value() {
-  _has_bits_[0] &= ~0x00000008u;
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void DataSeriesPoint::clear_value() {
   value_ = 0;
@@ -5977,7 +6019,51 @@ inline void DataSeriesPoint::set_value(double value) {
 
 // DataSeriesPointSet
 
-// repeated .Python.proto.DataSeriesPoint points = 1;
+// required uint32 chartId = 1;
+inline bool DataSeriesPointSet::has_chartid() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void DataSeriesPointSet::set_has_chartid() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void DataSeriesPointSet::clear_has_chartid() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void DataSeriesPointSet::clear_chartid() {
+  chartid_ = 0u;
+  clear_has_chartid();
+}
+inline ::google::protobuf::uint32 DataSeriesPointSet::chartid() const {
+  return chartid_;
+}
+inline void DataSeriesPointSet::set_chartid(::google::protobuf::uint32 value) {
+  set_has_chartid();
+  chartid_ = value;
+}
+
+// required uint64 time = 2;
+inline bool DataSeriesPointSet::has_time() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void DataSeriesPointSet::set_has_time() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void DataSeriesPointSet::clear_has_time() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void DataSeriesPointSet::clear_time() {
+  time_ = GOOGLE_ULONGLONG(0);
+  clear_has_time();
+}
+inline ::google::protobuf::uint64 DataSeriesPointSet::time() const {
+  return time_;
+}
+inline void DataSeriesPointSet::set_time(::google::protobuf::uint64 value) {
+  set_has_time();
+  time_ = value;
+}
+
+// repeated .Python.proto.DataSeriesPoint points = 3;
 inline int DataSeriesPointSet::points_size() const {
   return points_.size();
 }
@@ -6000,6 +6086,35 @@ DataSeriesPointSet::points() const {
 inline ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPoint >*
 DataSeriesPointSet::mutable_points() {
   return &points_;
+}
+
+// -------------------------------------------------------------------
+
+// DataSeriesPointSets
+
+// repeated .Python.proto.DataSeriesPointSet sets = 1;
+inline int DataSeriesPointSets::sets_size() const {
+  return sets_.size();
+}
+inline void DataSeriesPointSets::clear_sets() {
+  sets_.Clear();
+}
+inline const ::Python::proto::DataSeriesPointSet& DataSeriesPointSets::sets(int index) const {
+  return sets_.Get(index);
+}
+inline ::Python::proto::DataSeriesPointSet* DataSeriesPointSets::mutable_sets(int index) {
+  return sets_.Mutable(index);
+}
+inline ::Python::proto::DataSeriesPointSet* DataSeriesPointSets::add_sets() {
+  return sets_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPointSet >&
+DataSeriesPointSets::sets() const {
+  return sets_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::Python::proto::DataSeriesPointSet >*
+DataSeriesPointSets::mutable_sets() {
+  return &sets_;
 }
 
 // -------------------------------------------------------------------
