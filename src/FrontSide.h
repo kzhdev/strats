@@ -230,7 +230,12 @@ public:
         int64_t total = 0;
         try {
             chartHistories.open("./chart_histories_" + chartHistoriesFile, std::ios::ate | std::ios::binary);
-            if (!chartHistories.is_open()) {
+            if (!chartHistories) {
+                // file not exist. create the file.
+                // _chartHistories.open("./chart_histories_" + chartHistoriesFile, std::ios::ate | std::ios::binary | std::ios::in | std::ios::out) will not
+                // create the file.
+                std::ofstream f("./chart_histories_" + chartHistoriesFile, std::ios::binary | std::ios::out | std::ios::trunc);
+                f.close();
                 logging::GetLogger().logInfo("No chart history data.");
                 return -1;
             }
@@ -250,7 +255,7 @@ public:
             std::string buf;
             do {
                 if (!chartHistories.read(reinterpret_cast<char*>(&length), sizeof(length))) {
-                    logging::GetLogger().logError(boost::str(boost::format("Error reading DataSeriesPointSet size. #RecordRead=%1%, total=%2%, read=%3%") % _dataPoints.size() % pos));
+                    logging::GetLogger().logError(boost::str(boost::format("Error reading DataSeriesPointSet size. #RecordRead=%1%, total=%2%, read=%3%") % _totalNumberDataSeriesPointSet % pos));
                     break;
                 }
 
@@ -261,13 +266,13 @@ public:
                     pos = chartHistories.tellg();
                 } else {
                     pos -= sizeof(length);
-                    logging::GetLogger().logError(boost::str(boost::format("Error reading series data. #RecordRead=%1%, total=%2%, read=%3%") % _dataPoints.size() % total % pos));
+                    logging::GetLogger().logError(boost::str(boost::format("Error reading series data. #RecordRead=%1%, total=%2%, read=%3%") % _totalNumberDataSeriesPointSet % total % pos));
                     break;
                 }
             } while (!chartHistories.eof() && pos < total);
-            logging::GetLogger().logInfo(boost::str(boost::format("Load ChartHistories. #RecordRead=%1%, total=%2%, read=%3% tellg=%4%") % _dataPoints.size() % total % pos % chartHistories.tellg()));
+            logging::GetLogger().logInfo(boost::str(boost::format("Load ChartHistories. #RecordRead=%1%, total=%2%, read=%3% tellg=%4%") % _totalNumberDataSeriesPointSet % total % pos % chartHistories.tellg()));
         } catch(...) {
-            logging::GetLogger().logError(boost::str(boost::format("Load ChartHistories. Exception Occurred, #RecordRead=%1%, total=%2%, read=%3% tellg=%4%") % _dataPoints.size() % total % pos % chartHistories.tellg()));
+            logging::GetLogger().logError(boost::str(boost::format("Load ChartHistories. Exception Occurred, #RecordRead=%1%, total=%2%, read=%3% tellg=%4%") % _totalNumberDataSeriesPointSet % total % pos % chartHistories.tellg()));
         }
         chartHistories.close();
         return pos == total ? -1 : pos;
@@ -584,14 +589,15 @@ public:
     void sendChartsUpdateToGui() {
         auto relativeValue = reinterpret_cast<RelativeValue*>(_strategies[toUInt(StrategyId::RelativeValue)]);
         if (relativeValue->_hasDataForCharts) {
-            proto::DataSeriesPointSet pointsSet;
-            _guiThings.populateChartDataPoints(pointsSet, relativeValue);
-            std::ostringstream oss;
-            _clientAcceptor->sendChartDataPoints(pointsSet, oss);
+            proto::DataSeriesPointSets dataSets;
+            if (_guiThings.populateChartDataPoints(dataSets, relativeValue)) {
+                std::ostringstream oss;
+                _clientAcceptor->sendChartDataPoints(dataSets, oss);
 
-            if (!oss.str().empty()) {
-                cacheDataPointSets(oss.str());
-                saveDataPointSets(oss.str());
+                if (!oss.str().empty()) {
+                    cacheDataPointSets(oss.str());
+                    saveDataPointSets(oss.str());
+                }
             }
         }
     }
@@ -606,6 +612,7 @@ public:
         sets->assign(data);
 
         _currentDataReplaySize += sets->size();
+        ++_totalNumberDataSeriesPointSet;
     }
 
     void saveDataPointSets(const std::string& data) {
@@ -2197,7 +2204,7 @@ public:
     }
 
     void sendChartHistories(int32_t connectionId) {
-        if (!_dataPoints.empty()) {
+        if (_totalNumberDataSeriesPointSet) {
             auto begin = TimeUtils::clock_gettime();
             for (auto& replay : _dataPoints) {
                 if (!replay.sets_size()) {
@@ -2205,8 +2212,9 @@ public:
                 }
                 _clientAcceptor->sendChartHistories(replay, connectionId);
             }
+
             _clientAcceptor->sendChartHistoriesEnd(connectionId);
-            logging::GetLogger().logInfo(boost::str(boost::format("Sent chart histories. timespan=%1% ns") % (TimeUtils::clock_gettime() - begin)));
+            logging::GetLogger().logInfo(boost::str(boost::format("Sent chart histories. #=%1%. timespan=%2% ns") % _totalNumberDataSeriesPointSet % (TimeUtils::clock_gettime() - begin)));
         }
     }
 
@@ -2385,6 +2393,7 @@ public:
     om::instance_id_t _iid;
 
     std::vector<proto::DataSeriesReplay> _dataPoints;
+    uint64_t _totalNumberDataSeriesPointSet = 0;
     uint32_t _currentDataReplaySize = 0;
     std::fstream _chartHistories;
 

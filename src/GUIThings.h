@@ -391,34 +391,33 @@ public:
         return std::make_tuple(time, edgeStf, edgeMkt);
     }
 
-    void populateChartDataPoints(proto::DataSeriesPointSet& message, RelativeValue* relativeValue) {
-        auto points = message.mutable_points();
+    bool populateChartDataPoints(proto::DataSeriesPointSets& message, RelativeValue* relativeValue) {
+        auto sets = message.mutable_sets();
         for (uint32_t vectorIndex = 0; vectorIndex < relativeValue->_numberOfVectors; ++vectorIndex) {
+            auto set = sets->Add();
+            auto points = set->mutable_points();
             {
                 const double ltf = relativeValue->_longTermFairsInVector.getValue(vectorIndex);
                 auto point = points->Add();
-                point->set_chartid(vectorIndex);
                 point->set_dataseriesid(toUInt(DataSeries::LTF));
                 point->set_value(ltf);
-                point->set_time(hf::util::TimeUtils::clock_gettime());
             }
             {
                 const double mkt = relativeValue->_currentVectorMarketPrices->getValue(vectorIndex);
                 auto point = points->Add();
-                point->set_chartid(vectorIndex);
                 point->set_dataseriesid(toUInt(DataSeries::VectorPrice));
                 point->set_value(mkt);
-                point->set_time(hf::util::TimeUtils::clock_gettime());
             }
             {
                 double stf = relativeValue->_shortTermFairsInVector.getValue(vectorIndex);
-                auto point = points->Add();
-                point->set_chartid(vectorIndex);
-                point->set_dataseriesid(toUInt(DataSeries::STF));
-                point->set_value(stf);
-                point->set_time(hf::util::TimeUtils::clock_gettime());
+                    auto point = points->Add();
+                    point->set_dataseriesid(toUInt(DataSeries::STF));
+                    point->set_value(stf);
             }
+            set->set_chartid(vectorIndex);
+            set->set_time(hf::util::TimeUtils::clock_gettime());
         }
+        return sets->size() > 0;
     }
 
     void populateMarketMakerEnabled(proto::GridUpdate& message, uint32_t id, bool enabled) {

@@ -414,10 +414,10 @@ void ClientsAcceptor::sendGridUpdate(proto::GridUpdate& data, int32_t connection
     }
 }
 
-void ClientsAcceptor::sendChartDataPoints(proto::DataSeriesPointSet& data, std::ostringstream& streamMessage) {
+void ClientsAcceptor::sendChartDataPoints(proto::DataSeriesPointSets& data, std::ostringstream& streamMessage) {
     if (hasConnection()) {
         ServerClientMessenger::instance()->sendMessageToClient(nullptr,
-                                                               proto::SERVER_MESSAGE_TYPE_DATA_POINT_SET,
+                                                               proto::SERVER_MESSAGE_TYPE_DATA_POINT_SETS,
                                                                data, streamMessage);
     } else {
         LOG_WARN(boost::str(boost::format("Wanted to send ChartDataPoint but do not have connection. %1%") % data.ShortDebugString()));
