@@ -1,3 +1,7 @@
+#Version 1.55.4.1
+- Fix chart histories file is not created
+- Changed chart history data point wire protocol to improve GUI performance [GUI 1.6.10 required]
+
 #Version 1.55.4
 - Fix delayed best market update in updateHedge function might fails the MaxTicksThroughMarket
 - Send DataSeriesReplayEnd message to GUI after sending out historical data
