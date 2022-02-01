@@ -1,3 +1,6 @@
+#Version 1.55.4.2
+- Initialize GUIs with current Viper values not the default value.
+
 #Version 1.55.4.1
 - Fix chart histories file is not created
 - Changed chart history data point wire protocol to improve GUI performance [GUI 1.6.10 required]
