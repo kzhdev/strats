@@ -585,20 +585,12 @@ public:
         Lean& lean = quote._leans._leans[0];
         int vectorIndexSigned = _factorHedgedIndexes.getValue(contractId, lean._instrumentIndex);
         if (vectorIndexSigned != -1) {
-            uint32_t vectorIndex = (uint32_t) vectorIndexSigned;
+            auto vectorIndex = (uint32_t) vectorIndexSigned;
             if (_factorHedged.getValue(vectorIndex)) {
-                double vectorRisk = 0;
-                if (contract._definition._legs.size() > 1) {
-                    for (const auto& leg : contract._definition._legs) {
-                        vectorRisk += _riskMatrix.getValue(vectorIndex, leg._index) * leg._ratio;
-                    }
-                } else {
-                    vectorRisk = _riskMatrix.getValue(vectorIndex, contractId);
-                }
-                vectorRisk = Round<2>(vectorRisk);
+                double vectorRisk = _vectorRiskMatrix.getValue(vectorIndex, contractId);
                 if (!IsZero(vectorRisk)) {
                     double vectorPos = _positionsInVector.getValue(vectorIndex);
-                    position += vectorPos / vectorRisk / contract._quantityMultiplier;
+                    position += vectorPos / _vectorRisk_Div_qtyMultiplier_Matrix.getValue(vectorIndex, contractId);
                 }
                 LOG(0, "{C[i1]} getResiduals vectorIndex={i2} vectorRisk={d1} position={d2}", getContract(contract._internalId), vectorIndex, vectorRisk, position)
             }
@@ -1413,6 +1405,7 @@ public:
                     contract._quantityMultiplier = boost::lexical_cast<double>(gridCell.value());
                     _viperConfig._pricingConfigs[contract._internalId]._quantityMultiplier = contract._quantityMultiplier;
                     LOG(0, "RV {C[i1]}. QuantityMultiplier changed. Value={i2}", getContract(contract._internalId), contract._quantityMultiplier)
+                    handleQtyMultiplierUpdate(contract);
                     qtyMultiplierChanged = true;
                     sendUpdate = true;
                     break;
@@ -1468,6 +1461,23 @@ public:
             sendQuoteSizesToGUI();
         }
         return true;
+    }
+
+    void handleQtyMultiplierUpdate(RvContract& contract) {
+        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
+            if (contract._definition._legs.size() == 1) {
+                assert(contract._internalId < _risk_X_qtyMultiplier_Matrix._numberOfColumns);
+                _risk_X_qtyMultiplier_Matrix.setValue(vectorIndex, contract._internalId, _riskMatrix.getValue(vectorIndex, contract._internalId) * contract._quantityMultiplier);
+            }
+            _vectorRisk_Div_qtyMultiplier_Matrix.setValue(vectorIndex, contract._internalId, (_vectorRiskMatrix.getValue(vectorIndex, contract._internalId) / contract._quantityMultiplier));
+        }
+
+        for (auto& otherContract : _contracts) {
+            _costMultiplierMatrix.setValue(contract._internalId, otherContract._internalId,
+                                      contract._pricingMultiplier / otherContract._pricingMultiplier * contract._quantityMultiplier / otherContract._quantityMultiplier);
+            _costMultiplierMatrix.setValue(otherContract._internalId, contract._internalId,
+                                      otherContract._pricingMultiplier / contract._pricingMultiplier * otherContract._quantityMultiplier / contract._quantityMultiplier);
+        }
     }
 
     void updatePositionInVector() {
@@ -2152,6 +2162,40 @@ public:
         _shortTermFairsMoveForContract.init(_numberOfAllContracts);
         _rhoneMaxClipSize.init(_numberOfAllContracts);
         _lastOrderRequests.resize(_numberOfAllContracts);
+
+        _risk_X_qtyMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _riskMatrix._numberOfColumns);
+        _risk_Div_pricingMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _riskMatrix._numberOfColumns);
+        _vectorRiskMatrix.initialize(_riskMatrix._numberOfRows, _numberOfAllContracts);
+        _vectorRisk_Div_qtyMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _numberOfAllContracts);
+        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
+            for (uint32_t contractId = 0; contractId < _riskMatrix._numberOfColumns; ++contractId) {
+                const auto& contract = _contracts[contractId];
+                const auto riskValue = _riskMatrix.getValue(vectorIndex, contractId);
+                _risk_X_qtyMultiplier_Matrix.setValue(vectorIndex, contractId, riskValue * contract._quantityMultiplier);
+                _risk_Div_pricingMultiplier_Matrix.setValue(vectorIndex, contractId, riskValue / contract._pricingMultiplier);
+            }
+        }
+
+        double vectorRisk = 0;
+        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
+            for (const auto& contract : _contracts) {
+                if (contract._definition._legs.size() > 1) {
+                    vectorRisk = 0;
+                    for (const auto& leg: contract._definition._legs) {
+                        vectorRisk += _riskMatrix.getValue(vectorIndex, leg._index) * leg._ratio;
+                    }
+                    vectorRisk = Round<2>(vectorRisk);
+                    _vectorRiskMatrix.setValue(vectorIndex, contract._internalId, vectorRisk);
+                    _vectorRisk_Div_qtyMultiplier_Matrix.setValue(vectorIndex, contract._internalId,
+                                                                  (vectorRisk / contract._quantityMultiplier));
+                } else {
+                    _vectorRiskMatrix.setValue(vectorIndex, contract._internalId,
+                                               Round<2>(_riskMatrix.getValue(vectorIndex, contract._internalId)));
+                    _vectorRisk_Div_qtyMultiplier_Matrix.setValue(vectorIndex, contract._internalId,
+                                                                  (_vectorRiskMatrix.getValue(vectorIndex,contract._internalId) / contract._quantityMultiplier));
+                }
+            }
+        }
     }
 
     void initializeLeanMatrix(std::vector<VectorWithContract>& config) {
@@ -2233,6 +2277,14 @@ public:
         }
         _numberOfAllContracts = _viperConfig._allContracts.size();
         _numberOfPricingContracts = _viperConfig._numberOfPricingContracts;
+
+        _costMultiplierMatrix.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        for (auto& contract1 : _contracts) {
+            for (auto& contract2 : _contracts) {
+                _costMultiplierMatrix.setValue(contract1._internalId, contract2._internalId,
+                                          contract1._pricingMultiplier / contract2._pricingMultiplier * contract1._quantityMultiplier / contract2._quantityMultiplier);
+            }
+        }
     }
 
     void calculateHedgeRatiosAndWidthAndCommissionsAndQuoteSizes() {
@@ -2424,7 +2476,7 @@ public:
             RvContract& contract = _contracts[contractIndex];
             double move = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-                move += oneLotMoves.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex) / contract._pricingMultiplier;
+                move += oneLotMoves.getValue(vectorIndex) * _risk_Div_pricingMultiplier_Matrix.getValue(vectorIndex, contractIndex);
             }
             fairMoveForContract.setValue(contractIndex, move);
         }
@@ -2545,7 +2597,7 @@ public:
             return false;
         }
         auto delta = std::abs(lhs - rhs);
-        hf::price_t perspective_quote = (delta * hedgeRatio * leanContract._pricingMultiplier / quoteContract._pricingMultiplier * leanContract._quantityMultiplier / quoteContract._quantityMultiplier);
+        hf::price_t perspective_quote = (delta * hedgeRatio * _costMultiplierMatrix.getValue(leanContract._internalId, quoteContract._internalId));
         return perspective_quote >= (nticks * quoteContract._definition._tickSize);
     }
 
@@ -2615,7 +2667,7 @@ public:
             for (const auto& leg : contract._definition._legs) {
                 const double legPositionChange = positionChange * leg._ratio;
                 for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                    const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange * contract._quantityMultiplier;
+                    const double changeInVector = legPositionChange * _risk_X_qtyMultiplier_Matrix.getValue(vectorIndex, leg._index);
                     _positionsInVector.add(vectorIndex, changeInVector);
                 }
             }
@@ -2626,7 +2678,7 @@ public:
             }
         } else {
             for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfColumns; ++vectorIndex) {
-                const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange * contract._quantityMultiplier;
+                const double changeInVector = positionChange * _risk_X_qtyMultiplier_Matrix.getValue(vectorIndex, contract._definition._internalId);
                 _positionsInVector.add(vectorIndex, changeInVector);
                 if (checkLimit) {
                     checkVectorPositionLimit(vectorIndex, isStartUp);
@@ -2705,7 +2757,7 @@ public:
             RvContract& contract = _contracts[contractIndex];
             double shortTermFair = 0;
             for (uint32_t vectorIndex = 0; vectorIndex < _numberOfVectors; ++vectorIndex) {
-                const double value = _shortTermFairsInVector.getValue(vectorIndex) * _riskMatrix.getValue(vectorIndex, contractIndex) / contract._pricingMultiplier;
+                const double value = _shortTermFairsInVector.getValue(vectorIndex) * _risk_Div_pricingMultiplier_Matrix.getValue(vectorIndex, contractIndex);
                 shortTermFair += value;
             }
             const hf::price_t rhonePrice = ToRhonePrice(shortTermFair);
@@ -2978,8 +3030,7 @@ public:
 
     template<bool ShouldCapNegativeCostToPctWidth = true>
     hf::price_t calculateHedgingCost(hf::price_t width, hf::price_t cost, double hedgeRatio, RvContract& contract, RvContract& leanContract) {
-        const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio * leanContract._pricingMultiplier / contract._pricingMultiplier
-                                                                 * leanContract._quantityMultiplier / contract._quantityMultiplier);
+        const hf::price_t hedgingCost = static_cast<hf::price_t>(cost * hedgeRatio * _costMultiplierMatrix.getValue(leanContract._internalId, contract._internalId));
         if (ShouldCapNegativeCostToPctWidth && (hedgingCost < 0)) {
             const hf::price_t maxHedgingCost = static_cast<hf::price_t>(0.95 * width);
             if (-hedgingCost > maxHedgingCost) {
@@ -3073,6 +3124,11 @@ private:
 public:
     Matrix _pricingMatrix; // x,y - vectors - square
     Matrix _riskMatrix; // x,y - vectors - square
+    Matrix _risk_X_qtyMultiplier_Matrix;
+    Matrix _risk_Div_pricingMultiplier_Matrix;
+    Matrix _vectorRiskMatrix;
+    Matrix _vectorRisk_Div_qtyMultiplier_Matrix;
+    Matrix _costMultiplierMatrix;
     uint32_t _numberOfVectors;
 
     Vector<double> _vectorsRange;
