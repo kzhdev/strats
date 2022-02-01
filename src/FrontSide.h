@@ -2025,7 +2025,7 @@ public:
                 }
                 auto& connection = *connIter->second;
                 proto::GUIInitialization m;
-                _guiThings.populateGUIInitialization(m, _strategies, _executor);
+                _guiThings.populateGUIInitialization(m, _strategies, _executor, _pnlCalculator);
                 _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency),
                                                      connection, _viperConfig._traders[_viperConfig._currentTrader].c_str());
                 _newLogins.emplace_back(clockUtil::GetCycles(), connection.m_fd);

@@ -161,6 +161,11 @@ public:
         message.set_gridid(toUInt(WindowIds::MessagesCounts));
         message.set_updatetype(proto::GridUpdateType::CellsType);
         auto cells = message.mutable_cells();
+        populateMessageCountCells(cells, executor);
+    }
+
+    template<typename T>
+    void populateMessageCountCells(::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >* cells, T* executor) {
         auto total = _config->_allContracts.size();
         uint32_t inserts = 0;
         uint32_t modifies = 0;
@@ -230,10 +235,6 @@ public:
             }
         }
         setCell(cells, total, MessageCountsColumns::FillsRatio, std::to_string(fillsRatio));
-    }
-
-    void populateMarketMakerState(proto::GridUpdate& message, const MarketMaker* marketMaker) {
-
     }
 
     static constexpr PNLRows getPNLRow(StrategyId strategy) noexcept {
@@ -429,7 +430,7 @@ public:
 
     template<typename ExecutorT>
     void populateGUIInitialization(proto::GUIInitialization& message, std::vector<ViperStrategyBase*>& strategies,
-                                   ExecutorT* executor) {
+                                   ExecutorT* executor, PnlCalculator& pnlCalculator) {
         auto definitions = message.mutable_definitions();
         populateMainControl(definitions->Add(), executor);
         populateErrors(definitions->Add());
@@ -441,12 +442,12 @@ public:
         populatePricingConfig(definitions->Add());
         populateManualFillsEntry(definitions->Add());
         populateFills(definitions->Add());
-        populateGatewayStatuses(definitions->Add());
+        populateGatewayStatuses(definitions->Add(), executor);
         populateStackerParameters(definitions->Add());
-        populatePNL(definitions);
-        populatePnlDetail(definitions);
+        populatePNL(definitions, pnlCalculator);
+        populatePnlDetail(definitions, pnlCalculator);
         populateGlobalConfigs(definitions->Add());
-        populateMessageCounts(definitions);
+        populateMessageCounts(definitions, executor);
         populatePositionInOutrights(definitions);
         populateAudit(definitions->Add());
         tryPopulateGTCGridColumns(message);
@@ -797,12 +798,13 @@ public:
 
         auto cells = definition->mutable_cells();
         setCell(cells, 0, TraderSwitchColumns::Trader, std::to_string(_config->_currentTrader));
-        setCell(cells, 0, TraderSwitchColumns::Shift, std::to_string(toUInt(Shifts::US)));
+        setCell(cells, 0, TraderSwitchColumns::Shift, std::to_string(toUInt(_config->_currentShift)));
 
         addSubmitButton(definition);
     }
 
-    void populateMessageCounts(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
+    template<typename ExecutorT>
+    void populateMessageCounts(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions, ExecutorT* executor) {
         auto [definition, rowHeader, cells] = addWindow(definitions, WindowIds::MessagesCounts, "Message Counts", proto::GridType::Table);
         addHeader(definition, {
                 headerCell(MessageCountsColumns::Inserts, "Insert", true, proto::DataType::unsigned_type),
@@ -817,29 +819,14 @@ public:
         for (auto& config : _config->_marketMakerConfigs) {
             uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::MessagesCounts, rowHeader,internalId, config._contract);
-            addCells(cells, internalId, {
-                    Cell(MessageCountsColumns::Inserts, "0"),
-                    Cell(MessageCountsColumns::Modifies, "0"),
-                    Cell(MessageCountsColumns::Cancels, "0"),
-                    Cell(MessageCountsColumns::CancelRejects, "0"),
-                    Cell(MessageCountsColumns::ModifyRejects, "0"),
-                    Cell(MessageCountsColumns::Fills, "0"),
-                    Cell(MessageCountsColumns::FillsRatio, "0"),
-            });
         }
 
         auto total = _config->_allContracts.size();
         addRowHeaderCell(WindowIds::MessagesCounts, rowHeader,total, "Total");
-        setCell(cells, total, MessageCountsColumns::Inserts, "0");
-        setCell(cells, total, MessageCountsColumns::Modifies, "0");
-        setCell(cells, total, MessageCountsColumns::Cancels, "0");
-        setCell(cells, total, MessageCountsColumns::CancelRejects, "0");
-        setCell(cells, total, MessageCountsColumns::ModifyRejects, "0");
-        setCell(cells, total, MessageCountsColumns::Fills, "0");
-        setCell(cells, total, MessageCountsColumns::FillsRatio, "0");
+        populateMessageCountCells(cells, executor);
     }
 
-    void populatePnlDetail(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
+    void populatePnlDetail(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions, PnlCalculator& pnlCalculator) {
         auto [definition, rowHeader, cells] = addWindow(definitions, WindowIds::PnlDetail, "PNL Detail", proto::GridType::Table);
 
         addHeader(definition, {
@@ -858,18 +845,32 @@ public:
         for (auto& config : _config->_marketMakerConfigs) {
             uint32_t internalId = _config->getInternalId(config._contract);
             addRowHeaderCell(WindowIds::PnlDetail, rowHeader,internalId, config._contract);
-            addCells(cells, internalId, {
-                    Cell(PnlDetailColumns::MMOpen, "0"),
-                    Cell(PnlDetailColumns::MMClosed, "0"),
-                    Cell(PnlDetailColumns::RVOpen, "0"),
-                    Cell(PnlDetailColumns::RVClosed, "0"),
-                    Cell(PnlDetailColumns::ASOpen, "0"),
-                    Cell(PnlDetailColumns::ASClosed, "0"),
-                    Cell(PnlDetailColumns::MMTotal, "0"),
-                    Cell(PnlDetailColumns::RVTotal, "0"),
-                    Cell(PnlDetailColumns::ASTotal, "0"),
-                    Cell(PnlDetailColumns::Total, "0"),
-            });
+            for (uint i = 0 ; i < toUInt(StrategyId::MAX); ++i) {
+                auto pnl = pnlCalculator.getPnlDetail(internalId, static_cast<StrategyId>(i));
+                switch (i) {
+                    case toUInt(StrategyId::RelativeValue): {
+                        setCell(cells, internalId, PnlDetailColumns::RVOpen, std::to_string(pnl._open));
+                        setCell(cells, internalId, PnlDetailColumns::RVClosed, std::to_string(pnl._closed));
+                        setCell(cells, internalId, PnlDetailColumns::RVTotal, std::to_string(pnl.getTotal()));
+                        break;
+                    }
+                    case toUInt(StrategyId::MarketMaker): {
+                        setCell(cells, internalId, PnlDetailColumns::MMOpen, std::to_string(pnl._open));
+                        setCell(cells, internalId, PnlDetailColumns::MMClosed, std::to_string(pnl._closed));
+                        setCell(cells, internalId, PnlDetailColumns::MMTotal, std::to_string(pnl.getTotal()));
+                        break;
+                    }
+                    case toUInt(StrategyId::ArbieSpreader): {
+                        setCell(cells, internalId, PnlDetailColumns::ASOpen, std::to_string(pnl._open));
+                        setCell(cells, internalId, PnlDetailColumns::ASClosed, std::to_string(pnl._closed));
+                        setCell(cells, internalId, PnlDetailColumns::ASTotal, std::to_string(pnl.getTotal()));
+                        break;
+                    }
+                    case toUInt(StrategyId::MAX):
+                        break;
+                }
+            }
+            setCell(cells, internalId, PnlDetailColumns::Total, std::to_string(pnlCalculator.getTotalPnl(internalId)));
         }
     }
 
@@ -901,7 +902,7 @@ public:
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
-    void populatePNL(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) {
+    void populatePNL(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions, PnlCalculator& pnlCalculator) {
         auto [definition, rowHeader, cells] = addWindowWithSubmitButton(definitions, WindowIds::PNL, "PNL", proto::GridType::Table);
         addHeader(definition, {
                 headerCell(PNLColumns::Open, "Open", true, proto::DataType::rhone_price),
@@ -938,10 +939,20 @@ public:
         };
 
         for (uint32_t i = 0; i < toUInt(PNLRows::__end_marker__); ++i) {
-            setCell(cells, i, PNLColumns::Open, "0");
-            setCell(cells, i, PNLColumns::Closed, "0");
-            setCell(cells, i, PNLColumns::Total, "0");
-            setCell(cells, i, PNLColumns::Drawdown, "0");
+            if (i != toUInt(PNLRows::Total)) {
+                auto strategyId = static_cast<StrategyId>(i);
+                const auto& pnl = pnlCalculator.getAggregatedPnl(strategyId);
+                setCell(cells, i, PNLColumns::Open, std::to_string(pnl._open));
+                setCell(cells, i, PNLColumns::Closed, std::to_string(pnl._closed));
+                setCell(cells, i, PNLColumns::Total, std::to_string(pnl.getTotal()));
+                setCell(cells, i, PNLColumns::Drawdown, std::to_string(pnl._drawdown));
+            } else {
+                const auto& pnl = pnlCalculator._pnlTotal;
+                setCell(cells, i, PNLColumns::Open, std::to_string(pnl._open));
+                setCell(cells, i, PNLColumns::Closed, std::to_string(pnl._closed));
+                setCell(cells, i, PNLColumns::Total, std::to_string(pnl.getTotal()));
+                setCell(cells, i, PNLColumns::Drawdown, std::to_string(pnl._drawdown));
+            }
             uint32_t pnlLimit = 0;
             uint32_t drawdownLimit = 0;
             std::vector<uint32_t> shiftLimits(shiftColumns.size(), 0);
@@ -1006,7 +1017,8 @@ public:
         addButton(buttons, toUInt(0), "Submit", proto::ButtonFrontBehavior_CommitValues, proto::ButtonBackBehavior_Send, RequiresConfirmation::NO);
     }
 
-    void populateGatewayStatuses(proto::GridDefinition* definition) {
+    template<typename ExecutorT>
+    void populateGatewayStatuses(proto::GridDefinition* definition, ExecutorT* executor) {
         definition->set_gridid(toUInt(WindowIds::GatewayStatuses));
         definition->set_name("Gateway Status");
         definition->set_type(proto::GridType::Table);
@@ -1023,7 +1035,7 @@ public:
         auto cells = definition->mutable_cells();
 
         setCell(cells, 1, GatewayStatusColumns::Exchange, "ICE");
-        setCell(cells, 1, GatewayStatusColumns::Status, "1");
+        setCell(cells, 1, GatewayStatusColumns::Status, std::to_string(static_cast<int>(executor->_gatewayStatus._active)));
     }
 
     void populateGatewayStatusUpdate(proto::GridUpdate& message, bool active) {

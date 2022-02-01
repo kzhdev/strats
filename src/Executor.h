@@ -1632,6 +1632,7 @@ public:
             for (uint32_t i = 0; i < _viperConfig._allContracts.size(); ++i) {
                 const ConfigContract &contract = _viperConfig._allContracts[i];
                 auto& state = _contractStates[i];
+                state._contract = contract;
                 if (contract._toMarketMake) {
                     const StackerConfig &stackerConfig = _viperConfig._stackerConfigs[contract._marketMakeIndex];
                     const RelativeValueConfig &rvConfig = _viperConfig._relativeValueConfigs[contract._marketMakeIndex];
@@ -1648,7 +1649,6 @@ public:
                     state._ime.initialize(this, contract, stackerConfig, rvHedgeMatchTolerance,
                                           fillBannerPeriod, quoteBannerPeriod, hedgeBannerPeriod, selfMatchBannerPeriod,
                                           state._books, _viperConfig._iceCancelResting);
-                    state._contract = contract;
                 }
                 _usedVenues.insert(contract._venue);
                 PricingConfig& pc = _viperConfig._pricingConfigs[i];
@@ -2222,6 +2222,16 @@ public:
         if (!state._contract._toMarketMake) {
             if(event.statusType == md::MDStatusEvent::TYPE::RECOVERED) {
                 handleMDRecoveryDuringGapIfNeeded(venue, event.sid);
+                const volatile auto &top = this->context().getSymbolTop(venue, event.sid);
+                state._contract._settlement = top.last_settle;
+                uint64_t settle_date = 0;
+                if (venue == hf::VENUE::ICE) {
+                    settle_date = top.ice.valuation_date_time / (TimeUtils::SECONDS_PER_DAY * 1000);
+                }
+                else if (venue == hf::VENUE::CME) {
+                    settle_date = top.cme.last_settle_refdate;
+                }
+                logging::GetLogger().logInfo(boost::str(boost::format("%1% settlement=%2%, settle_date=%3% settlement_flag=%4% bid=%5% sid=%6% top=%7%") % state._contract._name % state._contract._settlement % settle_date % top.last_settle_flags % bid % event.sid % &top));
             }
             return;
         }
