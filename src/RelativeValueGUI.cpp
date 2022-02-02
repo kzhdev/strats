@@ -350,11 +350,11 @@ proto::GridUpdate RelativeValue::getExtraContractWidth_PctStfMove_MaxTicksThroug
     auto cells = message.mutable_cells();
     for (uint32_t contractIndex = 0; contractIndex < _numberOfAllContracts; ++contractIndex) {
         const RvContract& contract = _contracts[contractIndex];
-        guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::ExtraWidth, std::to_string(ToDollars(_extraContractWidths.getValue(contract._internalId))));
         if (contract._traded) {
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::ExtraWidth, std::to_string(ToDollars(_extraContractWidths.getValue(contract._internalId))));
             guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::PCTStfMove, std::to_string(_pctStfMoves.getValue(contractIndex)));
+            guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(_maxTicksThroughMarket.getValue(contractIndex) / contract._definition._tickSize));
         }
-        guiThings.setCell(cells, contract._internalId, ContractParameterRVColumns::MaxTicksThroughMarket, std::to_string(_maxTicksThroughMarket.getValue(contractIndex) / contract._definition._tickSize));
     }
     return message;
 }

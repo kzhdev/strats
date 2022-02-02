@@ -3517,6 +3517,7 @@ public:
                 std::string traderName = _viperConfig._traders[trader];
                 this->context().swapTrader(traderName, "");
                 _viperConfig._currentTrader = trader;
+                logging::GetLogger().logInfo(boost::str(boost::format("Switch Trader to %1%") % traderName));
             } else if (columnType == TraderSwitchColumns::Shift) {
                 auto shift = atoi(gridCell.value().c_str());
                 if (shift >= 0) {
@@ -3532,7 +3533,7 @@ public:
 
     void onShiftChanged(uint32_t shift) {
         _viperConfig._currentShift = static_cast<Shifts>(shift);
-        LOG(0, "Shift changed to {i1}", shift)
+        logging::GetLogger().logInfo(boost::str(boost::format("Shift changed to %1%") % to_string(static_cast<Shifts>(shift))));
         for (const auto& config : _viperConfig._globalConfigs) {
             if (config._key == QUOTE_BANNER_PERIOD) {
                 uint64_t period = GetCyclesFromMicroSeconds(boost::lexical_cast<uint32_t>(config._shifts[shift]), _frequency);
