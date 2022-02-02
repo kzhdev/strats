@@ -2144,24 +2144,6 @@ public:
         }
         _currentVectorMarketPrices = &_vectorMarketPrices[0];
         _priorVectorMarketPrices = &_vectorMarketPrices[1];
-    }
-
-    void initializeStructures() {
-        _hedgeRatios.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        _factorHedgedIndexes.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        _shortTermFairsInVector.init(_numberOfVectors);
-        _shortTermFairsMoveInVector.init(_numberOfVectors);
-        _possibleHedgeRatios.initialize(_numberOfVectors, 3);
-        _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
-        _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
-        _normalizationMatrix.initialize(_numberOfPricingContracts, 3);
-        _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
-        _shortTermFairsForContracts.initDefault(_numberOfAllContracts);
-        _shortTermFairsCache.init(_numberOfAllContracts);
-        _shortTermFairsMoveForContract.init(_numberOfAllContracts);
-        _rhoneMaxClipSize.init(_numberOfAllContracts);
-        _lastOrderRequests.resize(_numberOfAllContracts);
 
         _risk_X_qtyMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _riskMatrix._numberOfColumns);
         _risk_Div_pricingMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _riskMatrix._numberOfColumns);
@@ -2196,6 +2178,24 @@ public:
                 }
             }
         }
+    }
+
+    void initializeStructures() {
+        _hedgeRatios.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        _factorHedgedIndexes.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        _quoteSizes.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        _shortTermFairsInVector.init(_numberOfVectors);
+        _shortTermFairsMoveInVector.init(_numberOfVectors);
+        _possibleHedgeRatios.initialize(_numberOfVectors, 3);
+        _hedgeVectorRiskExposures.initialize(_numberOfVectors, _numberOfVectors);
+        _hedgeVectorRiskExposuresSums.init(_numberOfVectors);
+        _normalizationMatrix.initialize(_numberOfPricingContracts, 3);
+        _commissions.initialize(_numberOfAllContracts, _numberOfAllContracts);
+        _shortTermFairsForContracts.initDefault(_numberOfAllContracts);
+        _shortTermFairsCache.init(_numberOfAllContracts);
+        _shortTermFairsMoveForContract.init(_numberOfAllContracts);
+        _rhoneMaxClipSize.init(_numberOfAllContracts);
+        _lastOrderRequests.resize(_numberOfAllContracts);
     }
 
     void initializeLeanMatrix(std::vector<VectorWithContract>& config) {
