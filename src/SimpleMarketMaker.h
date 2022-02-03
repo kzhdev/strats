@@ -1339,6 +1339,7 @@ public:
             case MarketMakerParametersColumns::QuoteExternal: {
                 bool quoteExternal = 1 == atoi(gridCell.value().c_str());
                 _quoteExternal = quoteExternal;
+                _quoteExternalBeforeMaxTicksWideStopQuotingBreached = quoteExternal;
                 LOG(0, "MM {C[i1]}. Quote external changed. Value={i2}", getContractName(), quoteExternal)
                 break;
             }
