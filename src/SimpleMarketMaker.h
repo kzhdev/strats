@@ -658,7 +658,7 @@ public:
                 disable(true, false, true);
                 setQuoteExternalFlag(false);
                 _marketMaker->notifyFrontMMExternalQuoteDisabled(_contract._internalId);
-                _marketMaker->sendErrorMessage(boost::str(boost::format("MM - MaxPayUpTicks breached. Contract=%1% hedgePrice=%2% refFillPrice=%3%") % _contract._name % externalPrice % _refFillPrice), ErrorType::Critical);
+                _marketMaker->sendErrorMessage(boost::str(boost::format("MM - MaxPayUpTicks breached. Contract=%1% hedgePrice=%2% refFillPrice=%3%") % _contract._name % ToDollars(externalPrice) % ToDollars(_refFillPrice)), ErrorType::Critical);
                 LOG(0, "MM {C[i1]}. maxPayUpTicks breached. Disable MM. Disable QuoteExternal and UseGTC. hedgePrice={d1} refFillPrice={d2}", getContractName(), ToDollars(externalPrice), ToDollars(_refFillPrice))
                 return std::make_tuple(false, true);
             }
@@ -1313,6 +1313,14 @@ public:
             bidQuote._externalSize = 0;
             Quote& askQuote = _quotes[ASK];
             askQuote._externalSize = 0;
+
+            if (_internallyInitiatedPosition || _externallyInitiatedPosition) {
+                if (_internallyInitiatedPosition > 0 || _externallyInitiatedPosition > 0) {
+                    _refFillPrice = _books[BID].l[0].pr;
+                } else {
+                    _refFillPrice = _books[ASK].l[0].pr;
+                }
+            }
 
             bool hasHedgeSizeChange = modifyHedgeSize();
             auto [hedgePriceChanged, maxPayUpBreached] = forceUpdateQuotesUpdateHedgePrice();
