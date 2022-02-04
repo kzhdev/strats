@@ -2062,40 +2062,6 @@ public:
             contract._quantityMultiplier = pc._quantityMultiplier;
             _maxTicksWide.setValue(index, config[index]._maxTicksWide < 0 ? std::numeric_limits<int64_t>::max() : config[index]._maxTicksWide * contract._definition._tickSize);
         }
-
-        _risk_X_qtyMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _riskMatrix._numberOfColumns);
-        _risk_Div_pricingMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _riskMatrix._numberOfColumns);
-        _vectorRiskMatrix.initialize(_riskMatrix._numberOfRows, _numberOfAllContracts);
-        _vectorRisk_Div_qtyMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _numberOfAllContracts);
-        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
-            for (uint32_t contractId = 0; contractId < _riskMatrix._numberOfColumns; ++contractId) {
-                const auto& contract = _contracts[contractId];
-                const auto riskValue = _riskMatrix.getValue(vectorIndex, contractId);
-                _risk_X_qtyMultiplier_Matrix.setValue(vectorIndex, contractId, riskValue * contract._quantityMultiplier);
-                _risk_Div_pricingMultiplier_Matrix.setValue(vectorIndex, contractId, riskValue / contract._pricingMultiplier);
-            }
-        }
-
-        double vectorRisk = 0;
-        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
-            for (const auto& contract : _contracts) {
-                if (contract._definition._legs.size() > 1) {
-                    vectorRisk = 0;
-                    for (const auto& leg: contract._definition._legs) {
-                        vectorRisk += _riskMatrix.getValue(vectorIndex, leg._index) * leg._ratio;
-                    }
-                    vectorRisk = Round<2>(vectorRisk);
-                    _vectorRiskMatrix.setValue(vectorIndex, contract._internalId, vectorRisk);
-                    _vectorRisk_Div_qtyMultiplier_Matrix.setValue(vectorIndex, contract._internalId,
-                                                                  (vectorRisk / contract._quantityMultiplier));
-                } else {
-                    _vectorRiskMatrix.setValue(vectorIndex, contract._internalId,
-                                               Round<2>(_riskMatrix.getValue(vectorIndex, contract._internalId)));
-                    _vectorRisk_Div_qtyMultiplier_Matrix.setValue(vectorIndex, contract._internalId,
-                                                                  (_vectorRiskMatrix.getValue(vectorIndex,contract._internalId) / contract._quantityMultiplier));
-                }
-            }
-        }
     }
 
     void calculateOverdeterminedMatrix() {
@@ -2178,6 +2144,40 @@ public:
         }
         _currentVectorMarketPrices = &_vectorMarketPrices[0];
         _priorVectorMarketPrices = &_vectorMarketPrices[1];
+
+        _risk_X_qtyMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _riskMatrix._numberOfColumns);
+        _risk_Div_pricingMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _riskMatrix._numberOfColumns);
+        _vectorRiskMatrix.initialize(_riskMatrix._numberOfRows, _numberOfAllContracts);
+        _vectorRisk_Div_qtyMultiplier_Matrix.initialize(_riskMatrix._numberOfRows, _numberOfAllContracts);
+        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
+            for (uint32_t contractId = 0; contractId < _riskMatrix._numberOfColumns; ++contractId) {
+                const auto& contract = _contracts[contractId];
+                const auto riskValue = _riskMatrix.getValue(vectorIndex, contractId);
+                _risk_X_qtyMultiplier_Matrix.setValue(vectorIndex, contractId, riskValue * contract._quantityMultiplier);
+                _risk_Div_pricingMultiplier_Matrix.setValue(vectorIndex, contractId, riskValue / contract._pricingMultiplier);
+            }
+        }
+
+        double vectorRisk = 0;
+        for (uint32_t vectorIndex = 0; vectorIndex < _riskMatrix._numberOfRows; ++vectorIndex) {
+            for (const auto& contract : _contracts) {
+                if (contract._definition._legs.size() > 1) {
+                    vectorRisk = 0;
+                    for (const auto& leg: contract._definition._legs) {
+                        vectorRisk += _riskMatrix.getValue(vectorIndex, leg._index) * leg._ratio;
+                    }
+                    vectorRisk = Round<2>(vectorRisk);
+                    _vectorRiskMatrix.setValue(vectorIndex, contract._internalId, vectorRisk);
+                    _vectorRisk_Div_qtyMultiplier_Matrix.setValue(vectorIndex, contract._internalId,
+                                                                  (vectorRisk / contract._quantityMultiplier));
+                } else {
+                    _vectorRiskMatrix.setValue(vectorIndex, contract._internalId,
+                                               Round<2>(_riskMatrix.getValue(vectorIndex, contract._internalId)));
+                    _vectorRisk_Div_qtyMultiplier_Matrix.setValue(vectorIndex, contract._internalId,
+                                                                  (_vectorRiskMatrix.getValue(vectorIndex,contract._internalId) / contract._quantityMultiplier));
+                }
+            }
+        }
     }
 
     void initializeStructures() {
