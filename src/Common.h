@@ -128,6 +128,7 @@ enum class MarketMakerParametersColumns {
     MaxTicksWideStopExtQuoting,
     MaxTicksWideDisable,
 
+    MaxPayUpTicks,
     QuotePctTob,
     WorsenPayupCondPercent,
     QueueImportance,
