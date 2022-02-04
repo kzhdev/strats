@@ -27,6 +27,12 @@ void MarketMaker::onManualFill(ManualFill& fill) {
     sendAcceptedManualFillToFront(fill._contract, allocatedInternally, price, true);
     sendAcceptedManualFillToFront(fill._contract, allocatedExternally, price, false);
     _manualFilledMarketMakers.emplace(&mm);
+
+    if (!mm._internallyInitiatedPosition && !mm._externallyInitiatedPosition) {
+        mm._refFillPrice = hf::NULL_PRICE;
+    } else if (mm._refFillPrice == hf::NULL_PRICE) {
+        mm._refFillPrice = price;
+    }
 }
 
 COLD
