@@ -221,6 +221,7 @@ public:
         _hedgeOffsetPrice = _hedgeOffset * _tickSize;
         _maxTicksWideStopExtQuoting = config._maxTicksWideStopExtQuoting < 0 ? std::numeric_limits<int64_t>::max() : config._maxTicksWideStopExtQuoting * _tickSize;
         _maxTicksWideDisable = config._maxTicksWideDisable < 0 ? std::numeric_limits<int64_t>::max() : config._maxTicksWideDisable * _tickSize;
+        _maxPayUpTicks = config._maxPayUpTicks * _tickSize;
         _internallyInitiatedPosition = config._internalPosition;
         _externallyInitiatedPosition = config._externalPosition;
         _worsenPayupConditionAmount = config._worsenPayupCondPercent * _tickSize;
@@ -465,16 +466,13 @@ public:
         if (BOOST_UNLIKELY((askBook.pr - bidBook.pr) > _maxTicksWideStopExtQuoting)) {
             if (!_maxTicksWideStopExtQuotingBreached) {
                 std::string msg = boost::str(boost::format("MM - MaxTicksWidth breached, disable external quoting, disable GTC. Contract=%1%") % _contract._name);
-                _quoteExternalBeforeMaxTicksWideStopQuotingBreached = disableExternalQuotingAndUseGTC(msg, true, false);
+                _quoteExternalBeforeMaxTicksWideStopQuotingBreached = disableExternalQuotingAndUseGTC(msg, true, false, true);
                 _maxTicksWideStopExtQuotingBreached = true;
             }
         } else if (_maxTicksWideStopExtQuotingBreached) {
             _maxTicksWideStopExtQuotingBreached = false;
             if (_quoteExternalBeforeMaxTicksWideStopQuotingBreached) {
                 LOG(0, "MM {C[i1]}. MaxTicksWidthStopExtQuote Unbreached. Re-enable external quoting", getContractName())
-                _marketMaker->sendErrorMessage(boost::str(boost::format(
-                        "MM - MaxTicksWidthStopExtQuote Unbreached, re-enable external quoting. Contract=%1%")
-                                                          % _contract._name), ErrorType::Normal);
                 enableExternalQuoting(false);
             }
         }
@@ -497,14 +495,20 @@ public:
 
             if (topBookChanged || askChanged) {
                 if (isHedging<BID>()) {
-                    bool hedgeChanged = updateHedgePrice<BID>(bidBook, askBook);
+                    auto [hedgeChanged, maxPayUpTicksBreached] = updateHedgePrice<BID>(bidBook, askBook);
+                    if (maxPayUpTicksBreached) {
+                        return;
+                    }
                     hasChange |= hedgeChanged;
                     hasChange |= checkHedgeCross<BID, 6>(quoteExternally, hedgeChanged, askChanged);
                 }
             }
             if (topBookChanged || bidChanged) {
                 if (isHedging<ASK>()) {
-                    bool hedgeChanged = updateHedgePrice<ASK>(askBook, bidBook);
+                    auto [hedgeChanged, maxPayUpTicksBreached] = updateHedgePrice<ASK>(askBook, bidBook);
+                    if (maxPayUpTicksBreached) {
+                        return;
+                    }
                     hasChange |= hedgeChanged;
                     hasChange |= checkHedgeCross<ASK, 6>(quoteExternally, hedgeChanged, bidChanged);
                 }
@@ -583,7 +587,7 @@ public:
         _mdPriceChangeIndex[ASK] = -1;
     }
 
-    bool forceUpdateQuotesUpdateHedgePrice() {
+    std::tuple<bool, bool> forceUpdateQuotesUpdateHedgePrice() {
         const auto& bidBook = topBook<BID>();
         const auto& askBook = topBook<ASK>();
 
@@ -594,16 +598,22 @@ public:
         checkQuoteCross<7>(quoteExternally, bidChanged, askChanged);
         hasChange |= bidChanged | askChanged;
         if (isHedging<BID>()) {
-            bool hedgeChanged = updateHedgePrice<BID>(bidBook, askBook);
+            auto [hedgeChanged, maxPayUpTicksBreached] = updateHedgePrice<BID>(bidBook, askBook);
+            if (maxPayUpTicksBreached) {
+                return std::make_tuple(false, true);
+            }
             hasChange |= hedgeChanged;
             hasChange |= checkHedgeCross<BID, 8>(quoteExternally, hedgeChanged, askChanged);
         }
         if (isHedging<ASK>()) {
-            bool hedgeChanged = updateHedgePrice<ASK>(askBook, bidBook);
+            auto [hedgeChanged, maxPayUpTicksBreached] = updateHedgePrice<ASK>(askBook, bidBook);
+            if (maxPayUpTicksBreached) {
+                return std::make_tuple(false, true);
+            }
             hasChange |= hedgeChanged;
             hasChange |= checkHedgeCross<ASK, 8>(quoteExternally, hedgeChanged, bidChanged);
         }
-        return hasChange;
+        return std::make_tuple(hasChange, false);
     }
 
     template<uint32_t Side>
@@ -635,7 +645,7 @@ public:
     }
 
     template<uint32_t Side>
-    bool updateHedgePrice(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook) {
+    std::tuple<bool, bool> updateHedgePrice(const md::top_t::level_t& book, const md::top_t::level_t& otherSideBook) {
         bool hasChange = false;
         LOG(0, "MM {C[i1]}. {i2} updating hedge price", getContractName(), Side)
         Hedge& hedge = _hedges[Side];
@@ -644,6 +654,14 @@ public:
         hf::price_t externalPrice;
         hedge._inPayUp = calculateHedgePrices<Side>(hedge._sizeToQuote, internalPrice, externalPrice, book, otherSideBook);
         if (hedge._inPayUp) {
+            if (_refFillPrice != hf::NULL_PRICE && (std::abs(externalPrice - _refFillPrice) >= _maxPayUpTicks)) {
+                disable(true, false, true);
+                setQuoteExternalFlag(false);
+                _marketMaker->notifyFrontMMExternalQuoteDisabled(_contract._internalId);
+                _marketMaker->sendErrorMessage(boost::str(boost::format("MM - MaxPayUpTicks breached. Contract=%1% hedgePrice=%2% refFillPrice=%3%") % _contract._name % externalPrice % _refFillPrice), ErrorType::Critical);
+                LOG(0, "MM {C[i1]}. maxPayUpTicks breached. Disable MM. Disable QuoteExternal and UseGTC. hedgePrice={d1} refFillPrice={d2}", getContractName(), ToDollars(externalPrice), ToDollars(_refFillPrice))
+                return std::make_tuple(false, true);
+            }
             hedge._internalPrice = internalPrice;
             hedge._externalPrice = externalPrice;
             modifyHedgeOrder<Side>(hedge, true);
@@ -662,7 +680,7 @@ public:
                 hasChange = true;
             }
         }
-        return hasChange;
+        return std::make_tuple(hasChange, false);
     }
 
     template<uint32_t Side, uint32_t source>
@@ -898,15 +916,18 @@ public:
         quote._lastExternalSizeSent = quote._externalSize;
     }
 
-    bool disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true, bool notifyExtQuoteDisableToGUI = true) {
+    bool disableExternalQuotingAndUseGTC(const std::string& message, bool placeHedgeBack = true, bool notifyExtQuoteDisableToGUI = true, bool sendErrorMessageIfGTCEnabled = false) {
         bool msgSend = false;
         auto oldQuoteExternal = setQuoteExternalFlag(false);
         if (oldQuoteExternal) {
             if (notifyExtQuoteDisableToGUI) {
                 _marketMaker->notifyFrontMMExternalQuoteDisabled(_contract._internalId);
             }
-            _marketMaker->sendErrorMessage(message, ErrorType::Critical);
-            msgSend = true;
+
+            if (!sendErrorMessageIfGTCEnabled) {
+                _marketMaker->sendErrorMessage(message, ErrorType::Critical);
+                msgSend = true;
+            }
         }
 
         auto oldUseGTC = *_contract._useGTC;
@@ -1015,6 +1036,11 @@ public:
                 takeOverFill(fill);
                 // onEndOfFills event will follow
             }
+            if (!_internallyInitiatedPosition && !_externallyInitiatedPosition) {
+                _refFillPrice = hf::NULL_PRICE;
+            } else if (_refFillPrice == hf::NULL_PRICE) {
+                _refFillPrice = fill._price;
+            }
             return;
         }
 
@@ -1066,6 +1092,12 @@ public:
             }
         }
         _marketMaker->sendFillToFront(fill._contractId, fill._side, fill._price, fill._qty, fill._type, fill._source, allocatedInternally, allocatedExternally);
+
+        if (!_internallyInitiatedPosition && !_externallyInitiatedPosition) {
+            _refFillPrice = hf::NULL_PRICE;
+        } else if (_refFillPrice == hf::NULL_PRICE) {
+            _refFillPrice = fill._price;
+        }
     }
 
     void allocateExternalQuoteFill(Quote& quote, hf::qty_t size, uint32_t side) {
@@ -1214,7 +1246,8 @@ public:
             return;
         }
         bool hedgeSizeChanged = modifyHedgeSize();
-        if (forceUpdateQuotesUpdateHedgePrice() | hedgeSizeChanged) {
+        auto [hedgePriceChanged, maxPayUpBreached] = forceUpdateQuotesUpdateHedgePrice();
+        if (!maxPayUpBreached && (hedgePriceChanged | hedgeSizeChanged)) {
             notifyOrderRequest();
         }
     }
@@ -1282,7 +1315,8 @@ public:
             askQuote._externalSize = 0;
 
             bool hasHedgeSizeChange = modifyHedgeSize();
-            if (forceUpdateQuotesUpdateHedgePrice() | hasHedgeSizeChange) {
+            auto [hedgePriceChanged, maxPayUpBreached] = forceUpdateQuotesUpdateHedgePrice();
+            if (!maxPayUpBreached && (hedgePriceChanged | hasHedgeSizeChange)) {
                 notifyOrderRequest();
             }
         }
@@ -1524,6 +1558,18 @@ public:
                 }
                 break;
             }
+            case MarketMakerParametersColumns::MaxPayUpTicks: {
+                int32_t value = atoi(gridCell.value().c_str());
+                if (value  <= 0) {
+                    LOG(0, "MM {C[i1]}. MaxPayUpTicks <= 0, refusing to change. Value={i2}", getContractName(), value);
+                    _marketMaker->sendErrorMessage("MM WorsenPayupCond% must be >= 0", ErrorType::Critical);
+                    gridCell.set_value(std::to_string(_maxPayUpTicks / _tickSize));
+                } else {
+                    LOG(0, "MM {C[i1]}. MaxPayUpTicks changed. Value={i2}", getContractName(), value)
+                    _maxPayUpTicks = value * _tickSize;
+                }
+                break;
+            }
             case MarketMakerParametersColumns::WorsenPayupCondPercent: {
                 double worsenPayupConditionValue = boost::lexical_cast<double>(gridCell.value());
                 if(worsenPayupConditionValue < 0 || IsZero(worsenPayupConditionValue)) {
@@ -1744,6 +1790,8 @@ public:
     hf::price_t _hedgeOffsetPrice;
     hf::price_t _maxTicksWideStopExtQuoting;
     hf::price_t _maxTicksWideDisable;
+    hf::price_t _maxPayUpTicks;
+    hf::price_t _refFillPrice = hf::NULL_PRICE;
     double _hedgeOffset;
     hf::qty_t _internallyInitiatedPosition = 0;
     hf::qty_t _externallyInitiatedPosition = 0;

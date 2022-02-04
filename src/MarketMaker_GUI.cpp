@@ -16,6 +16,7 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
             headerCell(MarketMakerParametersColumns::QuotePctTob, "Quote%TOB", false, proto::DataType::double_type),
             headerCell(MarketMakerParametersColumns::MaxTicksWideStopExtQuoting, "MaxTicksWideStopExtQuoting", false, proto::DataType::signed_type),
             headerCell(MarketMakerParametersColumns::MaxTicksWideDisable, "MaxTicksWideDisable", false, proto::DataType::signed_type),
+            headerCell(MarketMakerParametersColumns::MaxPayUpTicks, "MaxPayUpTicks", false, proto::DataType::signed_type),
             headerCell(MarketMakerParametersColumns::Width, "WidthPercentage", true, proto::DataType::double_type),
             headerCell(MarketMakerParametersColumns::AsiaWidth, "AsiaWidthPercentage", false, proto::DataType::double_type),
             headerCell(MarketMakerParametersColumns::EuroWidth, "EuroWidthPercentage", false, proto::DataType::double_type),
@@ -68,6 +69,7 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
                 Cell(MarketMakerParametersColumns::QuotePctTob, std::to_string(config._quotePctTob)),
                 Cell(MarketMakerParametersColumns::MaxTicksWideStopExtQuoting, std::to_string(config._maxTicksWideStopExtQuoting)),
                 Cell(MarketMakerParametersColumns::MaxTicksWideDisable, std::to_string(config._maxTicksWideDisable)),
+                Cell(MarketMakerParametersColumns::MaxPayUpTicks, std::to_string(config._maxPayUpTicks)),
                 Cell(MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)])),
         });
         for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
