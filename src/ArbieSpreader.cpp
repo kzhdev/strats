@@ -59,6 +59,7 @@ void ArbieSpreader::initializeContracts() {
             contract._quoteSize = config._quoteSize;
             contract._hedgeOffset = config._hedgeOffset;
             contract._maxTicksThroughMarket = config._maxTicksThroughMarket * configContract._tickSize;
+            contract._2TimesMaxTicksThroughMarket = contract._maxTicksThroughMarket << 1;
             contract._hedgeOffsetPrice = config._hedgeOffset * configContract._tickSize;
             contract._shortTermFairOffsets.reserve(config._paths.size());
             uint32_t id = 0;

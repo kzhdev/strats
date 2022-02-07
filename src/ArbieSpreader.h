@@ -107,8 +107,6 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         bool marketDirty(Contract* contract);
 
-        template<uint32_t Side>
-        inline bool canHedge(hf::qty_t size, hf::price_t& pathPrice, std::unordered_set<Path*>& temporarilyDisabledPath, bool firstPath) noexcept;
         void log() const noexcept;
     };
 
@@ -192,6 +190,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         hf::price_t _edge = 0;
         double _hedgeOffset = 0.;
         hf::price_t _maxTicksThroughMarket = 0;
+        hf::price_t _2TimesMaxTicksThroughMarket = 0;
         hf::price_t _extCommission = 0.;
         hf::price_t _hedgeOffsetPrice = 0;
         hf::qty_t _quoteSize = 0;
@@ -405,13 +404,13 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     Matrix _riskMatrix; // x,y - vectors - square
     std::vector<double> _vectorsRange;
     std::vector<double> _vectorsMaxPosition;
-    std::unordered_set<Path*> _temporarilyInvalidatedPaths;
+    std::vector<FillMessage> _fillsToGUI;
 
 public:
     ArbieSpreader()
         : _orderRequestMgr(OrderRequestManager::get())
         , _updatedContracts(8192) {
-        _temporarilyInvalidatedPaths.reserve(8);
+        _fillsToGUI.reserve(8);
     }
 
     ~ArbieSpreader() {
@@ -516,8 +515,11 @@ private:
     template<uint32_t Side>
     inline bool checkMaxTicksThroughMarket(Contract& contract, Contract::Quote& quote);
 
-    template<uint32_t Side, typename SendFillToFront>
-    inline bool updateHedge(Contract& contract, hf::price_t fillPrice, hf::qty_t qty, SendFillToFront&& sendFillToFront, bool isInternal);
+    template<uint32_t Side>
+    inline hf::qty_t updateHedge(Contract& contract, hf::price_t fillPrice, hf::qty_t qty, std::vector<FillMessage>& fillsToGUI, bool isInternal);
+
+    template<uint32_t Side>
+    inline bool hedge(Contract& contract, Path* path, hf::price_t fillPrice, hf::qty_t qty, std::vector<FillMessage>& fillsToGUI, bool isInternal);
 
     void sendHedgeOrder(uint32_t internalId,
                         uint32_t hedgeContractId,
@@ -563,9 +565,9 @@ inline Market* getLeanMarkets<ASK>(const ArbieSpreader::PathContract& pathContra
     return pathContract._multiplier > 0 ? pathContract._contract->_markets[ASK] : pathContract._contract->_markets[BID];
 }
 
-template<uint32_t Side, typename SendFillToFront>
-inline bool ArbieSpreader::updateHedge(Contract& contract, hf::price_t fillPrice, hf::qty_t qty, SendFillToFront&& sendFillToFront, bool isInternal) {
-    ADD_PERF_POINT_BEGIN(PerfId::AS_UpdateHedge);
+template<uint32_t Side>
+inline hf::qty_t ArbieSpreader::updateHedge(Contract& contract, hf::price_t fillPrice, hf::qty_t qty, std::vector<FillMessage>& fillsToGUI, bool isInternal) {
+    SCOPED_PERF_POINT(PerfId::AS_UpdateHedge);
     constexpr auto otherSide = GetOtherSide<Side>();
     if (isInternal) {
         if (contract._markets[Side][Market::Internal].undoAsQuoteAdjustment(_affected_markets)) {
@@ -590,159 +592,153 @@ inline bool ArbieSpreader::updateHedge(Contract& contract, hf::price_t fillPrice
     _affected_markets.clear();
 
     Path* pBest = contract._paths[Side][0];
-    Path* pPreviousBest = nullptr;
-    uint32_t pathCount = 0;
-    bool canHedge = false;
-    hf::price_t pathPrice = hf::NULL_PRICE;
-    if (!(canHedge = pBest->canHedge<Side>(qty, pathPrice, _temporarilyInvalidatedPaths, true))) {
-        do {
-            pPreviousBest = pBest;
-            pathCount = 0;
-            contract.template updatePaths<Side>(pathCount);
-            ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractHedge, pathCount);
-            pBest = contract._paths[Side][0];
-            if ((canHedge = pBest->canHedge<Side>(qty, pathPrice, _temporarilyInvalidatedPaths, false))) {
+    hf::qty_t remainingSize = qty;
+    if (pBest->_priceSize.valid() && pBest->_priceSize._size && !pBest->_recalc) {
+        auto hedgeSize = std::min<hf::qty_t>(pBest->_priceSize._size, qty);
+        if (!hedge<Side>(contract, pBest, fillPrice, hedgeSize, fillsToGUI, isInternal)) {
+            return remainingSize;
+        }
+        remainingSize -= hedgeSize;
+    }
+
+    if (remainingSize) {
+        uint32_t pathCount = 0;
+        contract.template updatePaths<Side>(pathCount);
+
+        for (auto path : contract._paths[Side]) {
+            if (!path->_priceSize.valid() || !path->_priceSize._size) {
                 break;
             }
-        } while (pPreviousBest != pBest && _temporarilyInvalidatedPaths.size() < contract._paths[Side].size());
-    }
 
-    for (auto path : _temporarilyInvalidatedPaths) {
-        path->_recalc = true;
-    }
-    _temporarilyInvalidatedPaths.clear();
+            auto hedgeSize = std::min<hf::qty_t>(pBest->_priceSize._size, remainingSize);
+            if (!hedge<Side>(contract, path,fillPrice, hedgeSize, fillsToGUI, isInternal)) {
+                return remainingSize;
+            }
+            remainingSize -= hedgeSize;
 
-    if (canHedge && pathPrice != hf::NULL_PRICE) {
-        if (calculateTicksThroughMarket<Side>(fillPrice, pathPrice) >= contract._maxTicksThroughMarket) {
-            LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed in updateHedge. Disable AS. Side={i2} fillPrice={d1} hedgePath: {i3} {i4}@{d2}", contract.name(),
-                Side, ToDollars(fillPrice), pBest->_id, pBest->_priceSize._size, ToDollars(pathPrice))
-            pBest->log();
-            sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=MaxTicksThroughMarketCheckFailed in updateHedge. OffendingContract=%1% Side=%2% fillPrice=%3% pathPrice=%4%")
-                                        % contract._def._name % Side % ToDollars(fillPrice)
-                                        % ToDollars(pBest->_priceSize._price)), ErrorType::Critical);
-            disable();
-            handleDisabled();
-            ADD_PERF_POINT_END(PerfId::AS_UpdateHedge);
-            return false;
-        }
-
-        sendFillToFront();
-        auto hedgeId = ++_hedgeId;
-        LOG(0, "AS {C[i1]}. Hedge on Path {i2} {i3}@{d1}. IsSwitchPath={i4}", contract.name(), pBest->_id, pBest->_priceSize._size, ToDollars(pBest->_priceSize._price), !pBest->_stfOffset._id.empty())
-        for (uint32_t i = 0; i < pBest->_leanContracts.size(); ++i) {
-            auto& hedgeContract = pBest->_leanContracts[i];
-            auto* hedgeMarket = hedgeContract.bestMarket();
-            if (hedgeContract._multiplier > 0) {
-                auto internalHedgePrice = applyPriceOffset<otherSide>(hedgeMarket->getPrice(), hedgeContract._contract->_hedgeOffsetPrice);
-                auto externalHedgePrice = hedgeMarket->getPrice();
-                sendHedgeOrder(contract._def._internalId, hedgeContract._internalId, otherSide,
-                               internalHedgePrice, externalHedgePrice, qty, hedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL,
-                               hedgeId, hedgeMarket->getId(), pBest->_id);
-            } else {
-                auto internalHedgePrice = applyPriceOffset<Side>(hedgeMarket->getPrice(), hedgeContract._contract->_hedgeOffsetPrice);
-                auto externalHedgePrice = hedgeMarket->getPrice();
-                sendHedgeOrder(contract._def._internalId, hedgeContract._internalId, Side,
-                               internalHedgePrice, externalHedgePrice, qty, hedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL,
-                               hedgeId, hedgeMarket->getId(), pBest->_id);
+            if (!remainingSize) {
+                // fully hedged
+                break;
             }
         }
+    }
 
-        ADD_PERF_POINT_END(PerfId::AS_UpdateHedge);
+    return remainingSize;
+}
 
-        if (!pBest->_stfOffset._id.empty()) {
-            // This is a switch path, forward the fill to RV
-            auto now = hf::util::TimeUtils::clock_gettime();
-            sendMessageToFront<FillMessage>(ViperMessageType::Fill,
-                                            [&contract, otherSide, qty, now](FillMessage& message) {
-                                                message._contractId = contract._def._internalId;
-                                                message._strategy = StrategyId::ArbieSpreader;
-                                                message._price = contract._stf;
-                                                message._qty = qty;
-                                                message._side = otherSide;
-                                                message._type = FillType::Internal;
-                                                message._source = FillSource::AsToRv;
-                                                message._checkLimit = false;
-                                                message._timestamp = now;
-                                                message._forceOverFill = false;
-                                                message._rvStf = hf::NULL_PRICE;
-                                            });
+template<uint32_t Side>
+inline bool ArbieSpreader::hedge(Contract& contract, Path* path, hf::price_t fillPrice, hf::qty_t qty, std::vector<FillMessage>& fillsToGUI, bool isInternal) {
+    if (calculateTicksThroughMarket<Side>(fillPrice, path->_priceSize._price) >= contract._2TimesMaxTicksThroughMarket) {
+        LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed in updateHedge. Disable AS. Side={i2} fillPrice={d1} hedgePath: {i3} {i4}@{d2}", contract.name(),
+            Side, ToDollars(fillPrice), path->_id, path->_priceSize._size, ToDollars(path->_priceSize._size))
+        path->log();
+        sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=MaxTicksThroughMarketCheckFailed in updateHedge. OffendingContract=%1% Side=%2% fillPrice=%3% pathPrice=%4%")
+                                    % contract._def._name % Side % ToDollars(fillPrice)
+                                    % ToDollars(path->_priceSize._price)), ErrorType::Critical);
+        disable();
+        handleDisabled();
+        return false;
+    }
 
-            auto dataSize = (pBest->_leanContracts.size() + 1) * sizeof(FillMessage);
-            auto* rv = getStrategy(StrategyId::RelativeValue);
-            rv->template sendMessage<ASFillsToRV>(
-                    ViperMessageType::TransferPositionToRV,
-                    [this, &contract, qty, now, pBest, otherSide](ASFillsToRV& message) {
-                        auto quoteAdjustedFillPrice = contract._stf + pBest->_stfOffset._rvSTFMove * qty;
-                        message._numFills = pBest->_leanContracts.size() + 1;
-                        FillMessage* fill = message._fills;
-                        fill->_contractId = contract._def._internalId;
+    constexpr auto otherSide = GetOtherSide<Side>();
+    auto hedgeId = ++_hedgeId;
+    LOG(0, "AS {C[i1]}. Hedge on Path {i2} {i3}@{d1}. IsSwitchPath={i4}", contract.name(), path->_id, path->_priceSize._size, ToDollars(path->_priceSize._price), !path->_stfOffset._id.empty())
+    for (uint32_t i = 0; i < path->_leanContracts.size(); ++i) {
+        auto& hedgeContract = path->_leanContracts[i];
+        auto* hedgeMarket = hedgeContract.bestMarket();
+        if (hedgeContract._multiplier > 0) {
+            auto internalHedgePrice = applyPriceOffset<otherSide>(hedgeMarket->getPrice(), hedgeContract._contract->_hedgeOffsetPrice);
+            auto externalHedgePrice = hedgeMarket->getPrice();
+            sendHedgeOrder(contract._def._internalId, hedgeContract._internalId, otherSide,
+                           internalHedgePrice, externalHedgePrice, qty, hedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL,
+                           hedgeId, hedgeMarket->getId(), path->_id);
+        } else {
+            auto internalHedgePrice = applyPriceOffset<Side>(hedgeMarket->getPrice(), hedgeContract._contract->_hedgeOffsetPrice);
+            auto externalHedgePrice = hedgeMarket->getPrice();
+            sendHedgeOrder(contract._def._internalId, hedgeContract._internalId, Side,
+                           internalHedgePrice, externalHedgePrice, qty, hedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL,
+                           hedgeId, hedgeMarket->getId(), path->_id);
+        }
+    }
+
+    if (!path->_stfOffset._id.empty()) {
+        // This is a switch path, forward the fill to RV
+        auto now = hf::util::TimeUtils::clock_gettime();
+        FillMessage message;
+        message._contractId = contract._def._internalId;
+        message._strategy = StrategyId::ArbieSpreader;
+        message._price = contract._stf;
+        message._qty = qty;
+        message._side = otherSide;
+        message._type = FillType::Internal;
+        message._source = FillSource::AsToRv;
+        message._checkLimit = false;
+        message._timestamp = now;
+        message._forceOverFill = false;
+        message._rvStf = hf::NULL_PRICE;
+        fillsToGUI.template emplace_back(message);
+
+        auto dataSize = (path->_leanContracts.size() + 1) * sizeof(FillMessage);
+        auto* rv = getStrategy(StrategyId::RelativeValue);
+        rv->template sendMessage<ASFillsToRV>(
+                ViperMessageType::TransferPositionToRV,
+                [this, &contract, qty, now, path, otherSide, &fillsToGUI](ASFillsToRV& message) {
+                    auto quoteAdjustedFillPrice = contract._stf + path->_stfOffset._rvSTFMove * qty;
+                    message._numFills = path->_leanContracts.size() + 1;
+                    FillMessage* fill = message._fills;
+                    fill->_contractId = contract._def._internalId;
+                    fill->_strategy = StrategyId::RelativeValue;
+                    fill->_price = quoteAdjustedFillPrice;
+                    fill->_qty = qty;
+                    fill->_side = Side;
+                    fill->_type = FillType::Internal;
+                    fill->_source = FillSource::AsToRv;
+                    fill->_checkLimit = false;
+                    fill->_timestamp = now;
+                    fill->_forceOverFill = false;
+                    fill->_rvStf = hf::NULL_PRICE;
+
+                    for (const auto& hedgeContract : path->_leanContracts) {
+                        FillMessage msg;
+                        msg._contractId = hedgeContract._internalId;
+                        msg._strategy = StrategyId::ArbieSpreader;
+                        msg._price = hedgeContract._contract->_stf;
+                        msg._qty = qty;
+                        msg._side = hedgeContract._multiplier > 0 ? Side : otherSide;
+                        msg._type = FillType::Internal;
+                        msg._source = FillSource::AsToRv;
+                        msg._checkLimit = false;
+                        msg._timestamp = now;
+                        msg._forceOverFill = false;
+                        msg._rvStf = hf::NULL_PRICE;
+                        fillsToGUI.emplace_back(msg);
+
+                        ++fill;
+                        fill->_contractId = hedgeContract._internalId;
                         fill->_strategy = StrategyId::RelativeValue;
-                        fill->_price = quoteAdjustedFillPrice;
+                        fill->_price = hedgeContract._contract->_stf;
                         fill->_qty = qty;
-                        fill->_side = Side;
+                        fill->_side = hedgeContract._multiplier > 0 ? otherSide : Side;
                         fill->_type = FillType::Internal;
                         fill->_source = FillSource::AsToRv;
                         fill->_checkLimit = false;
                         fill->_timestamp = now;
                         fill->_forceOverFill = false;
                         fill->_rvStf = hf::NULL_PRICE;
-
-                        for (const auto& hedgeContract : pBest->_leanContracts) {
-                            sendMessageToFront<FillMessage>(ViperMessageType::Fill,
-                                                            [&hedgeContract, otherSide, qty, now](FillMessage& message) {
-                                                                message._contractId = hedgeContract._internalId;
-                                                                message._strategy = StrategyId::ArbieSpreader;
-                                                                message._price = hedgeContract._contract->_stf;
-                                                                message._qty = qty;
-                                                                message._side = hedgeContract._multiplier > 0 ? Side
-                                                                                                              : otherSide;
-                                                                message._type = FillType::Internal;
-                                                                message._source = FillSource::AsToRv;
-                                                                message._checkLimit = false;
-                                                                message._timestamp = now;
-                                                                message._forceOverFill = false;
-                                                                message._rvStf = hf::NULL_PRICE;
-                                                            });
-
-                            ++fill;
-                            fill->_contractId = hedgeContract._internalId;
-                            fill->_strategy = StrategyId::RelativeValue;
-                            fill->_price = hedgeContract._contract->_stf;
-                            fill->_qty = qty;
-                            fill->_side = hedgeContract._multiplier > 0 ? otherSide : Side;
-                            fill->_type = FillType::Internal;
-                            fill->_source = FillSource::AsToRv;
-                            fill->_checkLimit = false;
-                            fill->_timestamp = now;
-                            fill->_forceOverFill = false;
-                            fill->_rvStf = hf::NULL_PRICE;
-                        }
-                    }, dataSize);
-        }
-
-        // Adjust FAK in separate loop so that the hedges are sent out ASAP.
-        for (const auto& hedgeContract : pBest->_leanContracts) {
-            auto* hedgeMarket = hedgeContract.bestMarket();
-            hedgeMarket->addFAKAdjustment(hedgeId, qty);
-            assert(hedgeMarket->getSide() == (1 - Side) || (hedgeContract._multiplier > 0));
-            markContractDirty(*hedgeContract._contract, hedgeMarket);
-        }
-        return true;
+                    }
+                }, dataSize);
     }
-    ADD_PERF_POINT_END(PerfId::AS_UpdateHedge);
-    LOG(0, "AS {C[i1]}. {i2} Unable to hedge. No valid path.", contract.name(), Side)
-    for (auto path : contract._paths[Side]) {
-        LOG(0, "AS {C[i1]}. Path {i2} {i3}@{d1}", contract.name(), path->_id, path->_priceSize._size,
-            ToDollars(path->_priceSize._price))
-        for (auto& pathContract : path->_leanContracts) {
-            auto bestMarket = pathContract.bestMarket();
-            LOG(0, "    - {C[i1]}. {i2} {i3}({i4})@{d1}", pathContract._contract->name(), pathContract._side,
-                bestMarket->getUnAdjustedSize(), bestMarket->getAdjustedSize(), ToDollars(bestMarket->getPrice()))
-        }
+
+    // Adjust FAK in separate loop so that the hedges are sent out ASAP.
+    for (const auto& hedgeContract : path->_leanContracts) {
+        auto* hedgeMarket = hedgeContract.bestMarket();
+        hedgeMarket->addFAKAdjustment(hedgeId, qty);
+        assert(hedgeMarket->getSide() == (1 - Side) || (hedgeContract._multiplier > 0));
+        markContractDirty(*hedgeContract._contract, hedgeMarket);
     }
-    sendErrorMessage(boost::str(boost::format("AS %1%. Unable to hedge. No valid path.") % contract._def._name), ErrorType::Critical);
-    return false;
+    return true;
 }
+
 
 template<uint32_t Side>
 inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
@@ -961,56 +957,6 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
         _resort = true;
     }
 }
-
-template<uint32_t Side>
-bool ArbieSpreader::Path::canHedge(hf::qty_t size, hf::price_t& pathPrice, std::unordered_set<Path*>& temporarilyDisabledPath, bool firstPath) noexcept {
-    if (_priceSize._price != hf::NULL_PRICE) {
-        if (_priceSize._size >= size && !_recalc) {
-            pathPrice = _priceSize._price;
-            return true;
-        } if (!_recalc) {
-            _priceSize.reset();
-            _resort = true;
-            _recalc = false;
-            temporarilyDisabledPath.emplace(this);
-        }
-        return false;
-    } else if (firstPath && _stfOffset._stfOffset != hf::NULL_PRICE) {
-        // 2 Scenarios:
-        // 1. After AS Quote adjustment, the path might be invalidated
-        // 2. While the fill inflight, the path is banned by another contract. Although the path is banned, we should
-        //    allow the contract hedge on this path.
-        pathPrice = 0;
-        for (const auto& pathContract : _leanContracts) {
-            auto market = pathContract.bestMarket();
-            auto side = market->getSide();
-            auto price = market->getPrice();
-            if (price == hf::NULL_PRICE || market->getId() == MarketIds::__end__ ||
-                pathContract._quoteDeterminePrice == hf::NULL_PRICE ||
-                IsBetter(pathContract._quoteDeterminePrice, price, side)) {
-                pathPrice = hf::NULL_PRICE;
-                return false;
-            } else if (market->getAdjustedSize() < size) {
-                _priceSize.reset();
-                _resort = true;
-                _recalc = false;
-                temporarilyDisabledPath.emplace(this);
-                pathPrice = hf::NULL_PRICE;
-                return false;
-            }
-
-            if (market->getId() == MarketIds::MARKET_ID_EXTERNAL) {
-                price = applyPriceOffset(price, -pathContract._contract->_extCommission, side);
-            }
-            pathPrice += pathContract._multiplier * price;
-        }
-        pathPrice += _stfOffset._stfOffset;
-        pathPrice = applyPriceOffset<Side>(pathPrice, -_commission);
-        return true;
-    }
-    return false;
-}
-
 
 template<uint32_t Side>
 inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force) {

@@ -212,6 +212,7 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                         } else {
                             LOG(0, "AS {C[i1]}. MaxTicksThroughMarket changed. {d1}->{d2}", contract.name(), (contract._maxTicksThroughMarket / contract._def._tickSize), value)
                             contract._maxTicksThroughMarket = value * contract._def._tickSize;
+                            contract._2TimesMaxTicksThroughMarket = contract._maxTicksThroughMarket << 1;
                             updatedContracts.emplace_back(&contract);
                         }
                     }
