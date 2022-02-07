@@ -558,8 +558,9 @@ public:
                 it = orders.erase(it);
             }
             if (neededSize > 0) {
-                if (canIncrease(isHedge)) {
-                    createNewOrder(getSliceSize(neededSize, isHedge), isHedge);
+                auto sizeToIncrease = canIncrease(getSliceSize(neededSize, isHedge), isHedge);
+                if (sizeToIncrease) {
+                    createNewOrder(sizeToIncrease, isHedge);
                 }
             }
 
@@ -623,8 +624,8 @@ public:
             //TODO: Stop if we hit this case
             BOOST_ASSERT(target() == 0 ? change <= 0 : true);
 
-            LOG(0, "OM {C[i1]}. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8} change={i9}", getContractName(),
-                _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout, change)
+            DLOG(0, "OM {C[i1]}. Price={d1} Target={i2}|{i3} Acked={i4} Flight={i5} Trade={i6} PotentialOverfill={i7} NumFlightout={i8} change={i9}", getContractName(),
+                 _dollar, _target[0], _target[1], _acknowledged, _flight, _traded, _potentialOverfill, _flightout, change)
 
             if (!_usedByOtherStack) {
                 synchronizeOrders(change, isHedge, stealer);
@@ -749,36 +750,42 @@ public:
 
         void synchronizeOrders(hf::qty_t change, bool isHedge, LevelStealer* stealer = nullptr) {
             if (change > 0) {
-                if (canIncrease(isHedge)) {
-                    increaseSize(getSliceSize(change, isHedge), isHedge, stealer);
+                auto sizeToIncrease = canIncrease(getSliceSize(change, isHedge), isHedge);
+                if (sizeToIncrease) {
+                    increaseSize(sizeToIncrease, isHedge, stealer);
                 }
             } else if (change < 0) {
                 reduceSize(-change, isHedge);
             }
         }
 
-        bool canIncrease(bool isHedge) const {
+        hf::qty_t canIncrease(hf::qty_t sliceSize, bool isHedge) const {
             if (_orders.empty() || isHedge || !_om->_enableQuoteSprayer || this == _om->_topLevel) {
-                return true;
+                return sliceSize;
             }
 
             auto totalOrderQty = getTotalOrdersQuantity();
             if (totalOrderQty > _target[OM_HEDGE]) {
                 // There is quote slice already
+
+                if (totalOrderQty < sliceSize) {
+                    return sliceSize - totalOrderQty;
+                }
+
                 om::order_t* order = _orders.back();
 
                 // On order response, we do not have queue position yet, it will cause
                 // calculate qty behind incorrectly.
                 if (!IsBitSet(*order, STACKER_ORDER_FLAGS, SOF_QUEUE_POSITION_UPDATED)) {
-                    return false;
+                    return 0;
                 }
 
                 auto qtyBehind = getQtyBehind(order);
                 DLOG(0, "{i1} acked {i2} qty behind {i3}", order->oid.value(), (int)order->action_flags.is_acked, qtyBehind)
-                return order->action_flags.is_acked && qtyBehind >= _om->_quoteGap;
+                return (order->action_flags.is_acked && qtyBehind >= _om->_quoteGap) ? sliceSize : 0;
             }
             // This is likely the first quote slice
-            return true;
+            return sliceSize;
         }
 
         hf::qty_t getSliceSize(hf::qty_t change, bool isHedge) const {
@@ -1007,8 +1014,11 @@ public:
         void adjustAfterAck(om::order_t& order, bool requiresRequote) {
             const hf::qty_t change = getQuantityChange();
             if (change > 0) {
-                if(!_om->_overfillProtection.blocked() && canIncrease(false)) {
-                    createNewOrder(getSliceSize(change, false), false);
+                if(!_om->_overfillProtection.blocked()) {
+                    auto sizeToIncrease = canIncrease(getSliceSize(change, false), false);
+                    if (sizeToIncrease) {
+                        createNewOrder(sizeToIncrease, false);
+                    }
                 }
             } else if (change < 0) {
                 if (getTargetLevel(order) == this) {
