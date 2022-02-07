@@ -61,10 +61,10 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
 
             getStrategy(StrategyId::MarketMaker)->sendMessage<FillMessage>(
                     ViperMessageType::Fill,
-                    [&fill, price, size, side](FillMessage& message) {
+                    [&fill, price, unhedgedSize, side](FillMessage& message) {
                         message._contractId = fill._contract;
                         message._price = price;
-                        message._qty = size;
+                        message._qty = unhedgedSize;
                         message._side = side;
                         message._strategy = StrategyId::ArbieSpreader;
                         message._source = FillSource::ASUnableToHedge;
