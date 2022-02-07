@@ -519,6 +519,12 @@ public:
                     onShiftChanged(msg._number_2);
                     break;
                 }
+                case ViperMessageType::Fill: {
+                    auto& fill = reinterpret_cast<FillMessage&>(message._data[0]);
+                    auto& state = _contractStates[fill._contractId];
+                    state._ime.allocateUnhedgedFills(fill);
+                    break;
+                }
                 default:
 //                    DLOG(0, "EXE. unhandled ViperMessage {i1}", toUInt(message._type))
                     break;

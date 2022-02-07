@@ -810,8 +810,14 @@ public:
                 _latencyTracking = fill._latencyTracking;
             }
         } else {
-            LOG(0, "RV {C[i1]}. got filled. But disabled. Sending fill to MarketMaker. Side={i2} Price={d1} Qty={i3}", getContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty);
-            sendFillToMarketMaker(fill);
+            LOG(0, "RV {C[i1]}. got filled. But disabled. Sending fill back to IME. Side={i2} Price={d1} Qty={i3}", getContract(fill._contractId), fill._side, ToDollars(fill._price), fill._qty);
+            sendMessageToExecutor<FillMessage>(
+                    ViperMessageType::Fill,
+                    [&](FillMessage& message) {
+                        memcpy(&message, &fill, sizeof(FillMessage));
+                        message._source = FillSource::RvDisable;
+                        message._forceOverFill = true;
+                    });
         }
     }
 
@@ -834,16 +840,6 @@ public:
             _rhoneMaxClipSize.setValue(limit._internalId, limit._max_order_qty);
             LOG(0, "RV Set rhone limit for Contract={C[i1]} to {i2}", getContract(limit._internalId), _rhoneMaxClipSize.getValue(limit._internalId));
         }
-    }
-
-    void sendFillToMarketMaker(const FillMessage& fill) {
-        getStrategy(StrategyId::MarketMaker)->sendMessage<FillMessage>(
-                ViperMessageType::Fill,
-                [&](FillMessage& message) {
-                    memcpy(&message, &fill, sizeof(FillMessage));
-                    message._source = FillSource::RvDisable;
-                    message._forceOverFill = true;
-                });
     }
 
     void sendFillToFront(const FillMessage& fill) {
@@ -1938,7 +1934,6 @@ public:
     }
 
     void calculateOverdeterminedPrices() {
-        DLOG(0, "CalculateOverdeterminedPrices. {i1}", 0)
         for (uint32_t outrightIndex = 0; outrightIndex < _numberOfPricingContracts; ++outrightIndex) {
             double sum = 0;
             for (uint32_t allIndex = 0; allIndex < _numberOfAllContracts; ++allIndex) {

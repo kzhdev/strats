@@ -983,7 +983,7 @@ enum class FillSource : uint8_t {
 
     AsDisable,
     AsHedgeReject,
-    ASUnableToHedge,
+    ASUnhedgedFill,
     AsToRv,
 };
 enum class ErrorType : uint8_t {Critical, Normal};
