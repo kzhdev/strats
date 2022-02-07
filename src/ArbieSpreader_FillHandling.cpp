@@ -49,7 +49,7 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
             });
 
             for (auto& fillMsg : _fillsToGUI) {
-                sendMessageToFront<FillMessage>(ViperMessageType::AcceptedManualFill, [&](FillMessage& msg) {
+                sendMessageToFront<FillMessage>(ViperMessageType::Fill, [&](FillMessage& msg) {
                     memcpy(&msg, &fillMsg, sizeof(FillMessage));
                 });
             }
@@ -107,7 +107,7 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
                 });
 
                 for (auto& fillMsg : _fillsToGUI) {
-                    sendMessageToFront<FillMessage>(ViperMessageType::AcceptedManualFill, [&](FillMessage& msg) {
+                    sendMessageToFront<FillMessage>(ViperMessageType::Fill, [&](FillMessage& msg) {
                         memcpy(&msg, &fillMsg, sizeof(FillMessage));
                     });
                 }
