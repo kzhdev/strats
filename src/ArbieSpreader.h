@@ -229,7 +229,14 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         Quote _lastQuoteSent[2];
         uint64_t _banExpiresAt[2] {0, 0};
         hf::batch_id_t _lastMDbid {0};
-        bool _banInitiator[2] {false, false};
+
+        enum BanInitiator : uint8_t {
+            None,
+            Aggressor,
+            Fill,
+        };
+        BanInitiator _banInitiator[2] { BanInitiator::None, BanInitiator::None };
+
         bool _forceUpdate[2] {false, false};
         bool _usedInQuoting = false;
         bool _usedInPath = false;
@@ -305,11 +312,11 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         void updatePaths(bool force = false) {
             uint32_t pathCount = 0;
 
-            if (!_banInitiator[BID]) {
+            if (_banInitiator[BID] == Contract::BanInitiator::None) {
                 updatePaths<BID>(pathCount, force);
             }
 
-            if (!_banInitiator[ASK]) {
+            if (_banInitiator[ASK] == Contract::BanInitiator::None) {
                 updatePaths<ASK>(pathCount, force);
             }
             ADD_PERF_VALUE(PerfId::AS_PathUpdateCountPerContractQuotes, pathCount);
@@ -1028,7 +1035,7 @@ inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, P
             auto now = clockUtil::GetCycles();
             auto banExpireTime = now + _contractBanPeriod;
             contract._banExpiresAt[Side] = banExpireTime;
-            contract._banInitiator[Side] = true;
+            contract._banInitiator[Side] = Contract::BanInitiator::Aggressor;
             assert(banExpireTime);
             _bannedContracts.emplace(&contract);
             LOG(0, "AS {C[i1]}. {i2} Initiate temporary bans until {i3}", contract.name(), Side, banExpireTime)
@@ -1116,7 +1123,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
     bool quoteUpdated = false;
     auto* pBestPath = contract._paths[Side][0];
     auto& quote = contract._quote[Side];
-    if (pBestPath->_priceSize.valid() && (!contract._banExpiresAt[Side] || contract._banInitiator[Side])) {
+    if (pBestPath->_priceSize.valid() && (!contract._banExpiresAt[Side] || contract._banInitiator[Side] == Contract::BanInitiator::Aggressor)) {
         quote._leanPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, pBestPath->_commission);
         quote._internalPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, -contract._edge);
         quote._internalSize = pBestPath->_priceSize._size;
@@ -1129,7 +1136,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
             quote._externalSize = 0;
         }
 
-        if (isEnabled() && !contract._banInitiator[Side]) {
+        if (isEnabled() && contract._banInitiator[Side] == Contract::BanInitiator::None) {
             if (!checkMaxTicksThroughMarket<Side>(contract, quote)) {
                 LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed. Disable AS and Disable AS External Quoting. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanPrice={d3} LeanOnRV={i6} OtherSideBestPrice={d4}", contract.name(),
                     Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,

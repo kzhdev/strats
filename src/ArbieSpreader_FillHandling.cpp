@@ -100,11 +100,11 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
             }
 
             if (unhedgedSize != fill._qty) {
-                if (!contract._banInitiator[fill._side]) {
+                if (contract._banInitiator[fill._side] != Contract::BanInitiator::Aggressor) {
                     auto now = clockUtil::GetCycles();
                     auto banExpireTime = now + _contractBanPeriod;
                     contract._banExpiresAt[fill._side] = banExpireTime;
-                    contract._banInitiator[fill._side] = true;
+                    contract._banInitiator[fill._side] = Contract::BanInitiator::Fill;
                     _bannedContracts.emplace(&contract);
                     LOG(0, "AS {C[i1]}. {i2} Initiate temporary bans until {i3}", contract.name(), fill._side, banExpireTime)
                     for (auto* p : contract._affectedPaths[fill._side]) {
