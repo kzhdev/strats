@@ -353,7 +353,7 @@ void ArbieSpreader::checkBans(uint64_t now) {
             updateQuote = true;
             LOG(0, "AS {C[i1]}. 0 Quoting unbanned. isInitiator={i2}. {i3}", contract->name(),
                 contract->_banInitiator[BID], now)
-            contract->_banInitiator[BID] = 0;
+            contract->_banInitiator[BID] = false;
         }
 
         if (contract->_banExpiresAt[ASK] && now >= contract->_banExpiresAt[ASK]) {
@@ -361,7 +361,7 @@ void ArbieSpreader::checkBans(uint64_t now) {
             updateQuote = true;
             LOG(0, "AS {C[i1]}. 1 Quoting unbanned. isInitiator={i2}. {i3}", contract->name(),
                 contract->_banInitiator[ASK], now)
-            contract->_banInitiator[ASK] = 0;
+            contract->_banInitiator[ASK] = false;
         }
 
         if (updateQuote) {

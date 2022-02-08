@@ -229,7 +229,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         Quote _lastQuoteSent[2];
         uint64_t _banExpiresAt[2] {0, 0};
         hf::batch_id_t _lastMDbid {0};
-        uint64_t _banInitiator[2] {false, false};
+        bool _banInitiator[2] {false, false};
         bool _forceUpdate[2] {false, false};
         bool _usedInQuoting = false;
         bool _usedInPath = false;
