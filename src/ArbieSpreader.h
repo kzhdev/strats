@@ -630,7 +630,7 @@ template<uint32_t Side>
 inline bool ArbieSpreader::hedge(Contract& contract, Path* path, hf::price_t fillPrice, hf::qty_t qty, std::vector<FillMessage>& fillsToGUI, bool isInternal) {
     if (calculateTicksThroughMarket<Side>(fillPrice, path->_priceSize._price) >= contract._2TimesMaxTicksThroughMarket) {
         LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed in updateHedge. Disable AS. Side={i2} fillPrice={d1} hedgePath: {i3} {i4}@{d2}", contract.name(),
-            Side, ToDollars(fillPrice), path->_id, path->_priceSize._size, ToDollars(path->_priceSize._size))
+            Side, ToDollars(fillPrice), path->_id, path->_priceSize._size, ToDollars(path->_priceSize._price))
         path->log();
         sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=MaxTicksThroughMarketCheckFailed in updateHedge. OffendingContract=%1% Side=%2% fillPrice=%3% pathPrice=%4%")
                                     % contract._def._name % Side % ToDollars(fillPrice)
