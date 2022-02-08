@@ -610,7 +610,7 @@ inline hf::qty_t ArbieSpreader::updateHedge(Contract& contract, hf::price_t fill
                 break;
             }
 
-            auto hedgeSize = std::min<hf::qty_t>(pBest->_priceSize._size, remainingSize);
+            auto hedgeSize = std::min<hf::qty_t>(path->_priceSize._size, remainingSize);
             if (!hedge<Side>(contract, path,fillPrice, hedgeSize, fillsToGUI, isInternal)) {
                 return remainingSize;
             }
