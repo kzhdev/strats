@@ -2,6 +2,9 @@
 - Initialize GUIs with current Viper values, not the default value.
 - If MM instrument's quoteExternal is changed from GUI maxTicksWideStopExtQuoting unbreaching will not re-enable extQuoting.
 - Added MM MaxPayUpTicks safety check.
+- AS hedge as mush qty as possible on best path then hedge on the next best path
+- Send unhedged AS/RV fill back to IME to re-allocate the fill to other strategy
+- When AS quote filled, ban all paths which use the contract for 1 seconds
 
 #Version 1.55.4.1
 - Fix chart histories file is not created
