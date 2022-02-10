@@ -69,12 +69,13 @@ void ArbieSpreader::initializeContracts() {
 
                 std::map<uint32_t, ShortTermFairOffset::ShortTermFair> pathShortTermFares;
                 std::vector<PathContract> pathContracts;
+                uint32_t index = 0;
                 for (const auto& configPathContract : path._contracts) {
                     auto* pathContract = _viperConfig.getContract(configPathContract._contract);
                     if (!pathContract) {
                         logging::GetLogger().logErrorAndThrow("Contract " + configPathContract._contract + " not found");
                     }
-                    pathContracts.emplace_back(&_contracts[pathContract->_internalId], configPathContract._multiplier, pathContract->_internalId);
+                    pathContracts.emplace_back(&_contracts[pathContract->_internalId], configPathContract._multiplier, pathContract->_internalId, index++);
 
                     if (pathContract->_legs.empty()) {
                         auto it = pathShortTermFares.find(pathContract->_internalId);
@@ -380,7 +381,7 @@ void ArbieSpreader::checkBans(uint64_t now) {
         if (now >= path->_banExpiresAt) {
             if (path->_banExpiresAt) {
                 path->_banExpiresAt = 0;
-                path->_recalc = true;
+                path->_resort = true;
                 pushUpdatedContract(path->_contract);
                 LOG(0, "AS {C[i1]}. Path {i2} Side={i3} unbanned. {i4}", path->_contract->name(), path->_id,
                     path->_side, now)

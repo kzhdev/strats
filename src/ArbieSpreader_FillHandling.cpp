@@ -106,9 +106,8 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
                     contract._banExpiresAt[fill._side] = banExpireTime;
                     contract._banInitiator[fill._side] = Contract::BanInitiator::Fill;
                     _bannedContracts.emplace(&contract);
-                    LOG(0, "AS {C[i1]}. {i2} Initiate temporary bans until {i3}", contract.name(), fill._side, banExpireTime)
+                    LOG(0, "AS {C[i1]}. {i2} Initiate temporary bans until {i3}. Fill", contract.name(), fill._side, banExpireTime)
                     for (auto* p : contract._affectedPaths[fill._side]) {
-                        p->_priceSize.reset();
                         p->_banExpiresAt = banExpireTime;
                         p->_resort = true;
                         ArbieSpreader::get()->_bannedPaths.emplace(p);
@@ -145,8 +144,8 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
 
                 if (logging::loggingLevel() >= logging::LOG_LEVEL::DEBUG) {
                     for (auto path : contract._paths[fill._side]) {
-                        LOG(0, "AS {C[i1]}. Path {i2} {i3}@{d1}", contract.name(), path->_id, path->_priceSize._size,
-                            ToDollars(path->_priceSize._price))
+                        LOG(0, "AS {C[i1]}. Path {i2} {i3}@{d1} invalid_flag={i4}", contract.name(), path->_id, path->size(),
+                            ToDollars(path->price()), path->_invalidFlags.to_ulong())
                         for (auto& pathContract : path->_leanContracts) {
                             auto bestMarket = pathContract.bestMarket();
                             LOG(0, "    - {C[i1]}. {i2} {i3}({i4})@{d1}", pathContract._contract->name(), pathContract._side,
