@@ -5,21 +5,25 @@ using namespace Python;
 ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract* contract,
                           const std::vector<PathContract>& pathContracts, ArbieSpreaderPath& pathConfig,
                           const ShortTermFairOffset* stfOffset, uint32_t numAllContracts)
-    : _contract(contract)
+    : _commission(ToRhonePrice(pathConfig._commission))
+    , _contract(contract)
     , _config(&pathConfig)
     , _stfOffset(*stfOffset)
-    , _commission(ToRhonePrice(pathConfig._commission))
     , _leanContracts(pathContracts)
     , _id(id)
     , _side(side)
     , _name(std::move(name)) {
     _contractToPathContract.resize(numAllContracts, nullptr);
+    _invalidFlags.set();
+    _invalidFlags.set(InvalidField::STFOffset, !_stfOffset._id.empty());
+    _invalidFlags.set(InvalidField::CanTrade, !contract->_canTrade);
     for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
         auto& pathContract = _leanContracts[i];
         pathContract._side = pathContract._multiplier > 0 ? _side : (1 - _side);
         pathContract._contract->_usedInPath = true;
         _contractToPathContract[pathContract._internalId] = &pathContract;
     }
+    _pricesInvalid.resize(_leanContracts.size(), true);
 }
 
 void ArbieSpreader::Path::log() const noexcept {

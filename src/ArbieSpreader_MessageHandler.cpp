@@ -203,11 +203,10 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
     hf::price_t stfOffset = 0;
     for (auto& stf : _shortTermFairs) {
         if (stf._fair == hf::NULL_PRICE) {
-            if (_stfOffset != hf::NULL_PRICE) {
+            if (_stfOffset != 0) {
                 stfOffset = hf::NULL_PRICE;
                 break;
             }
-            _stfOffset = hf::NULL_PRICE;
             return false;
         }
         stfOffset += stf._ratio * stf._fair;
@@ -218,24 +217,21 @@ bool ArbieSpreader::ShortTermFairOffset::calculateShortTermFairOffset() {
             ToDollars(stfOffset), ToDollars(_rvSTFMove))
         if (stfOffset == hf::NULL_PRICE) {
             for (auto path : _paths) {
-                path->_priceSize.reset();
+                path->_invalidFlags.set(Path::InvalidField::STFOffset);
                 path->_resort = true;
             }
-        }
-        else if (_stfOffset == hf::NULL_PRICE) {
-            for (auto path : _paths) {
-                path->_recalc = true;
-            }
+            _stfOffset = 0;
         } else {
             auto diff =  stfOffset - _stfOffset;
             for (auto path : _paths) {
-                if (path->_priceSize.valid()) {
-                    path->_priceSize._price += diff;
+                path->_invalidFlags.reset(Path::InvalidField::STFOffset);
+                if (path->_price != hf::NULL_PRICE) {
+                    path->_price += diff;
                     path->_resort = true;
                 }
             }
+            _stfOffset = stfOffset;
         }
-        _stfOffset = stfOffset;
         return true;
     }
     return false;

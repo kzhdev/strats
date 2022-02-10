@@ -3,6 +3,7 @@
 #include "ViperStrategyBase.h"
 #include "OrderRequestManager.h"
 #include "PerfMonitor.h"
+#include <boost/dynamic_bitset.hpp>
 
 namespace Python {
 template<uint32_t>
@@ -20,48 +21,15 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     struct Contract;
     struct ShortTermFairOffset;
 
-    struct PriceQtyPair {
-        hf::price_t _price {hf::NULL_PRICE};
-        hf::qty_t _size {std::numeric_limits<hf::qty_t>::max()};
-
-        PriceQtyPair() = default;
-
-        PriceQtyPair(const PriceQtyPair& rhs) noexcept
-            : _price(rhs._price), _size(rhs._size) {
-        }
-
-        PriceQtyPair& operator=(const PriceQtyPair& rhs) noexcept {
-            memcpy(this, &rhs, sizeof(PriceQtyPair));
-            return *this;
-        }
-
-        bool operator!=(const PriceQtyPair& rhs) const noexcept {
-            return _price != rhs._price || _size != rhs._size;
-        }
-
-        bool operator==(const PriceQtyPair& rhs) const noexcept {
-            return !operator!=(rhs);
-        }
-
-        bool valid() const noexcept {
-            return _price != hf::NULL_PRICE;
-        }
-
-        void reset() noexcept {
-            _price = hf::NULL_PRICE;
-            _size = 0 ;
-        }
-    };
-
     struct PathContract {
         Contract* _contract;
-        hf::price_t _quoteDeterminePrice = hf::NULL_PRICE;
         int32_t _multiplier;
         uint32_t _internalId;
         uint32_t _side;
+        uint32_t _index;
 
-        PathContract(Contract* contract, int32_t multiplier, uint32_t internalId)
-            : _contract(contract), _multiplier(multiplier), _internalId(internalId) {}
+        PathContract(Contract* contract, int32_t multiplier, uint32_t internalId, uint32_t index)
+            : _contract(contract), _multiplier(multiplier), _internalId(internalId), _index(index) {}
 
         Market* bestMarket() const noexcept {
             return _contract->_bestMarket[_side];
@@ -72,16 +40,22 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     template<uint32_t> friend Market* getLeanMarkets(const ArbieSpreader::PathContract&);
 
     struct Path {
+    private:
+        friend class ShortTermFairOffset;
+        hf::price_t _price = hf::NULL_PRICE;
+        hf::qty_t _size = 0;
+        hf::price_t _commission;
+
+    public:
         Contract* _contract;
         ArbieSpreaderPath* _config;
         Path* _otherSidePath = nullptr;
         const ShortTermFairOffset& _stfOffset;
         hf::price_t _rvSTFMove = 0;
-        hf::price_t _commission;
         std::vector<PathContract> _leanContracts;
         std::vector<PathContract*> _contractToPathContract;
-        PriceQtyPair _priceSize;
-        PriceQtyPair _oldPriceSize;
+        boost::dynamic_bitset<> _pricesInvalid;
+
         uint64_t _banExpiresAt = 0;
         uint32_t _id;
         uint32_t _side;
@@ -91,6 +65,45 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         bool _resort {false};
         bool _leanOnRV {false};
         std::string _name;
+
+        enum InvalidField : uint8_t {
+            STFOffset,
+            AdjustedSize,
+            CanTrade,
+            __InvalidField_End__,
+        };
+
+        std::bitset<InvalidField::__InvalidField_End__> _invalidFlags;
+
+        bool isValid() const noexcept {
+            return _invalidFlags.none() && _config->_enabled && _pricesInvalid.none();
+        }
+
+        bool isBanned() const noexcept {
+            return _banExpiresAt;
+        }
+
+        bool isEnabled() const noexcept {
+            return _config->_enabled & _contract->_enabled;
+        }
+
+        hf::price_t price() const noexcept {
+            return isValid() ? _price : hf::NULL_PRICE;
+        }
+
+        hf::qty_t size() const noexcept {
+            return isValid() ? _size : 0;
+        }
+
+        hf::price_t commission() const noexcept {
+            return _commission;
+        }
+
+        void reset() noexcept {
+            _price = hf::NULL_PRICE;
+            _size = 0;
+            _resort = true;
+        }
 
         template<uint32_t Side>
         inline bool calculate(bool force, uint32_t& pathCount);
@@ -108,6 +121,19 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         bool marketDirty(Contract* contract);
 
         void log() const noexcept;
+
+        bool updateCommission(hf::price_t value) noexcept {
+            hf::price_t oldPrice = _price;
+            _price += applyPriceOffset(_price, _commission - value, _side);
+            LOG(0, "AS {C[i1]}. {i2} Path {i3} commission changed {i4}->{i5}. price {d1}->{d2}", _contract->name(),
+                _side, _id, _commission, value, ToDollars(oldPrice), ToDollars(_price))
+            _commission = value;
+            if (IsBetter(_price, oldPrice, _side)) {
+                _resort = true;
+                return true;
+            }
+            return false;
+        }
     };
 
     template<uint32_t Side>
@@ -115,16 +141,18 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         static constexpr hf::price_t priceFactor = (Side == BID) ? 1 : -1;
 
         bool operator()(const ArbieSpreader::Path* a, const ArbieSpreader::Path* b) const {
-            auto aValid = a->_priceSize._price != hf::NULL_PRICE;
-            auto bValid = b->_priceSize._price != hf::NULL_PRICE;
+            auto aPrice = a->price();
+            auto bPrice = b->price();
+            auto aValid = aPrice != hf::NULL_PRICE;
+            auto bValid = bPrice != hf::NULL_PRICE;
             // 1. if one is valid and other is not, consider the valid better.
             // 2. if both same validity
             //    a. If side is BID, bigger price is best
             //    b. If side is ASK, lower price is best (hence priceFactor == -1)
-            auto aPair = std::make_pair(aValid, a->_priceSize._price * priceFactor);
-            auto bPair = std::make_pair(bValid, b->_priceSize._price * priceFactor);
+            auto aPair = std::make_pair(aValid, aPrice * priceFactor);
+            auto bPair = std::make_pair(bValid, bPrice * priceFactor);
             if (aPair == bPair) {
-                return a->_priceSize._size > b->_priceSize._size;
+                return a->size() > b->size();
             }
             return aPair > bPair;  // pair ordering is lexicographical
         }
@@ -150,7 +178,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         ShortTermFairOffset() = default;
         ShortTermFairOffset(Contract* contract, std::string&& id, std::map<uint32_t, ShortTermFair>&& stfs)
-                : _id(std::move(id)), _contract(contract), _stfOffset(hf::NULL_PRICE)
+                : _id(std::move(id)), _contract(contract)
         {
             for (auto& kvp : stfs) {
                 _shortTermFairs.emplace_back(kvp.second);
@@ -265,10 +293,9 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
             _canTrade = canTrade;
             for (auto& affectedPathBySide : _affectedPaths) {
                 for (auto* path : affectedPathBySide) {
-                    if (_canTrade) {
-                        path->_recalc = true;
-                    } else if (path->_priceSize.valid()) {
-                        path->_priceSize.reset();
+                    bool pathWasValid = path->isValid();
+                    path->_invalidFlags.set(Path::InvalidField::CanTrade, !_canTrade);
+                    if (!_canTrade && pathWasValid) {
                         path->_resort = true;
                     }
                 }
@@ -279,9 +306,10 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         template<uint32_t Side>
         hf::price_t getExtCommissionAdjustedBestPrice() const noexcept {
             auto price = _bestMarket[Side]->getPrice();
-            return (_bestMarket[Side]->getId() == MarketIds::MARKET_ID_EXTERNAL && price != hf::NULL_PRICE)
-                ? applyPriceOffset<Side>(price, -_extCommission)
-                : price;
+            if (_bestMarket[Side]->getId() == MarketIds::MARKET_ID_EXTERNAL) {
+                return (price != hf::NULL_PRICE) ? applyPriceOffset<Side>(price, -_extCommission) : hf::NULL_PRICE;
+            }
+            return price;
         }
 
         template<uint32_t Side>
@@ -324,6 +352,9 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
 
         template<uint32_t Side>
         inline void updatePaths(uint32_t& pathCount, bool force = false);
+
+        template<uint32_t Side>
+        inline Path* getQuotingPath() const noexcept;
 
         template<uint32_t Side>
         bool updateBestMarket(Market* updated) {
@@ -600,8 +631,10 @@ inline hf::qty_t ArbieSpreader::updateHedge(Contract& contract, hf::price_t fill
 
     Path* pBest = contract._paths[Side][0];
     hf::qty_t remainingSize = qty;
-    if (pBest->_priceSize.valid() && pBest->_priceSize._size && !pBest->_recalc) {
-        auto hedgeSize = std::min<hf::qty_t>(pBest->_priceSize._size, qty);
+    hf::price_t price = pBest->price();
+    hf::qty_t size = pBest->size();
+    if (price != hf::NULL_PRICE && size && !pBest->_recalc) {
+        auto hedgeSize = std::min<hf::qty_t>(size, qty);
         if (!hedge<Side>(contract, pBest, fillPrice, hedgeSize, fillsToGUI, isInternal)) {
             return remainingSize;
         }
@@ -613,11 +646,12 @@ inline hf::qty_t ArbieSpreader::updateHedge(Contract& contract, hf::price_t fill
         contract.template updatePaths<Side>(pathCount);
 
         for (auto path : contract._paths[Side]) {
-            if (!path->_priceSize.valid() || !path->_priceSize._size) {
+            size = path->size();
+            if (path->price() == hf::NULL_PRICE || !size) {
                 break;
             }
 
-            auto hedgeSize = std::min<hf::qty_t>(path->_priceSize._size, remainingSize);
+            auto hedgeSize = std::min<hf::qty_t>(size, remainingSize);
             if (!hedge<Side>(contract, path,fillPrice, hedgeSize, fillsToGUI, isInternal)) {
                 return remainingSize;
             }
@@ -635,13 +669,15 @@ inline hf::qty_t ArbieSpreader::updateHedge(Contract& contract, hf::price_t fill
 
 template<uint32_t Side>
 inline bool ArbieSpreader::hedge(Contract& contract, Path* path, hf::price_t fillPrice, hf::qty_t qty, std::vector<FillMessage>& fillsToGUI, bool isInternal) {
-    if (calculateTicksThroughMarket<Side>(fillPrice, path->_priceSize._price) >= contract._2TimesMaxTicksThroughMarket) {
+    auto price = path->price();
+    auto size = path->size();
+    if (calculateTicksThroughMarket<Side>(fillPrice, price) >= contract._2TimesMaxTicksThroughMarket) {
         LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed in updateHedge. Disable AS. Side={i2} fillPrice={d1} hedgePath: {i3} {i4}@{d2}", contract.name(),
-            Side, ToDollars(fillPrice), path->_id, path->_priceSize._size, ToDollars(path->_priceSize._price))
+            Side, ToDollars(fillPrice), path->_id, size, ToDollars(price))
         path->log();
         sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=MaxTicksThroughMarketCheckFailed in updateHedge. OffendingContract=%1% Side=%2% fillPrice=%3% pathPrice=%4%")
                                     % contract._def._name % Side % ToDollars(fillPrice)
-                                    % ToDollars(path->_priceSize._price)), ErrorType::Critical);
+                                    % ToDollars(price)), ErrorType::Critical);
         disable();
         handleDisabled();
         return false;
@@ -649,7 +685,9 @@ inline bool ArbieSpreader::hedge(Contract& contract, Path* path, hf::price_t fil
 
     constexpr auto otherSide = GetOtherSide<Side>();
     auto hedgeId = ++_hedgeId;
-    LOG(0, "AS {C[i1]}. Hedge on Path {i2} {i3}@{d1}. IsSwitchPath={i4}", contract.name(), path->_id, path->_priceSize._size, ToDollars(path->_priceSize._price), !path->_stfOffset._id.empty())
+    LOG(0, "AS {C[i1]}. Hedge on Path {i2} {i3}@{d1}. IsSwitchPath={i4} invalidFlags={i5} allPricesValid={i6} banned={i7}", contract.name(),
+        path->_id, size, ToDollars(price), !path->_stfOffset._id.empty(), path->_invalidFlags.to_ulong(),
+        path->_pricesInvalid.none(), path->isBanned())
     for (uint32_t i = 0; i < path->_leanContracts.size(); ++i) {
         auto& hedgeContract = path->_leanContracts[i];
         auto* hedgeMarket = hedgeContract.bestMarket();
@@ -752,24 +790,17 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
     if (_recalc | force) {
         _recalc = false;
 
-        if (!_config->_enabled | !_contract->_enabled) {
-            if (_priceSize.valid()) {
+        if (!isEnabled()) {
+            if (_price != hf::NULL_PRICE) {
                 // just changed from Enabled to Disabled
-                _priceSize.reset();
+                reset();
                 return true;
             }
             // already disabled
             return false;
         }
 
-        if (BOOST_UNLIKELY(!_stfOffset._id.empty() && _stfOffset._stfOffset == hf::NULL_PRICE)) {
-            // STF hasn't received from RV yet or reset when RV disabled
-            if (BOOST_UNLIKELY(_priceSize.valid())) {
-                _priceSize.reset();
-                return true;
-            }
-            return false;
-        }
+        bool wasValid = isValid();
 
         SCOPED_PERF_POINT(PerfId::AS_Path_Calculation);
 
@@ -779,78 +810,66 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
         ++pathCount;
 #endif
 
-        _oldPriceSize = _priceSize;
-        _priceSize._price = 0;
-        _priceSize._size = _contract->_quoteSize;
+        auto oldPrice = _price;
+        auto oldSize = _size;
+        _price = 0;
+        _size = _contract->_quoteSize;
         _sizeDetermineContract = nullptr;
         _leanOnRV = false;
         for (uint32_t i = 0; i < _leanContracts.size(); ++i) {
             auto& pathContract = _leanContracts[i];
-            if (BOOST_UNLIKELY(!pathContract._contract->_canTrade)) {
-                _priceSize.reset();
-                break;
-            }
-
             auto bestHedgeMarket = pathContract.bestMarket();
             _leanOnRV |= bestHedgeMarket->getId() == MarketIds::Market_ID_RV_QUOTE;
             auto marketPrice = bestHedgeMarket->getPrice();
 
-            if (marketPrice == hf::NULL_PRICE) {
-                _priceSize.reset();
-                break;
-            }
-
             // apply commission to external market
-            if (bestHedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL) {
+            if (bestHedgeMarket->getId() == MarketIds::MARKET_ID_EXTERNAL && marketPrice != hf::NULL_PRICE) {
                 // apply commission to external market
                 marketPrice = applyPriceOffset(marketPrice, -pathContract._contract->_extCommission, bestHedgeMarket->getSide());
             }
 
-            auto size = bestHedgeMarket->getAdjustedSize();
-            if (size == 0) {
-                if (_contract->_markets[1 - _side][Market::External].getASQuoteAdjustment() == 0) {
-                    _priceSize.reset();
-                    break;
-                }
+            _pricesInvalid.set(pathContract._index, marketPrice == hf::NULL_PRICE);
+            if (BOOST_UNLIKELY(marketPrice == hf::NULL_PRICE)) {
+                marketPrice = 0;
+            }
 
+            auto size = bestHedgeMarket->getAdjustedSize();
+            if (!size && (_contract->_markets[1 - _side][Market::External].getASQuoteAdjustment())) {
                 // if 0 size was due to the aggressive AS quoting, exclude the FAK Pre Adjustment
                 size = bestHedgeMarket->getAdjustedSizeExcludeFAKPreAdj();
-                if (size == 0) {
-                    // still get 0 size, other contract must have adjusted the hedge contract too, switch to
-                    // other path.
-                    _priceSize.reset();
-                    break;
-                }
             }
 
 #ifdef IS_DEV
-            DLOG(0, "AS {C[i1]}. Update Path {i2} Side={i3} lean={C[i4]} marketId={i5} side={i6} {i7}({i8})@{d1}({d2})", _contract->name(),
+            DLOG(0, "AS {C[i1]}. Update Path {i2} Side={i3} lean={C[i4]} marketId={i5} side={i6} {i7}({i8})@{d1}({d2}) invalidFlags={i9} allPricesValid={i10}", _contract->name(),
                  _id, _side, pathContract._contract->name(), bestHedgeMarket->getId(), bestHedgeMarket->getSide(),
                  bestHedgeMarket->getUnAdjustedSize(), bestHedgeMarket->getAdjustedSize(),
-                 ToDollars(bestHedgeMarket->getPrice()), ToDollars(marketPrice))
+                 ToDollars(bestHedgeMarket->getPrice()), ToDollars(marketPrice), _invalidFlags.to_ulong(),
+                 _pricesInvalid.none())
 #endif
 
-            _priceSize._price += pathContract._multiplier * marketPrice;
+            _price += pathContract._multiplier * marketPrice;
 
-            if (_priceSize._size > size) {
-                _sizeDetermineContract = pathContract._contract;
-                _priceSize._size = size;
+            if (!_size || _size > size) {
+                _sizeDetermineContract = size ? pathContract._contract : nullptr;
+                _size = std::min(size, _contract->_quoteSize);
             }
         }
 
-        if (_priceSize.valid()) {
-            _priceSize._price += _stfOffset._stfOffset;
-            _priceSize._price = applyPriceOffset<Side>(_priceSize._price, -_commission);
-        }
+        _invalidFlags.set(InvalidField::AdjustedSize, !_size);
 
-        if ((_oldPriceSize._price != _priceSize._price) ||
-            ((_oldPriceSize._size > _priceSize._size) & (_priceSize._size < _contract->_quoteSize)) ||      // need to quote less
-            ((_oldPriceSize._size < _priceSize._size) & (_oldPriceSize._size < _contract->_quoteSize))) {   // can quote more
-            LOG(0, "AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", _contract->name(), _id, _side, _priceSize._size, ToDollars(_priceSize._price))
+        _price += _stfOffset._stfOffset;
+        _price = applyPriceOffset<Side>(_price, -_commission);
+
+        if (wasValid && ((oldPrice != _price) ||
+            ((oldSize > _size) & (_size < _contract->_quoteSize)) ||      // need to quote less
+            ((oldSize < _size) & (oldSize < _contract->_quoteSize)))) {   // can quote more
+            LOG(0, "AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1} invalidFlags={i5} allPriceValid={i6}", _contract->name(),
+                _id, _side, _size, ToDollars(_price), _invalidFlags.to_ulong(), _pricesInvalid.none())
 #ifdef IS_DEV
-            if (_leanContracts.size() == 1 && _priceSize._price != hf::NULL_PRICE && _leanContracts[0].bestMarket()->getPrice() != hf::NULL_PRICE &&
-                IsBetterPrice<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
-                LOG(0, "!!!! AS {C[i1]}. {i2} Path {i3} price better than best market {i4}", _contract->name(), Side, _id, _leanContracts[0].bestMarket()->getPrice())
+            if (_leanContracts.size() == 1 && _price != hf::NULL_PRICE && _leanContracts[0].bestMarket()->getPrice() != hf::NULL_PRICE &&
+                IsBetterPrice<Side>(_price, _leanContracts[0].bestMarket()->getPrice())) {
+                LOG(0, "!!!! AS {C[i1]}. {i2} Path {i3} price better than best market {i4} stfOffset={i5}", _contract->name(),
+                    Side, _id, _leanContracts[0].bestMarket()->getPrice(), _stfOffset._stfOffset)
             }
 #endif
             return true;
@@ -863,8 +882,9 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
 #endif
     }
 #ifdef IS_DEV
-    if (_leanContracts.size() == 1 && _priceSize._price != hf::NULL_PRICE && IsBetterPrice<Side>(_priceSize._price, _leanContracts[0].bestMarket()->getPrice())) {
-        LOG(0, "!!!! AS {C[i1]}. {i2} Path {i3} {i4}@{i5} price better than best market {i6}", _contract->name(), Side, _id, _priceSize._size, _priceSize._price, _leanContracts[0].bestMarket()->getPrice())
+    if (isValid() && _leanContracts.size() == 1 && _price != hf::NULL_PRICE && IsBetterPrice<Side>(_price, _leanContracts[0].bestMarket()->getPrice())) {
+        LOG(0, "!!!! AS {C[i1]}. {i2} Path {i3} {i4}@{i5} price better than best market {i6} stfOffset={i7}", _contract->name(),
+            Side, _id, _size, _price, _leanContracts[0].bestMarket()->getPrice(), _stfOffset._stfOffset)
     }
 #endif
     return false;
@@ -873,94 +893,82 @@ inline bool ArbieSpreader::Path::calculate(bool force, uint32_t& pathCount) {
 template<uint32_t Side>
 void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t oldPrice, hf::price_t newPrice,
                                                  hf::qty_t size) {
-    if (_recalc) {
+    if (_recalc || !isEnabled()) {
         // need to re-calc anyway
-        return;
-    }
-
-    if (_priceSize._price == hf::NULL_PRICE) {
-        if (newPrice != hf::NULL_PRICE && size != 0) {
-            if (BOOST_UNLIKELY(!_stfOffset._id.empty() && _stfOffset._stfOffset == hf::NULL_PRICE)) {
-                // STF hasn't received from RV yet
-                return;
-            }
-
-            // need to recalculate
-            _recalc = true;
-        }
-        return;
-    }
-
-    if (BOOST_UNLIKELY(!_stfOffset._id.empty() && _stfOffset._stfOffset == hf::NULL_PRICE)) {
-        // STF hasn't received from RV yet or reset when RV disabled
-        LOG(0, "**** AS {C[i1]}. shouldn't bee here", _contract->name())
-        _priceSize.reset();
-        _resort = true;
-        return;
-    }
-
-    if (newPrice == hf::NULL_PRICE) {
-        _priceSize.reset();
-        _resort = true;
-        return;
-    }
-
-    if (oldPrice == hf::NULL_PRICE) {
-        _recalc = true;
         return;
     }
 
     auto pathContract = _contractToPathContract[contract->_def._internalId];
     assert(pathContract);
+
+    if (_price == hf::NULL_PRICE) {
+        if (newPrice != hf::NULL_PRICE && size != 0) {
+            // need to recalculate
+            _pricesInvalid.reset(pathContract->_index);
+            _recalc = true;
+        }
+        return;
+    }
+
+    bool wasValid = isValid();
+
+    if (newPrice == hf::NULL_PRICE) {
+        _pricesInvalid.set(pathContract->_index);
+        _resort |= wasValid;
+        newPrice = 0;
+    } else if (_pricesInvalid.test(pathContract->_index)) {
+        _pricesInvalid.reset(pathContract->_index);
+        _resort |= _pricesInvalid.none();
+    }
+
+    if (oldPrice == hf::NULL_PRICE) {
+        oldPrice = 0;
+    }
+
     hf::price_t priceDelta = newPrice - oldPrice;
     hf::price_t delta = (pathContract->_multiplier * priceDelta);
-    TLOG(0, "AS {C[i1]}. {i2} Path {i3} Market {C[i4]} Side={i5} Apply delta {i6}. {i7}@{i8} _sizeDetermineContract={i9}", _contract->name(),
-         _side, _id, contract->name(), Side, delta, _priceSize._size, _priceSize._price,
+    TLOG(0, "AS {C[i1]}. {i2} Path {i3} Market {C[i4]} Side={i5} Apply delta {i6}. {i7}@{i8}->{i9} _sizeDetermineContract={i10}", _contract->name(),
+         _side, _id, contract->name(), Side, delta, _size, _price, (_price + delta),
          (_sizeDetermineContract ? _sizeDetermineContract->_def._internalId : -1))
-    _priceSize._price += delta;
+    _price += delta;
     _dirty |= priceDelta;
     if (IsBetterPrice<Side>(newPrice, oldPrice)) {
         // If best path price getting better, we don't need to re-sort
-        _resort |= (this != _contract->_paths[_side][0]);
+        _resort |= wasValid && (this != _contract->_paths[_side][0]);
     } else {
         // If best path price getting worse, we need to re-sort.
         // If other path price getting worse, we don't need to re-sort
-        _resort |= (this == _contract->_paths[_side][0]) && priceDelta;
+        _resort |= wasValid && (this == _contract->_paths[_side][0]) && priceDelta;
     }
 
-    if (size == 0) {
-        if (_contract->_markets[1 - _side][Market::External].getASQuoteAdjustment() == 0) {
-            _priceSize.reset();
-            _resort = true;
-            return;
+    if (newPrice != hf::NULL_PRICE) {
+        if (size == 0 && _contract->_markets[1 - _side][Market::External].getASQuoteAdjustment()) {
+            // if 0 size was due to the aggressive AS quoting, exclude the FAK Pre Adjustment
+            auto bestMarket = contract->_bestMarket[Side];
+            size = bestMarket->getAdjustedSizeExcludeFAKPreAdj();
         }
 
-        // if 0 size was due to the aggressive AS quoting, exclude the FAK Pre Adjustment
-        auto bestMarket = contract->_bestMarket[Side];
-        size = bestMarket->getAdjustedSizeExcludeFAKPreAdj();
+        _invalidFlags.set(InvalidField::AdjustedSize, !size);
         if (size == 0) {
-            // still get 0 size, other contract must have adjusted the hedge contract too, switch to
-            // other path.
-            _priceSize.reset();
-            _resort = true;
-            return;
+            _resort |= wasValid;
         }
     }
 
-    if (size < _priceSize._size) {
-        _priceSize._size = size;
-        _sizeDetermineContract = contract;
-        _resort = true;
-    } else if ((size > _priceSize._size) && (_priceSize._size < _contract->_quoteSize) &&
+    if (!_size || size < _size ) {
+        _size = std::min<hf::qty_t>(size, _contract->_quoteSize);
+        _sizeDetermineContract = size ? contract : nullptr;
+        _resort = size ? true : wasValid;
+    } else if ((size > _size) && (_size < _contract->_quoteSize) &&
                (!_sizeDetermineContract || contract == _sizeDetermineContract)) {
-        _priceSize._size = std::min<hf::qty_t>(size, _contract->_quoteSize);
+        _size = std::min<hf::qty_t>(size, _contract->_quoteSize);
         for (auto& pathContract : _leanContracts) {
             auto sz = pathContract.bestMarket()->getAdjustedSize();
-            if (sz < _priceSize._size) {
-                _priceSize._size = sz;
-                _sizeDetermineContract = pathContract._contract;
+            if (sz < _size) {
+                _size = sz;
+                _sizeDetermineContract = sz ? pathContract._contract : nullptr;
             }
         }
+
         _resort = true;
     }
 }
@@ -968,17 +976,12 @@ void ArbieSpreader::Path::onBestMarketDataUpdate(Contract* contract, hf::price_t
 template<uint32_t Side>
 inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force) {
     SCOPED_PERF_POINT(PerfId::AS_UpdatePaths);
-#ifdef ENABLE_PERF
-    static uint64_t total = 0;
-    ++total;
-#endif
     bool sort = false;
     for (auto path : _paths[Side]) {
-        if ((path->_recalc | force) & !path->_banExpiresAt) {
-            sort |= path->calculate<Side>(force, pathCount) | path->_resort;
-        } else {
-            sort |= path->_resort;
+        if (path->_recalc | force) {
+            sort |= path->calculate<Side>(force, pathCount);
         }
+        sort |= path->_resort;
         path->_resort = false;
         path->_dirty = false;
     }
@@ -989,8 +992,9 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
 #ifdef IS_DEV
         if (BOOST_UNLIKELY(logging::loggingLevel() > logging::LOG_LEVEL::TRACE)) {
             for (auto* path: _paths[Side]) {
-                TLOG(0, " - AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1}", path->_contract->name(), path->_id, Side,
-                     path->_priceSize._size, ToDollars(path->_priceSize._price))
+                TLOG(0, " - AS {C[i1]}. Path {i2} Side={i3} {i4}@{d1} invalidFlags={i5} allPricesValid={i6}", path->_contract->name(),
+                     path->_id, Side, path->size(), ToDollars(path->price()), path->_invalidFlags.to_ulong(),
+                     path->_pricesInvalid.none())
                 for (auto& contract: path->_leanContracts) {
                     TLOG(0, " - LeanContract={C[i1]}", contract._contract->name())
                     auto markets = getLeanMarkets<Side>(contract);
@@ -1008,22 +1012,28 @@ inline void ArbieSpreader::Contract::updatePaths(uint32_t& pathCount, bool force
             }
         }
 #endif
-        auto bestPath = _paths[Side][0];
-        if (oldBest != bestPath) {
-            LOG(0, "AS {C[i1]}. {i2} Lean on path {i3} {i4}@{d1}", bestPath->_contract->name(),
-                Side, bestPath->_id, bestPath->_priceSize._size, ToDollars(bestPath->_priceSize._price))
-
-            for (auto& pathContract : oldBest->_leanContracts) {
-                pathContract._quoteDeterminePrice = hf::NULL_PRICE;
-            }
-        }
-#ifdef ENABLE_PERF
-        else  {
-            static uint64_t count = 0;
-            ADD_PERF_PERCENTAGE(PerfId::AS_BestPathUnChangedAfterRecalc, ++count, total);
-        }
-#endif
     }
+}
+
+template<uint32_t Side>
+inline ArbieSpreader::Path* ArbieSpreader::Contract::getQuotingPath() const noexcept {
+    for (auto path : _paths[Side]) {
+        if (!path->isValid()) {
+            break;
+        }
+
+        if (path->isBanned()) {
+#ifdef IS_DEV
+            LOG(0, "AS {C[i1]}. {i2} Skip banned for quoting. Path {i3} {i4}@{d1} invalidFlags={i5} allPriceValid={i6}", name(),
+                Side, path->_id, path->size(), ToDollars(path->price()), path->_invalidFlags.to_ulong(),
+                path->_pricesInvalid.none())
+#endif
+            continue;
+        }
+
+        return path;
+    }
+    return nullptr;
 }
 
 template<uint32_t Side>
@@ -1038,10 +1048,9 @@ inline void ArbieSpreader::tryAddAggressiveQuoteAdjustment(Contract& contract, P
             contract._banInitiator[Side] = Contract::BanInitiator::Aggressor;
             assert(banExpireTime);
             _bannedContracts.emplace(&contract);
-            LOG(0, "AS {C[i1]}. {i2} Initiate temporary bans until {i3}", contract.name(), Side, banExpireTime)
+            LOG(0, "AS {C[i1]}. {i2} Initiate temporary bans until {i3}. ASAggressiveQuote", contract.name(), Side, banExpireTime)
             for (auto* p : contract._affectedPaths[Side]) {
                 if (p != path) {
-                    p->_priceSize.reset();
                     p->_banExpiresAt = banExpireTime;
                     p->_resort = true;
                     ArbieSpreader::get()->_bannedPaths.emplace(p);
@@ -1121,12 +1130,18 @@ inline bool ArbieSpreader::Contract::addAggressiveQuoteAdjustment(Path* path, co
 template<uint32_t Side>
 inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQuoteExternal, ReadyOrderRequests& lastRequest) {
     bool quoteUpdated = false;
-    auto* pBestPath = contract._paths[Side][0];
+    auto* pBestPath = contract.template getQuotingPath<Side>();
     auto& quote = contract._quote[Side];
-    if (pBestPath->_priceSize.valid() && (!contract._banExpiresAt[Side] || contract._banInitiator[Side] == Contract::BanInitiator::Aggressor)) {
-        quote._leanPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, pBestPath->_commission);
-        quote._internalPrice = applyPriceOffset<Side>(pBestPath->_priceSize._price, -contract._edge);
-        quote._internalSize = pBestPath->_priceSize._size;
+    hf::price_t price;
+    if (pBestPath && ((price = pBestPath->price()) != hf::NULL_PRICE && (!contract._banExpiresAt[Side] || contract._banInitiator[Side] == Contract::BanInitiator::Aggressor))) {
+        quote._leanPrice = applyPriceOffset<Side>(price, pBestPath->commission());
+        quote._internalPrice = applyPriceOffset<Side>(price, -contract._edge);
+        quote._internalSize = pBestPath->size();
+        if (quote._hedgePath != static_cast<int32_t>(pBestPath->_id)) {
+            LOG(0, "AS {C[i1]}. {i2} Lean on path {i3} {i4}@{d1} invalidFlag={i5} allPriceValid={i6}", pBestPath->_contract->name(), Side, pBestPath->_id,
+                quote._internalSize, ToDollars(price), pBestPath->_invalidFlags.to_ulong(), pBestPath->_pricesInvalid.none())
+        }
+        assert(quote._internalSize);
         quote._hedgePath = pBestPath->_id;
         if (canQuoteExternal) {
             quote._externalPrice = (quote._internalPrice != hf::NULL_PRICE) ? RoundToTickSize(quote._internalPrice, contract._def._tickSize, Side) : hf::NULL_PRICE;
@@ -1163,9 +1178,6 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
                     ToDollars(quote._externalPrice), quote._hedgePath, ToDollars(quote._leanPrice), pBestPath->_leanOnRV)
                 contract._lastQuoteSent[Side] = quote;
                 contract._forceUpdate[Side] = false;
-                for (auto& pathContract : pBestPath->_leanContracts) {
-                    pathContract._quoteDeterminePrice = pathContract.bestMarket()->getPrice();
-                }
                 tryAddAggressiveQuoteAdjustment<Side>(contract, pBestPath, quote, canQuoteExternal);
             }
         }
@@ -1205,19 +1217,19 @@ inline void ArbieSpreader::Contract::updateAffectedPathsBestMarket(hf::price_t o
     auto size = getBestMarket<Side>()->getAdjustedSize();
     for (auto* path : _affectedPaths[Side]) {
         path->onBestMarketDataUpdate<Side>(this, oldBestPrice, newBestPrice, size);
-        TLOG(0, "AS {C[i1]}. {i2} Path {i3} {C[i4]} best market updated. side={i5} price={i6} oldPrice={i7} size={i8} path {i9}@{i10} dirty={i11} recalc={i12} resort={i13}", path->_contract->name(),
-             path->_side, path->_id, name(), Side, newBestPrice, oldBestPrice, _bestMarket[Side]->getAdjustedSize(),
-             path->_priceSize._size, path->_priceSize._price, path->_dirty, path->_recalc, path->_resort)
+        TLOG(0, "AS {C[i1]}. {i2} Path {i3} {C[i4]} best market updated. price={d1} oldPrice={d2} path {i5}@{d3} dirty={i6} recalc={i7} resort={i8} invalidFlags={i9} allPriceValid={i10} banned={i11}", path->_contract->name(),
+             path->_side, path->_id, name(), ToDollars(newBestPrice), ToDollars(oldBestPrice),
+             path->size(), ToDollars(path->price()), path->_dirty, path->_recalc, path->_resort,
+             path->_invalidFlags.to_ulong(), path->_pricesInvalid.none(), path->isBanned())
 #ifdef IS_DEV
-        if (path->_contract == this && newBestPrice != hf::NULL_PRICE && path->_priceSize._price != hf::NULL_PRICE &&
-            IsBetterPrice<Side>(path->_priceSize._price, newBestPrice)) {
+        if (path->_contract == this && newBestPrice != hf::NULL_PRICE && path->price() != hf::NULL_PRICE &&
+            IsBetterPrice<Side>(path->price(), newBestPrice)) {
             LOG(0, "!!!! AS {C[i1]}. Path price better than best market", name())
         }
 #endif
 
         if (banEnd && path != banException) {
             if (path != banException) {
-                path->_priceSize.reset();
                 path->_banExpiresAt = banEnd;
                 path->_resort = true;
                 ArbieSpreader::get()->_bannedPaths.emplace(path);

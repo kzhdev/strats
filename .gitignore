@@ -17,3 +17,5 @@ store
 rv_pos.csv
 mm_last_fill_price.csv
 .vscode
+chart_histories_*
+perf_log.*

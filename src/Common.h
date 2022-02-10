@@ -432,7 +432,7 @@ constexpr uint32_t toUInt(EnumT value) {
 }
 
 inline hf::price_t applyPriceOffset(hf::price_t price, hf::price_t offset, uint32_t side) {
-    return side == BID ? price + offset :   price - offset;
+    return side == BID ? price + offset : price - offset;
 }
 
 template<uint32_t Side>

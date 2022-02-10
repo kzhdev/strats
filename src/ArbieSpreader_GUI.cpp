@@ -237,12 +237,12 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                 switch (columnType) {
                     case ArbieSpreaderPathsColumns::Commission: {
                         auto value = boost::lexical_cast<double>(cell.value());
-                        LOG(0, "AS {C[i1]}. Path {i2} commission changed. {i3}->{i4}", contract.name(), path->_id, path->_config->_commission, value)
                         path->_config->_commission = value;
-                        path->_commission = path->_otherSidePath->_commission = ToRhonePrice(value);
-                        path->_otherSidePath->_recalc = true;
-                        path->_recalc = true;
-                        updatedContracts.emplace_back(&contract);
+                        bool updated = path->updateCommission(value);
+                        updated |= path->_otherSidePath->updateCommission(value);
+                        if (updated) {
+                            updatedContracts.emplace_back(&contract);
+                        }
                         break;
                     }
                     case ArbieSpreaderPathsColumns::Enabled: {
@@ -252,10 +252,8 @@ void ArbieSpreader::processGridChange(GridUpdate& update) {
                         if (path->_config->_enabled != value) {
                             path->_config->_enabled = value;
                             if (!value) {
-                                path->_priceSize.reset();
-                                path->_resort = true;
-                                path->_otherSidePath->_priceSize.reset();
-                                path->_otherSidePath->_resort = true;
+                                path->reset();
+                                path->_otherSidePath->reset();
                             } else {
                                 path->_recalc = true;
                                 path->_otherSidePath->_recalc = true;
