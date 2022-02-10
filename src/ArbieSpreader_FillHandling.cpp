@@ -100,6 +100,23 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
             }
 
             if (unhedgedSize != fill._qty) {
+                if (contract._banInitiator[fill._side] != Contract::BanInitiator::Aggressor) {
+                    auto now = clockUtil::GetCycles();
+                    auto banExpireTime = now + _contractBanPeriod;
+                    contract._banExpiresAt[fill._side] = banExpireTime;
+                    contract._banInitiator[fill._side] = Contract::BanInitiator::Fill;
+                    _bannedContracts.emplace(&contract);
+                    LOG(0, "AS {C[i1]}. {i2} Initiate temporary bans until {i3}", contract.name(), fill._side, banExpireTime)
+                    for (auto* p : contract._affectedPaths[fill._side]) {
+                        p->_priceSize.reset();
+                        p->_banExpiresAt = banExpireTime;
+                        p->_resort = true;
+                        ArbieSpreader::get()->_bannedPaths.emplace(p);
+                        LOG(0, "AS {C[i1]}. {i2} Path {i3} banned temporarily until {i4}", p->_contract->name(),
+                            p->_side, p->_id, p->_banExpiresAt)
+                    }
+                }
+
                 sendMessageToFront<FillMessage>(ViperMessageType::Fill, [&](FillMessage& message) {
                     memcpy(&message, &fill, sizeof(FillMessage));
                     message._rvStf = hf::NULL_PRICE;
