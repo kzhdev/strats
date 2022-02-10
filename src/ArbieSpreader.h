@@ -128,7 +128,8 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
             LOG(0, "AS {C[i1]}. {i2} Path {i3} commission changed {i4}->{i5}. price {d1}->{d2}", _contract->name(),
                 _side, _id, _commission, value, ToDollars(oldPrice), ToDollars(_price))
             _commission = value;
-            if (IsBetter(_price, oldPrice, _side)) {
+            if ((IsBetter(_price, oldPrice, _side) && (this != _contract->_paths[_side][0])) || // Other path's price gets better
+                (IsBetter(oldPrice, _price, _side) && this == _contract->_paths[_side][0])) {   // Best path's price is worsened
                 _resort = true;
                 return true;
             }

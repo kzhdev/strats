@@ -84,7 +84,7 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
     auto& contract = _contracts[fill._contractId];
     if (contract._usedInQuoting) {
         bool hedgeSent = false;
-        if (isEnabled()) {
+        if (isEnabled() && contract._canTrade) {
             contract._forceUpdate[fill._side] = true;
             pushUpdatedContract(&contract);
 
