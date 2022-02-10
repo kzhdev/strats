@@ -59,7 +59,7 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
             LOG(0, "AS {C[i1]}. got manual filled. Side={i2} Price={d1} Qty={i3} UnhedgedSize={i4}. Send unhedgeSize to IME", contract.name(),
                 side, ToDollars(price), size, unhedgedSize)
 
-            getStrategy(StrategyId::MarketMaker)->sendMessage<FillMessage>(
+            sendMessageToExecutor<FillMessage>(
                     ViperMessageType::Fill,
                     [&fill, price, unhedgedSize, side](FillMessage& message) {
                         message._contractId = fill._contract;
@@ -67,7 +67,7 @@ COLD void ArbieSpreader::onManualFill(ManualFill &fill) {
                         message._qty = unhedgedSize;
                         message._side = side;
                         message._strategy = StrategyId::ArbieSpreader;
-                        message._source = FillSource::ASUnableToHedge;
+                        message._source = FillSource::ASUnhedgedFill;
                         message._forceOverFill = true;
                     });
         }
@@ -114,14 +114,14 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
             }
 
             if (unhedgedSize) {
-                LOG(0, "AS {C[i1]}. got filled. Side={i2} Price={d1} Qty={i3} UnhedgedQty={i4}", getContract(fill._contractId),
+                LOG(0, "AS {C[i1]}. Sending unhedged fill back to IME. Side={i2} Price={d1} Qty={i3} UnhedgedQty={i4}", getContract(fill._contractId),
                     fill._side, ToDollars(fill._price), fill._qty, unhedgedSize)
 
-                getStrategy(StrategyId::MarketMaker)->sendMessage<FillMessage>(
+                sendMessageToExecutor<FillMessage>(
                         ViperMessageType::Fill,
                         [&](FillMessage& message) {
                             memcpy(&message, &fill, sizeof(FillMessage));
-                            message._source = FillSource::ASUnableToHedge;
+                            message._source = FillSource::ASUnhedgedFill;
                             message._qty = unhedgedSize;
                             message._forceOverFill = true;
                         });
@@ -139,9 +139,9 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
                 }
             }
         } else {
-            LOG(0, "AS {C[i1]}. got filled. But disabled. Sending fill to MarketMaker. Side={i2} Price={d1} Qty={i3}", getContract(fill._contractId),
+            LOG(0, "AS {C[i1]}. got filled. But disabled. Sending fill back to IME. Side={i2} Price={d1} Qty={i3}", getContract(fill._contractId),
                 fill._side, ToDollars(fill._price), fill._qty)
-            getStrategy(StrategyId::MarketMaker)->sendMessage<FillMessage>(
+            sendMessageToExecutor<FillMessage>(
                     ViperMessageType::Fill,
                     [&](FillMessage& message) {
                         memcpy(&message, &fill, sizeof(FillMessage));
@@ -150,13 +150,13 @@ void ArbieSpreader::handleFill(const FillMessage& fill) {
                     });
         }
     } else {
-        LOG(0, "AS {C[i1]}. got filled. Not quoting a contract. Sending fill to MarketMaker. Side={i2} Price={d1} Qty={i3}", getContract(fill._contractId),
+        LOG(0, "AS {C[i1]}. got filled. Not quoting a contract. Sending fill back to IME. Side={i2} Price={d1} Qty={i3}", getContract(fill._contractId),
             fill._side, ToDollars(fill._price), fill._qty);
-        getStrategy(StrategyId::MarketMaker)->sendMessage<FillMessage>(
+        sendMessageToExecutor<FillMessage>(
                 ViperMessageType::Fill,
                 [&](FillMessage& message) {
                     memcpy(&message, &fill, sizeof(FillMessage));
-                    message._source = FillSource::ASUnableToHedge;
+                    message._source = FillSource::ASUnhedgedFill;
                     message._forceOverFill = true;
                 });
     }

@@ -1358,14 +1358,38 @@ public:
         }
     }
 
-    hf::qty_t allocateExternalMMHedgerFill(hf::price_t fillPrice, hf::qty_t fillQty, uint32_t side, uint64_t extid, om::order_id_t oid, uint32_t bid) {
+    void allocateUnhedgedFills(FillMessage& fill) {
+        LOG(0, "IME {C[i1]}. Allocate unhedged fill from strategy {i2}. Side={i3} Price={d1} Size={i4}", getContractName(),
+            strategyName(fill._strategy), fill._side, ToDollars(fill._price), fill._qty)
+
+        hf::qty_t unmatchedFills = allocateExternalMMHedgerFill(fill._price, fill._qty, fill._side);
+        if (unmatchedFills > 0) {
+            // allocate unmatched fills from MM Quote or RV which ever is the best
+            if (fill._side == BID) {
+                allocateUnhedgedFill(fill, _bidLevels, _bids);
+            } else {
+                allocateUnhedgedFill(fill, _askLevels, _asks);
+            }
+        }
+        if (_executor->onEndOfFills(_internalId, fill._side, fill._type == FillType::Internal, _lastMMOrderExecution + 1)) {
+            ++_lastMMOrderExecution;
+        }
+    }
+
+
+    hf::qty_t allocateExternalMMHedgerFill(hf::price_t fillPrice, hf::qty_t fillQty, uint32_t side,
+                                           uint64_t extid = std::numeric_limits<uint64_t>::max(),
+                                           om::order_id_t oid = std::numeric_limits<om::order_id_t>::max(),
+                                           uint32_t bid = std::numeric_limits<uint32_t>::max()) {
         auto& orders = side == BID ? _bidOrders : _askOrders;
         auto& mmHedge = orders[orderId(StrategyId::MarketMaker, Order::Type::Hedging)];
         if (mmHedge._externalSize) {
             auto allocatedQty = std::min<hf::qty_t>(mmHedge._externalSize, fillQty);
             mmHedge._externalSize -= allocatedQty;
             fillQty -= allocatedQty;
-            _executor->onExternalFillExt(_internalId, StrategyId::MarketMaker, fillPrice, allocatedQty, side, FillSource::Hedge, extid, oid, bid);
+            if (extid != std::numeric_limits<uint64_t>::max()) {
+                _executor->onExternalFillExt(_internalId, StrategyId::MarketMaker, fillPrice, allocatedQty, side, FillSource::Hedge, extid, oid, bid);
+            }
         }
         return fillQty;
     }
@@ -1421,22 +1445,83 @@ public:
             }
         }
         if (filledSize > 0) {
-            const uint32_t side = ToViperSide(order.side);
-            auto rv = _executor->getStrategy(StrategyId::RelativeValue);
-            if (!rv->isEnabled() || !rv->canQuoteExternally() || !rv->isContractQuoteExternal(_internalId)) {
-                if (bestStrategy != StrategyId::MAX) {
-                    LOG(0, "IME {C[i1]}. RV cannot quote externally. Send overfill to strategy {i2}. Side={i3} Price={d1} Size={i4}", getContractName(),
-                        toUInt(bestStrategy), side, ToDollars(filledPrice), filledSize)
-                    _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, bestStrategy,
-                                                  FillType::External, FillSource::Overfill);
-                } else {
-                    LOG(0, "IME {C[i1]}. RV can't quote externally. Send overfill to MM. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
-                    _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
-                }
-                return;
+            allocateOverFill(ToViperSide(order.side), filledPrice, filledSize, bestStrategy);
+        }
+    }
+
+    void allocateOverFill(uint32_t side, hf::price_t filledPrice, hf::qty_t filledSize, StrategyId bestStrategy) {
+        auto rv = _executor->getStrategy(StrategyId::RelativeValue);
+        if (!rv->isEnabled() || !rv->canQuoteExternally() || !rv->isContractQuoteExternal(_internalId)) {
+            if (bestStrategy != StrategyId::MAX) {
+                LOG(0, "IME {C[i1]}. RV cannot quote externally. Send overfill to strategy {i2}. Side={i3} Price={d1} Size={i4}", getContractName(),
+                    toUInt(bestStrategy), side, ToDollars(filledPrice), filledSize)
+                _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, bestStrategy,
+                                              FillType::External, FillSource::Overfill);
+            } else {
+                LOG(0, "IME {C[i1]}. RV can't quote externally. Send overfill to MM. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
+                _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::MarketMaker, FillType::External, FillSource::Overfill);
             }
-            LOG(0, "IME {C[i1]}. Send overfill to RV. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
-            _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+            return;
+        }
+        LOG(0, "IME {C[i1]}. Send overfill to RV. Side={i2} Price={d1} Size={i3}", getContractName(), side, ToDollars(filledPrice), filledSize)
+        _executor->sendFillToStrategy(_internalId, side, filledPrice, filledSize, StrategyId::RelativeValue, FillType::External, FillSource::Overfill);
+    }
+
+    template <typename LevelsT, typename MapT>
+    void allocateUnhedgedFill(FillMessage& fill, LevelsT& levels, MapT& map) {
+        LOG(0, "IME {C[i1]}. Allocating Unhedged fill to internal orders. Side={i2} Price={d1} Size={i3}", getContractName(), fill._side, ToDollars(fill._price), fill._qty)
+        hf::qty_t filledSize = fill._qty;
+        StrategyId bestStrategy = StrategyId::MAX;
+        for (auto levelIt = levels.begin(); levelIt != levels.end(); ) {
+            auto& level = levelIt->second;
+            auto& orders = level._orders;
+            for (auto orderIt = orders.begin(); orderIt != orders.end(); ) {
+                LOG(0, "IME {C[i1]}. Matching on level. Price={d1} NumberOfOrders={i2}", getContractName(), ToDollars(level._price), level._orders.size())
+                Order* o = *orderIt;
+                if (o->_strategy == fill._strategy) {
+                    // Not assign the fill to the same strategy
+                    continue;
+                }
+                if (bestStrategy == StrategyId::MAX) {
+                    bestStrategy = o->_strategy;
+                }
+                if (o->_externalSize == filledSize) {
+                    LOG(0, "IME {C[i1]}. Match. Equal size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), filledSize)
+                    _executor->sendFillToStrategy(_internalId, o->_side, fill._price, filledSize, o->_strategy, fill._type, fill._source, fill._forceOverFill, fill._checkLimit);
+                    orderIt = orders.erase(orderIt);
+                    o->priceLevel = nullptr;
+                    LOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
+                    if (orderIt == orders.end()) {
+                        LOG(0, "IME {C[i1]}. Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
+                        levels.erase(levelIt);
+                    }
+                    doInternalReductionAfterExternalFill(o, filledSize, map);
+                    return;
+                } else if (o->_externalSize < filledSize) {
+                    const hf::qty_t oneFill = o->_externalSize;
+                    LOG(0, "IME {C[i1]}. Match. Order size < filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id,  ToDollars(o->_externalPrice), oneFill)
+                    _executor->sendFillToStrategy(_internalId, o->_side, fill._price, oneFill, o->_strategy, fill._type, fill._source, fill._forceOverFill, fill._checkLimit);
+                    orderIt = orders.erase(orderIt);
+                    o->priceLevel = nullptr;
+                    LOG(0, "IME {C[i1]}. {i2} Removed order from level. Level={d1} LevelSize={i3} ID={i4}", getContractName(), o->_side, ToDollars(o->_externalPrice), level.getSize(), o->_id)
+                    doInternalReductionAfterExternalFill(o, oneFill, map);
+                    filledSize -= oneFill;
+                    if (orderIt == orders.end()) {
+                        LOG(0, "IME {C[i1]}. Erasing level. No more orders. Price={d1}", getContractName(), ToDollars(level._price))
+                        levelIt = levels.erase(levelIt);
+                        break;
+                    }
+                } else {
+                    LOG(0, "IME {C[i1]}. Match. Order size > filled size. Order={i2} Price={d1} Size={i3}", getContractName(), o->_id, ToDollars(o->_externalPrice), o->_externalSize)
+                    _executor->sendFillToStrategy(_internalId, o->_side, fill._price, filledSize, o->_strategy, fill._type, fill._source, fill._forceOverFill, fill._checkLimit);
+                    o->_externalSize -= filledSize;
+                    doInternalReductionAfterExternalFill(o, filledSize, map);
+                    return;
+                }
+            }
+        }
+        if (filledSize > 0) {
+            allocateOverFill(fill._side, fill._price, filledSize, bestStrategy);
         }
     }
 

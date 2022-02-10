@@ -579,7 +579,7 @@ public:
         addEnumMember(members, "Manual", toUInt(FillSource::Manual));
         addEnumMember(members, "AS Disable", toUInt(FillSource::AsDisable));
         addEnumMember(members, "AS HedgeReject", toUInt(FillSource::AsHedgeReject));
-        addEnumMember(members, "AS UnableToHedge", toUInt(FillSource::ASUnableToHedge));
+        addEnumMember(members, "AS UnhedgedFill", toUInt(FillSource::ASUnhedgedFill));
         addEnumMember(members, "AS To RV", toUInt(FillSource::AsToRv));
     }
 
