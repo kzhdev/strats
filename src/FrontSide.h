@@ -191,7 +191,6 @@ public:
         _refreshInterval = GetCyclesFromSeconds(1, _frequency);
         _chartRefreshInterval = GetCyclesFromMilliSeconds(200, _frequency);
         _ltfStoreInterval = GetCyclesFromSeconds(15, _frequency);
-        _versionSendingTime = GetCyclesFromSeconds(20, _frequency);
         _fillSoundThreshold = GetCyclesFromMilliSeconds(250, _frequency);
 
         for(unsigned i = 0; i < _viperConfig._marketMakerConfigs.size(); ++i) {
@@ -412,34 +411,6 @@ public:
             if (now > _nextLtfStoreTime) {
                 storeLtfs();
                 _nextLtfStoreTime = now + _ltfStoreInterval;
-            }
-
-            for (auto iter = _newLogins.begin(); iter != _newLogins.end();) {
-                auto& login = *iter;
-                if ((now - login._loginTime) >= _versionSendingTime) {
-                    for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
-                        for(const auto& position : _viperConfig._unallocatedPositionsFromFile[i]) {
-                            sendErrorMessage("Unallocated " + std::string(toString((StrategyId)i)) +
-                                             " position loaded from file.  Contract=" + position.first + " Position=" +
-                                             std::to_string(position.second), ErrorType::Critical,
-                                             login._connectionId);
-                        }
-                    }
-
-                    for (auto& economicNumber : _executor->_economicNumbers) {
-                        sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% MMDuration=%4%Sec RVDuration=%5%Sec ASDuration=%6%Sec")
-                                                    % to_string(economicNumber->_color) % economicNumber->_datetimeString % economicNumber->_id
-                                                    % economicNumber->_mmDuration % economicNumber->_rvDuration % economicNumber->_asDuration),
-                                         ErrorType::Normal, login._connectionId);
-                    }
-                    if (_executor->_economicNumbers.empty()) {
-                        sendErrorMessage("No economic number expected in the next 24 hours", ErrorType::Normal, login._connectionId);
-                    }
-                    sendChartHistories(login._connectionId);
-                    iter = _newLogins.erase(iter);
-                } else {
-                    ++iter;
-                }
             }
         }
     }
@@ -2028,7 +1999,6 @@ public:
                 _guiThings.populateGUIInitialization(m, _strategies, _executor, _pnlCalculator);
                 _clientAcceptor->handleLoginAccepted(m, GetMillisFromCycles(_guiHeartbeatInterval, _frequency),
                                                      connection, _viperConfig._traders[_viperConfig._currentTrader].c_str());
-                _newLogins.emplace_back(clockUtil::GetCycles(), connection.m_fd);
 
                 // set shift dependent values correctly
                 auto shift = toUInt(_viperConfig._currentShift);
@@ -2058,12 +2028,32 @@ public:
         }
     }
 
-    void onGuiInitializationAccepted() {
+    void onGuiInitializationAccepted(std::shared_ptr<ClientConnection>& connection) {
         if (!_guiInitialized) {
             _maxInternalHeartbeatTime = _internalHeartbeatTime * 2;
             sendGuiInitialized();
             _guiInitialized = true;
         }
+
+        for (uint32_t i = 1; i < toUInt(StrategyId::MAX); ++i) {
+            for(const auto& position : _viperConfig._unallocatedPositionsFromFile[i]) {
+                sendErrorMessage("Unallocated " + std::string(toString((StrategyId)i)) +
+                                 " position loaded from file.  Contract=" + position.first + " Position=" +
+                                 std::to_string(position.second), ErrorType::Critical,
+                                 connection.get());
+            }
+        }
+
+        for (auto& economicNumber : _executor->_economicNumbers) {
+            sendErrorMessage(boost::str(boost::format("Expecting %1% economic number at %2%. Id=%3% MMDuration=%4%Sec RVDuration=%5%Sec ASDuration=%6%Sec")
+                                        % to_string(economicNumber->_color) % economicNumber->_datetimeString % economicNumber->_id
+                                        % economicNumber->_mmDuration % economicNumber->_rvDuration % economicNumber->_asDuration),
+                             ErrorType::Normal, connection.get());
+        }
+        if (_executor->_economicNumbers.empty()) {
+            sendErrorMessage("No economic number expected in the next 24 hours", ErrorType::Normal, connection.get());
+        }
+        sendChartHistories(connection.get());
     }
 
     void onGuiInitializationRejected() {
@@ -2203,17 +2193,17 @@ public:
 //        }
     }
 
-    void sendChartHistories(int32_t connectionId) {
+    void sendChartHistories(ClientConnection* connection) {
         if (_totalNumberDataSeriesPointSet) {
             auto begin = TimeUtils::clock_gettime();
             for (auto& replay : _dataPoints) {
                 if (!replay.sets_size()) {
                     break;
                 }
-                _clientAcceptor->sendChartHistories(replay, connectionId);
+                _clientAcceptor->sendChartHistories(replay, connection);
             }
 
-            _clientAcceptor->sendChartHistoriesEnd(connectionId);
+            _clientAcceptor->sendChartHistoriesEnd(connection);
             logging::GetLogger().logInfo(boost::str(boost::format("Sent chart histories. #=%1%. timespan=%2% ns") % _totalNumberDataSeriesPointSet % (TimeUtils::clock_gettime() - begin)));
         }
     }
@@ -2371,16 +2361,6 @@ public:
     uint64_t _guiHeartbeatTime = 0;
     uint64_t _pendingShutdown = 0;
     std::bitset<toUInt(ResourceId::FrontSide)> _resourceNotResponsive;
-
-    struct LoginInfo {
-        uint64_t _loginTime = 0;
-        int32_t _connectionId = 0;
-
-        LoginInfo() = default;
-        LoginInfo(uint64_t time, int32_t connectionId) : _loginTime(time), _connectionId(connectionId) {}
-    };
-    std::vector<LoginInfo> _newLogins;
-    uint64_t _versionSendingTime;
 
     bool _canSendPnl = false;
     bool _firstLogin = true;

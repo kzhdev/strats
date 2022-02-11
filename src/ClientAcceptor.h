@@ -82,8 +82,8 @@ public:
     void sendGridUpdate(proto::GridUpdate& data, ClientConnection* connection);
     void sendGridUpdate(proto::GridUpdate& data, int32_t connectionId = -1);
     void sendChartDataPoints(proto::DataSeriesPointSets& data, std::ostringstream& streamMessage);
-    void sendChartHistories(proto::DataSeriesReplay& data, int32_t connectionId);
-    void sendChartHistoriesEnd(int32_t connectionId);
+    void sendChartHistories(proto::DataSeriesReplay& data, ClientConnection* connection);
+    void sendChartHistoriesEnd(ClientConnection* connection);
     void sendGuiHeartbeat(uint64_t utc_ts_in_nanos);
     void sendPlaySound(uint32_t id);
     void sendTraderUpdate(const char* trader);

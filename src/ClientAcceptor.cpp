@@ -294,7 +294,7 @@ void ClientsAcceptor::runIteration() {
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GUI_INITIALIZATION_ACCEPTED: {
                     LOG_INFO("GUI Initialization accepted. connectionId=" + std::to_string(connection->m_fd));
-                    _frontSide->onGuiInitializationAccepted();
+                    _frontSide->onGuiInitializationAccepted(connection);
                     break;
                 }
                 case proto::GUI_MESSAGE_TYPE::GUI_MESSAGE_TYPE_GUI_INITIALIZATION_REJECTED: {
@@ -424,14 +424,14 @@ void ClientsAcceptor::sendChartDataPoints(proto::DataSeriesPointSets& data, std:
     }
 }
 
-void ClientsAcceptor::sendChartHistories(proto::DataSeriesReplay& data, int32_t connectionId) {
-    ServerClientMessenger::instance()->sendMessageToClient(connectionId, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY, data);
+void ClientsAcceptor::sendChartHistories(proto::DataSeriesReplay& data, ClientConnection* connection) {
+    ServerClientMessenger::instance()->sendMessageToClient(connection, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY, data);
 }
 
-void ClientsAcceptor::sendChartHistoriesEnd(int32_t connectionId) {
+void ClientsAcceptor::sendChartHistoriesEnd(ClientConnection* connection) {
     proto::DataSeriesReplayEnd data;
     data.set_messageid(0);
-    ServerClientMessenger::instance()->sendMessageToClient(connectionId, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY_END, data);
+    ServerClientMessenger::instance()->sendMessageToClient(connection, proto::SERVER_MESSAGE_TYPE_DATA_POINT_REPLAY_END, data);
 }
 
 void ClientsAcceptor::sendSwitchChangeReply(uint32_t strategy, uint32_t action, const std::string& value, uint32_t gridId, bool accepted) {
