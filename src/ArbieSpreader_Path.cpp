@@ -27,7 +27,7 @@ ArbieSpreader::Path::Path(uint32_t side, std::string name, uint32_t id, Contract
 }
 
 void ArbieSpreader::Path::log() const noexcept {
-    LOG(0, "AS {C[i1]}. {i2} Path {i3} stfOffset={d1}", _contract->name(), _side, _id, _stfOffset._stfOffset)
+    LOG(0, "AS {C[i1]}. {i2} Path {i3} stfOffset={d1}", _contract->name(), _side, _id, ToDollars(_stfOffset._stfOffset))
     for (auto const& pathContract : _leanContracts) {
         Market* market = pathContract.bestMarket();
         LOG(0, "{C[i1]}. MarketId={i2} Side={i3} multiplier={i4} {i5}({i6})@{d1} extCommission={d2}", pathContract._contract->name(),

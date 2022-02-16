@@ -258,11 +258,14 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         Quote _lastQuoteSent[2];
         uint64_t _banExpiresAt[2] {0, 0};
         hf::batch_id_t _lastMDbid {0};
+        uint32_t _hedgeMaxTicksThroughBreachedCount {0};
 
         enum BanInitiator : uint8_t {
             None,
             Aggressor,
             Fill,
+            QuoteMaxTicksThroughBreach,
+            QuoteMaxTicksThroughBreachContinue,
         };
         BanInitiator _banInitiator[2] { BanInitiator::None, BanInitiator::None };
 
@@ -272,6 +275,7 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
         bool _enabled = false;
         bool _canTrade = true;
         bool _quoteExternally = false;
+        bool _quoteMaxTicksThroughBreached[2] = {false, false};
 
         std::vector<ShortTermFairOffset> _shortTermFairOffsets;
 
@@ -552,6 +556,9 @@ private:
     inline bool updateQuote(Contract& contract, bool force, bool canQuoteExternal, ReadyOrderRequests& lastRequest);
 
     template<uint32_t Side>
+    inline bool pullQuote(Contract& contract, Contract::Quote& quote, bool canQuoteExternal, ReadyOrderRequests& lastRequest);
+
+    template<uint32_t Side>
     inline bool checkMaxTicksThroughMarket(Contract& contract, Contract::Quote& quote);
 
     template<uint32_t Side>
@@ -634,7 +641,7 @@ inline hf::qty_t ArbieSpreader::updateHedge(Contract& contract, hf::price_t fill
     hf::qty_t remainingSize = qty;
     hf::price_t price = pBest->price();
     hf::qty_t size = pBest->size();
-    if (price != hf::NULL_PRICE && size && !pBest->_recalc) {
+    if (price != hf::NULL_PRICE && size && (!pBest->_resort && !pBest->_recalc)) {
         auto hedgeSize = std::min<hf::qty_t>(size, qty);
         if (!hedge<Side>(contract, pBest, fillPrice, hedgeSize, fillsToGUI, isInternal)) {
             return remainingSize;
@@ -676,11 +683,15 @@ inline bool ArbieSpreader::hedge(Contract& contract, Path* path, hf::price_t fil
         LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed in updateHedge. Disable AS. Side={i2} fillPrice={d1} hedgePath: {i3} {i4}@{d2}", contract.name(),
             Side, ToDollars(fillPrice), path->_id, size, ToDollars(price))
         path->log();
-        sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=MaxTicksThroughMarketCheckFailed in updateHedge. OffendingContract=%1% Side=%2% fillPrice=%3% pathPrice=%4%")
-                                    % contract._def._name % Side % ToDollars(fillPrice)
-                                    % ToDollars(price)), ErrorType::Critical);
-        disable();
-        handleDisabled();
+        if (++contract._hedgeMaxTicksThroughBreachedCount == 3) {
+            sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=MaxTicksThroughMarketCheck failed 3 times in updateHedge. OffendingContract=%1% Side=%2% fillPrice=%3% pathPrice=%4%")
+                                        % contract._def._name % Side % ToDollars(fillPrice)
+                                        % ToDollars(price)), ErrorType::Critical);
+            disable();
+            handleDisabled();
+            disableQuoteExternal();
+            contract._hedgeMaxTicksThroughBreachedCount = 0;
+        }
         return false;
     }
 
@@ -1137,6 +1148,7 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
     if (pBestPath && ((price = pBestPath->price()) != hf::NULL_PRICE && (!contract._banExpiresAt[Side] || contract._banInitiator[Side] == Contract::BanInitiator::Aggressor))) {
         quote._leanPrice = applyPriceOffset<Side>(price, pBestPath->commission());
         quote._internalPrice = applyPriceOffset<Side>(price, -contract._edge);
+
         quote._internalSize = pBestPath->size();
         if (quote._hedgePath != static_cast<int32_t>(pBestPath->_id)) {
             LOG(0, "AS {C[i1]}. {i2} Lean on path {i3} {i4}@{d1} invalidFlag={i5} allPriceValid={i6}", pBestPath->_contract->name(), Side, pBestPath->_id,
@@ -1154,19 +1166,28 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
 
         if (isEnabled() && contract._banInitiator[Side] == Contract::BanInitiator::None) {
             if (!checkMaxTicksThroughMarket<Side>(contract, quote)) {
-                LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed. Disable AS and Disable AS External Quoting. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanPrice={d3} LeanOnRV={i6} OtherSideBestPrice={d4}", contract.name(),
-                    Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
-                    ToDollars(quote._externalPrice), quote._hedgePath, ToDollars(quote._leanPrice), pBestPath->_leanOnRV,
-                    ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice()))
-                pBestPath->log();
-                sendErrorMessage(boost::str(boost::format("Disabling AS and AS QuoteExternal. Reason=AS MaxTicksThroughMarketCheckFailed. OffendingContract=%1% Side=%2% calculatedQuote=%3% otherSideBest=%4%")
-                    % contract._def._name % Side % ToDollars(quote._externalPrice)
-                    % ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice())), ErrorType::Critical);
-                disable();
-                handleDisabled();
-                disableQuoteExternal();
-                return false;
+                bool wasBreached = contract._quoteMaxTicksThroughBreached[Side];
+                if (!wasBreached) {
+                    LOG(0, "AS {C[i1]}. MaxTicksThroughMarketCheckFailed. Side={i2} Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanPrice={d3} LeanOnRV={i6} OtherSideBestPrice={d4}", contract.name(),
+                        Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
+                        ToDollars(quote._externalPrice), quote._hedgePath, ToDollars(quote._leanPrice), pBestPath->_leanOnRV,
+                        ToDollars(contract.template getBestMarket<GetOtherSide<Side>()>()->getPrice()))
+                    pBestPath->log();
+                    pullQuote<Side>(contract, quote, canQuoteExternal, lastRequest);
+                }
+                auto now = clockUtil::GetCycles();
+                auto banExpireTime = now + _contractBanPeriod;
+                contract._banExpiresAt[Side] = banExpireTime;
+                contract._banInitiator[Side] = !wasBreached ? Contract::BanInitiator::QuoteMaxTicksThroughBreach : Contract::BanInitiator::QuoteMaxTicksThroughBreachContinue;
+                _bannedContracts.emplace(&contract);
+                if (!wasBreached) {
+                    LOG(0, "AS {C[i1]}. {i2} Initiate temporary bans until {i3}. QuoteMaxTicksThroughBreach", contract.name(), Side, banExpireTime)
+                }
+                // Ban contract quote only, not banning other paths which lean on this contract
+                contract._quoteMaxTicksThroughBreached[Side] = true;
+                return !wasBreached;
             }
+            contract._quoteMaxTicksThroughBreached[Side] = false;
 
             if (contract._lastQuoteSent[Side] != quote || contract._forceUpdate[Side] || force) {
                 quoteUpdated = true;
@@ -1183,23 +1204,29 @@ inline bool ArbieSpreader::updateQuote(Contract& contract, bool force, bool canQ
             }
         }
     } else {
-        if (quote._hedgePath != -1) {
-            quote.reset();
-            if (isEnabled()) {
-                quoteUpdated = true;
-                lastRequest._quote[Side] = _orderRequestMgr.sendQuoteRequest(
-                        contract._def._internalId, orderId(StrategyId::ArbieSpreader, Order::Type::Quoting),
-                        Side, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
-                        canQuoteExternal, false,0);
-                LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV=0", contract.name(),
-                    Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
-                    ToDollars(quote._externalPrice), quote._hedgePath)
-                contract._lastQuoteSent[Side] = quote;
-                contract._forceUpdate[Side] = false;
-            }
-        }
+        quoteUpdated = pullQuote<Side>(contract, quote, canQuoteExternal, lastRequest);
     }
     return quoteUpdated;
+}
+
+template<uint32_t Side>
+inline bool ArbieSpreader::pullQuote(Contract& contract, Contract::Quote& quote, bool canQuoteExternal, ReadyOrderRequests& lastRequest) {
+    if (quote._hedgePath != -1) {
+        quote.reset();
+        if (isEnabled()) {
+            lastRequest._quote[Side] = _orderRequestMgr.sendQuoteRequest(
+                    contract._def._internalId, orderId(StrategyId::ArbieSpreader, Order::Type::Quoting),
+                    Side, quote._internalPrice, quote._internalSize, quote._externalPrice, quote._externalSize,
+                    canQuoteExternal, false,0);
+            LOG(0, "AS {C[i1]}. {i2} Update quote. Internal: {i3}@{d1} External: {i4}@{d2}. LeanPath={i5} LeanOnRV=0", contract.name(),
+                Side, quote._internalSize, ToDollars(quote._internalPrice), quote._externalSize,
+                ToDollars(quote._externalPrice), quote._hedgePath)
+            contract._lastQuoteSent[Side] = quote;
+            contract._forceUpdate[Side] = false;
+        }
+        return true;
+    }
+    return false;
 }
 
 template<uint32_t Side>
