@@ -312,8 +312,10 @@ void ArbieSpreader::handleVectorParameterUpdate(const VectorParameterUpdate& msg
     for (uint32_t i = 0; i < msg._numUpdate; ++i) {
         if (update->_type == VectorParametersColumns::Range) {
             _vectorsRange[update->_vectorIndex] = update->_value;
+        } else if (update->_type == VectorParametersColumns::MaxPosLong) {
+            _vectorsMaxPositionLong[update->_vectorIndex] = update->_value;
         } else {
-            _vectorsMaxPosition[update->_vectorIndex] = update->_value;
+            _vectorsMaxPositionShort[update->_vectorIndex] = update->_value;
         }
         ++update;
     }

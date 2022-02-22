@@ -15,14 +15,16 @@ void ArbieSpreader::init(double frequency, uint64_t internalHeartbeatPeriod, std
     ViperStrategyBase::init(frequency, internalHeartbeatPeriod, std::move(pnlLimitsChecker));
     auto numFactors = _viperConfig._vectorConfigs.size();
     _vectorsRange.resize(numFactors, 0.);
-    _vectorsMaxPosition.resize(numFactors, 0.);
+    _vectorsMaxPositionLong.resize(numFactors, 0.);
+    _vectorsMaxPositionShort.resize(numFactors, 0.);
     Matrix pricingMatrix;
     _viperConfig.populatePricingMatrix(pricingMatrix);
     _riskMatrix = pricingMatrix.inverse().transpose();
     for (uint32_t index = 0; index < numFactors; ++index) {
         VectorConfig& vc = _viperConfig._vectorConfigs[index];
         _vectorsRange[index] = vc._range;
-        _vectorsMaxPosition[index] = vc._maxPos;
+        _vectorsMaxPositionLong[index] = vc._maxPosLong;
+        _vectorsMaxPositionShort[index] = vc._maxPosShort;
     }
     _contractBanPeriod = GetCyclesFromSeconds(1, frequency);
     initializeContracts();
@@ -259,6 +261,10 @@ void ArbieSpreader::calculateRVSTFMove(Contract& quoteContract, ShortTermFairOff
         }
     };
 
+    auto getVectorMaxPos = [this, &factorNetPos](uint32_t vectorIndex) -> double {
+        return (factorNetPos[vectorIndex] >=0) ? _vectorsMaxPositionLong[vectorIndex] : _vectorsMaxPositionShort[vectorIndex];
+    };
+
     for (auto& stf : stfOffset._shortTermFairs) {
         auto& contract = _viperConfig._allContracts[stf._contractId];
         auto qtyMultiplier = _viperConfig._pricingConfigs[contract._internalId]._quantityMultiplier;
@@ -273,7 +279,7 @@ void ArbieSpreader::calculateRVSTFMove(Contract& quoteContract, ShortTermFairOff
     }
 
     for (size_t i = 0; i < numVectors; ++i) {
-        factorSTFMove.setValue(i, 0, -factorNetPos[i] * _vectorsRange[i] / _vectorsMaxPosition[i]);
+        factorSTFMove.setValue(i, 0, -factorNetPos[i] * _vectorsRange[i] / getVectorMaxPos(i));
 //#ifdef IS_DEV
 //        LOG(0, "Factor {i1} NetPos={d1}. range={d2} maxPos={d3} Factor STF move for 1 unit path: {d4}", i, factorNetPos[i], _vectorsRange[i], _vectorsMaxPosition[i], factorSTFMove.getValue(i, 0))
 //#endif

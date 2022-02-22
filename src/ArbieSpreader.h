@@ -446,7 +446,8 @@ class ArbieSpreader : public ViperStrategyBaseImpl<ArbieSpreader> {
     std::unordered_set<Path*> _bannedPaths;
     Matrix _riskMatrix; // x,y - vectors - square
     std::vector<double> _vectorsRange;
-    std::vector<double> _vectorsMaxPosition;
+    std::vector<double> _vectorsMaxPositionLong;
+    std::vector<double> _vectorsMaxPositionShort;
     std::vector<FillMessage> _fillsToGUI;
 
 public:
