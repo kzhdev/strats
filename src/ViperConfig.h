@@ -111,7 +111,8 @@ struct PricingConfig {
 struct VectorConfig {
     std::string _vectorName;
     double _range;
-    uint32_t _maxPos;
+    uint32_t _maxPosLong;
+    uint32_t _maxPosShort;
     bool _useEMA;
     uint32_t _EMALength;
     uint32_t _EMAOn;
@@ -1226,7 +1227,8 @@ struct ViperConfig {
             size_t i = 0;
             config._vectorName = values[i++];
             config._range = boost::lexical_cast<double>(values[i++]);
-            config._maxPos = boost::lexical_cast<uint32_t>(values[i++]);
+            config._maxPosLong = boost::lexical_cast<uint32_t>(values[i++]);
+            config._maxPosShort = boost::lexical_cast<uint32_t>(values[i++]);
             config._longTermFair = boost::lexical_cast<double>(values[i++]);
             config._useEMA = values[i++] == "TRUE";
             config._EMALength = boost::lexical_cast<uint32_t>(values[i++]);
@@ -1541,8 +1543,12 @@ struct ViperConfig {
                     config._range = atof(gridCell.value().c_str());
                     break;
                 }
-                case VectorParametersColumns::MaxPos: {
-                    config._maxPos = atoi(gridCell.value().c_str());
+                case VectorParametersColumns::MaxPosLong: {
+                    config._maxPosLong = atoi(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::MaxPosShort: {
+                    config._maxPosShort = atoi(gridCell.value().c_str());
                     break;
                 }
                 case VectorParametersColumns::EMA_ON: {
@@ -2247,7 +2253,8 @@ struct ViperConfig {
         for (const auto& config : _vectorConfigs) {
             output << config._vectorName;
             output << "," << config._range;
-            output << "," << config._maxPos;
+            output << "," << config._maxPosLong;
+            output << "," << config._maxPosShort;
             output << "," << config._longTermFair;
             output << "," << getWriteBoolValue(config._useEMA);
             output << "," << config._EMALength;
@@ -2403,7 +2410,7 @@ struct ViperConfig {
     uint32_t _numberOfPricingContracts;
 
     std::vector<VectorConfig> _vectorConfigs;
-    std::vector<std::string> _vectorConfigHeader = {"range", "maxPos", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged", "LTFDelta"};
+    std::vector<std::string> _vectorConfigHeader = {"range", "maxPosLong", "maxPosShort", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged", "LTFDelta"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
     std::vector<int32_t> _positions[toUInt(StrategyId::MAX)];
