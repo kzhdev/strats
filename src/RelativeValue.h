@@ -1513,17 +1513,17 @@ public:
             addPositionToVector(rvContract, pos);
         }
 
-        bool recal = false;
+        bool recalculate = false;
         for (uint32_t i = 0 ; i < posInVector._size; ++i) {
             auto oldPos = posInVector.getValue(i);
             auto pos = _positionsInVector.getValue(i);
             if ((oldPos >= 0) ^ (pos < 0)) {
                 // pos sign changed
-                recal |= shouldRecalculate(i);
+                recalculate |= shouldRecalculate(i);
             }
         }
 
-        if (recal) {
+        if (recalculate) {
             recalculateOnVectorPositionSignChanged();
         }
     }
@@ -2673,7 +2673,7 @@ public:
     }
 
     void addPositionToVector(RvContract& contract, double positionChange, bool checkLimit, bool isStartUp) {
-        bool recal = false;
+        bool recalculate = false;
         if (contract._definition._legs.size() > 1) {
             for (const auto& leg : contract._definition._legs) {
                 const double legPositionChange = positionChange * leg._ratio;
@@ -2682,7 +2682,7 @@ public:
                     const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange * contract._quantityMultiplier;
                     _positionsInVector.add(vectorIndex, changeInVector);
                     if ((oldPos >= 0) ^ (_positionsInVector.getValue(vectorIndex) < 0)) {
-                        recal |= shouldRecalculate(vectorIndex);
+                        recalculate |= shouldRecalculate(vectorIndex);
                     }
                 }
             }
@@ -2697,7 +2697,7 @@ public:
                 const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange * contract._quantityMultiplier;
                 _positionsInVector.add(vectorIndex, changeInVector);
                 if ((oldPos >= 0) ^ (_positionsInVector.getValue(vectorIndex) < 0)) {
-                    recal |= shouldRecalculate(vectorIndex);
+                    recalculate |= shouldRecalculate(vectorIndex);
                 }
                 if (checkLimit) {
                     checkVectorPositionLimit(vectorIndex, isStartUp);
@@ -2705,7 +2705,7 @@ public:
             }
         }
 
-        if (recal) {
+        if (recalculate) {
             recalculateAfterExternalMarketDataChange();
         }
     }
