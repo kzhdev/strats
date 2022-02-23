@@ -866,6 +866,14 @@ public:
         return true;
     }
 
+    bool usingMaxPosLong(uint32_t vectorIndex) const noexcept {
+        auto sign = Compare(_positionsInVector.getValue(vectorIndex), .0);
+        if (sign == 0) {
+            return Compare(_vectorsMaxPositionLong.getValue(vectorIndex), _vectorsMaxPositionShort.getValue(vectorIndex)) <= 0;
+        }
+        return sign == 1;
+    }
+
     bool isChangeWithinStfLimits(double originalRange, double range, double maxPosition, double ltf, uint32_t vectorIndex) {
         if (isEnabled()) {
             const bool setToMarket = _setToMarket.getValue(vectorIndex);
@@ -970,7 +978,7 @@ public:
                             break;
                         }
                     }
-                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
+                    if (usingMaxPosLong(vectorId) && isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionLong.getValue(vectorId), vectorId)) {
                         _vectorsMaxPositionLong.setValue(vectorId, value);
                         _fareMoveForOneUnitPositionLong = _vectorsRange.divide(_vectorsMaxPositionLong);
                         foundation = true;
@@ -995,7 +1003,7 @@ public:
                             break;
                         }
                     }
-                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
+                    if (!usingMaxPosLong(vectorId) && isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionShort.getValue(vectorId), vectorId)) {
                         _vectorsMaxPositionShort.setValue(vectorId, value);
                         _fareMoveForOneUnitPositionShort = _vectorsRange.divide(_vectorsMaxPositionShort);
                         foundation = true;
