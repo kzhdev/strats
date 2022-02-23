@@ -866,6 +866,14 @@ public:
         return true;
     }
 
+    bool usingMaxPosLong(uint32_t vectorIndex) const noexcept {
+        auto sign = Compare(_positionsInVector.getValue(vectorIndex), .0);
+        if (sign == 0) {
+            return Compare(_vectorsMaxPositionLong.getValue(vectorIndex), _vectorsMaxPositionShort.getValue(vectorIndex)) <= 0;
+        }
+        return sign == 1;
+    }
+
     bool isChangeWithinStfLimits(double originalRange, double range, double maxPosition, double ltf, uint32_t vectorIndex) {
         if (isEnabled()) {
             const bool setToMarket = _setToMarket.getValue(vectorIndex);
@@ -942,9 +950,9 @@ public:
                         }
                     }
 
-                    bool changeWithinLongStfLimits = isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), value, _vectorsMaxPositionLong.getValue(vectorId), _longTermFairsInVector.getValue(vectorId), vectorId);
-                    bool changeWithinShortStfLimits = isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), value, _vectorsMaxPositionShort.getValue(vectorId), _longTermFairsInVector.getValue(vectorId), vectorId);
-                    if (changeWithinLongStfLimits && changeWithinShortStfLimits) {
+                    bool changeWithinStfLimits = isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), value,
+                                                                         getVectorMaxPosition(vectorId), _longTermFairsInVector.getValue(vectorId), vectorId);
+                    if (changeWithinStfLimits) {
                         _vectorsRange.setValue(vectorId, value);
                         _fareMoveForOneUnitPositionLong = _vectorsRange.divide(_vectorsMaxPositionLong);
                         _fareMoveForOneUnitPositionShort = _vectorsRange.divide(_vectorsMaxPositionShort);
@@ -952,13 +960,9 @@ public:
                         shortTermFairs = true;
                         LOG(0, "RV range changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                         changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::Range, vectorId, value));
-                    } else if (!changeWithinLongStfLimits) {
-                        LOG(0, "RV could not change range. Change would be over 5 percent of range in Long. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range in Long. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
-                        gridCell.set_value(std::to_string(_vectorsRange.getValue(vectorId)));
                     } else {
-                        LOG(0, "RV could not change range. Change would be over 5 percent of range in Short. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                        sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range in Short. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
+                        LOG(0, "RV could not change range. Change would be over 5 percent of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        sendErrorMessage(boost::str(boost::format("RV could not change range. Change would be over 5 percent of range. Range=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
                         gridCell.set_value(std::to_string(_vectorsRange.getValue(vectorId)));
                     }
                     break;
@@ -974,7 +978,7 @@ public:
                             break;
                         }
                     }
-                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
+                    if (usingMaxPosLong(vectorId) && isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionLong.getValue(vectorId), vectorId)) {
                         _vectorsMaxPositionLong.setValue(vectorId, value);
                         _fareMoveForOneUnitPositionLong = _vectorsRange.divide(_vectorsMaxPositionLong);
                         foundation = true;
@@ -999,7 +1003,7 @@ public:
                             break;
                         }
                     }
-                    if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
+                    if (!usingMaxPosLong(vectorId) && isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionShort.getValue(vectorId), vectorId)) {
                         _vectorsMaxPositionShort.setValue(vectorId, value);
                         _fareMoveForOneUnitPositionShort = _vectorsRange.divide(_vectorsMaxPositionShort);
                         foundation = true;
@@ -1171,9 +1175,9 @@ public:
         }
 
         if (checkLimits) {
-            bool changeWithinLongStfLimits = isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), _vectorsMaxPositionLong.getValue(vectorId), value, vectorId);
-            bool changeWithinShortStfLimits = isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), _vectorsMaxPositionShort.getValue(vectorId), value, vectorId);
-            if (changeWithinLongStfLimits && changeWithinShortStfLimits) {
+            bool changeWithinStfLimits = isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId),
+                                                                 getVectorMaxPosition(vectorId), value, vectorId);
+            if (changeWithinStfLimits) {
                 _longTermFairsInVector.setValue(vectorId, value);
                 LOG(0, "RV ltf changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                 return LTFUpdateResult::Success;
@@ -1517,10 +1521,7 @@ public:
         for (uint32_t i = 0 ; i < posInVector._size; ++i) {
             auto oldPos = posInVector.getValue(i);
             auto pos = _positionsInVector.getValue(i);
-            if ((oldPos >= 0) ^ (pos < 0)) {
-                // pos sign changed
-                recalculate |= shouldRecalculate(i);
-            }
+            recalculate |= shouldRecalculate(i, oldPos, pos);
         }
 
         if (recalculate) {
@@ -2462,9 +2463,16 @@ public:
     }
 
     double getFairMove(uint32_t vectorIndex) const noexcept {
-        return Compare(_positionsInVector.getValue(vectorIndex), .0) >= 0
-            ? _fareMoveForOneUnitPositionLong.getValue(vectorIndex)
-            : _fareMoveForOneUnitPositionShort.getValue(vectorIndex);
+        auto sign = Compare(_positionsInVector.getValue(vectorIndex), .0);
+        if (sign == 0) {
+            return std::max<double>(_fareMoveForOneUnitPositionLong.getValue(vectorIndex), _fareMoveForOneUnitPositionShort.getValue(vectorIndex));
+        }
+
+        if (sign > 0) {
+            return _fareMoveForOneUnitPositionLong.getValue(vectorIndex);
+        }
+
+        return _fareMoveForOneUnitPositionShort.getValue(vectorIndex);
     }
 
     double calculateQuoteSize(uint32_t contractOneIndex, uint32_t contractTwoIndex, double hedgeRatio) {
@@ -2681,9 +2689,7 @@ public:
                     auto oldPos = _positionsInVector.getValue(vectorIndex);
                     const double changeInVector = _riskMatrix.getValue(vectorIndex, leg._index) * legPositionChange * contract._quantityMultiplier;
                     _positionsInVector.add(vectorIndex, changeInVector);
-                    if ((oldPos >= 0) ^ (_positionsInVector.getValue(vectorIndex) < 0)) {
-                        recalculate |= shouldRecalculate(vectorIndex);
-                    }
+                    recalculate |= shouldRecalculate(vectorIndex, oldPos, _positionsInVector.getValue(vectorIndex));
                 }
             }
             if (checkLimit) {
@@ -2696,9 +2702,7 @@ public:
                 auto oldPos = _positionsInVector.getValue(vectorIndex);
                 const double changeInVector = _riskMatrix.getValue(vectorIndex, contract._definition._internalId) * positionChange * contract._quantityMultiplier;
                 _positionsInVector.add(vectorIndex, changeInVector);
-                if ((oldPos >= 0) ^ (_positionsInVector.getValue(vectorIndex) < 0)) {
-                    recalculate |= shouldRecalculate(vectorIndex);
-                }
+                recalculate |= shouldRecalculate(vectorIndex, oldPos, _positionsInVector.getValue(vectorIndex));
                 if (checkLimit) {
                     checkVectorPositionLimit(vectorIndex, isStartUp);
                 }
@@ -2710,10 +2714,12 @@ public:
         }
     }
 
-    bool shouldRecalculate(uint32_t vectorIndex) const noexcept {
+    bool shouldRecalculate(uint32_t vectorIndex, double oldPos, double newPos) const noexcept {
         // recalculate when sign flipped and long/short maxPos are different
-        return !IsZero(_positionsInVector.getValue(vectorIndex)) &&
-               _vectorsMaxPositionShort.getValue(vectorIndex) != _vectorsMaxPositionLong.getValue(vectorIndex);
+        auto oldSign = Compare(oldPos, 0.);
+        auto newSign = Compare(newPos, 0.);
+        return (_vectorsMaxPositionShort.getValue(vectorIndex) != _vectorsMaxPositionLong.getValue(vectorIndex)) &&
+            (((oldSign != 0) ^ (newSign != 0)) || ((oldSign * newSign) == -1));
     }
 
     void recalculateOnVectorPositionSignChanged() {
@@ -2744,9 +2750,15 @@ public:
     }
 
     double getVectorMaxPosition(uint32_t vectorIndex) const noexcept {
-        return Compare(_positionsInVector.getValue(vectorIndex), .0) >= 0
-            ? _vectorsMaxPositionLong.getValue(vectorIndex)
-            : _vectorsMaxPositionShort.getValue(vectorIndex);
+        auto sign = Compare(_positionsInVector.getValue(vectorIndex), .0);
+        if (sign == 0) {
+            return std::min<double>(_vectorsMaxPositionLong.getValue(vectorIndex), _vectorsMaxPositionShort.getValue(vectorIndex));
+        }
+
+        if (sign > 0) {
+            return _vectorsMaxPositionLong.getValue(vectorIndex);
+        }
+        return _vectorsMaxPositionShort.getValue(vectorIndex);
     }
 
     void checkVectorPositionLimit(uint32_t vectorIndex, bool isStartUp) {
