@@ -1006,7 +1006,7 @@ public:
                         auto maxPosShort = _vectorsMaxPositionShort.getValue(vectorId);
                         if (isgreater(abs((value / maxPosShort) - 1), 0.1)) {
                             LOG(0, "RV could not change MaxPosShort more than 10 percent while RV enabled. Vector={V[i1]} Value={d1} OrgValue={d2}", getVectorName(vectorId), value, maxPosShort)
-                            sendErrorMessage(boost::str(boost::format("RV could not change MaxPosShort more than 10 percent while RV enabled. MaxPosShort=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
+                            sendErrorMessage(boost::str(boost::format("RV could not change MaxPosShort more than 10 percent while RV enabled. MaxPosShort=%1% Factor=%2% Original MaxPosShort=%3%") % value % _vectorNames[vectorId] % maxPosShort), ErrorType::Critical);
                             gridCell.set_value(std::to_string(static_cast<int32_t>(maxPosShort)));
                             break;
                         }
