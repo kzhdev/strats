@@ -1002,7 +1002,7 @@ public:
                 }
                 case VectorParametersColumns::MaxPosShort: {
                     auto value = boost::lexical_cast<double>(gridCell.value());
-                    if (isEnabled() && (!usingMaxPosLong(vectorId) || (_vectorsMaxPositionLong.getValue(vectorId) == _vectorsMaxPositionShort.getValue(vectorId)))) {
+                    if (isEnabled() && !usingMaxPosLong(vectorId)) {
                         auto maxPosShort = _vectorsMaxPositionShort.getValue(vectorId);
                         if (isgreater(abs((value / maxPosShort) - 1), 0.1)) {
                             LOG(0, "RV could not change MaxPosShort more than 10 percent while RV enabled. Vector={V[i1]} Value={d1} OrgValue={d2}", getVectorName(vectorId), value, maxPosShort)
