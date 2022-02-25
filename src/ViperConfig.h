@@ -1944,7 +1944,7 @@ struct ViperConfig {
 
     bool onPnlParametersUpdate(GridUpdate& update) {
         auto updateLimit = [this](PNLConfig& config, const std::string& value, Shifts shift) {
-            config._shiftLimit[toUInt(shift)] = boost::lexical_cast<uint32_t>(value);
+            config._shiftLimit[toUInt(shift)] = boost::lexical_cast<int64_t>(value);
             LOG(0, "Shift {i1} Pnl limit changed to {i2}", toUInt(shift), config._shiftLimit[toUInt(shift)])
             if (_currentShift == shift) {
                 config._limit = config._shiftLimit[toUInt(shift)];
@@ -1952,7 +1952,7 @@ struct ViperConfig {
         };
 
         auto updateDrawdown = [this](PNLConfig& config, const std::string& value, Shifts shift) {
-            config._shiftDrawdown[toUInt(shift)] = boost::lexical_cast<uint32_t>(value);
+            config._shiftDrawdown[toUInt(shift)] = boost::lexical_cast<int64_t>(value);
             LOG(0, "Shift {i1} Dawdown limit changed to {i2}", toUInt(shift), config._shiftDrawdown[toUInt(shift)])
             if (_currentShift == shift) {
                 config._drawdown = config._shiftDrawdown[toUInt(shift)];
