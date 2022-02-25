@@ -969,7 +969,7 @@ public:
                 }
                 case VectorParametersColumns::MaxPosLong: {
                     auto value = boost::lexical_cast<double>(gridCell.value());
-                    if (isEnabled()) {
+                    if (isEnabled() && usingMaxPosLong(vectorId)) {
                         auto maxPosLong = _vectorsMaxPositionLong.getValue(vectorId);
                         if (isgreater(abs((value / maxPosLong) - 1), 0.1)) {
                             LOG(0, "RV could not change MaxPosLong more than 10 percent while RV enabled. Vector={V[i1]} Value={d1} OrgValue={d2}", getVectorName(vectorId), value, maxPosLong)
@@ -978,7 +978,7 @@ public:
                             break;
                         }
 
-                        if (usingMaxPosLong(vectorId) && isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionLong.getValue(vectorId), vectorId)) {
+                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionLong.getValue(vectorId), vectorId)) {
                             _vectorsMaxPositionLong.setValue(vectorId, value);
                             _fareMoveForOneUnitPositionLong = _vectorsRange.divide(_vectorsMaxPositionLong);
                             foundation = true;
@@ -988,14 +988,21 @@ public:
                         } else {
                             LOG(0, "RV could not change MaxPosLong. Change would be over 5 percent of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                             sendErrorMessage(boost::str(boost::format("RV could not change MaxPosLong. Change would be over 5 percent of range. MaxPosLong=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
-                            gridCell.set_value(std::to_string(static_cast<int32_t>(_vectorsMaxPositionLong.getValue(vectorId))));
+                            gridCell.set_value(std::to_string(static_cast<int32_t>(maxPosLong)));
                         }
+                    } else {
+                        _vectorsMaxPositionLong.setValue(vectorId, value);
+                        _fareMoveForOneUnitPositionLong = _vectorsRange.divide(_vectorsMaxPositionLong);
+                        foundation = true;
+                        shortTermFairs = true;
+                        LOG(0, "RV MaxPosLong changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::MaxPosLong, vectorId, value));
                     }
                     break;
                 }
                 case VectorParametersColumns::MaxPosShort: {
                     auto value = boost::lexical_cast<double>(gridCell.value());
-                    if (isEnabled()) {
+                    if (isEnabled() && (!usingMaxPosLong(vectorId) || (_vectorsMaxPositionLong.getValue(vectorId) == _vectorsMaxPositionShort.getValue(vectorId)))) {
                         auto maxPosShort = _vectorsMaxPositionShort.getValue(vectorId);
                         if (isgreater(abs((value / maxPosShort) - 1), 0.1)) {
                             LOG(0, "RV could not change MaxPosShort more than 10 percent while RV enabled. Vector={V[i1]} Value={d1} OrgValue={d2}", getVectorName(vectorId), value, maxPosShort)
@@ -1004,7 +1011,7 @@ public:
                             break;
                         }
 
-                        if (!usingMaxPosLong(vectorId) && isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionShort.getValue(vectorId), vectorId)) {
+                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionShort.getValue(vectorId), vectorId)) {
                             _vectorsMaxPositionShort.setValue(vectorId, value);
                             _fareMoveForOneUnitPositionShort = _vectorsRange.divide(_vectorsMaxPositionShort);
                             foundation = true;
@@ -1014,8 +1021,15 @@ public:
                         } else {
                             LOG(0, "RV could not change MaxPosShort. Change would be over 5 percent of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                             sendErrorMessage(boost::str(boost::format("RV could not change MaxPosShort. Change would be over 5 percent of range. MaxPosShort=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
-                            gridCell.set_value(std::to_string(static_cast<int32_t>(_vectorsMaxPositionShort.getValue(vectorId))));
+                            gridCell.set_value(std::to_string(static_cast<int32_t>(maxPosShort)));
                         }
+                    } else {
+                        _vectorsMaxPositionShort.setValue(vectorId, value);
+                        _fareMoveForOneUnitPositionShort = _vectorsRange.divide(_vectorsMaxPositionShort);
+                        foundation = true;
+                        shortTermFairs = true;
+                        LOG(0, "RV MaxPosShort changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        changedRangeMaxPos.emplace_back(std::make_tuple(VectorParametersColumns::MaxPosShort, vectorId, value));
                     }
                     break;
                 }
