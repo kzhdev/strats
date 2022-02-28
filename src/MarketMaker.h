@@ -79,6 +79,7 @@ private:
     void handleEUREXMDStatus(uint32_t internalId, const md::MDStatusEvent& event, SimpleMarketMaker& state);
 
     void onMarketDataChange(uint32_t internalId);
+    void passPosToRV(uint32_t internalId);
 
 private:
     // System State handling

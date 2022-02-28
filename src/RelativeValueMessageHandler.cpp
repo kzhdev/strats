@@ -115,6 +115,15 @@ void RelativeValue::handleViperMessage(const ViperMessage& message) {
             handleFakDone(msg._number_1, msg._number_2, msg._number_3);
             break;
         }
+        case ViperMessageType::TransferMMPosToRV: {
+            const auto& msg = reinterpret_cast<const GenericMessage&>(message._data[0]);
+            ManualFill fill;
+            fill._contract = msg._number_1;
+            fill._size = msg._number_2;
+            onManualFill(fill);
+            onEndOfManualFills();
+            break;
+        }
         default:
 //            DLOG(0, "RV. unhandled ViperMessage {i1}", toUInt(message._type))
             break;
