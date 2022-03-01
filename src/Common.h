@@ -133,6 +133,7 @@ enum class MarketMakerParametersColumns {
     WorsenPayupCondPercent,
     QueueImportance,
     QuoteGap,
+    TransferPositionToRV,
 };
 enum class ArbieSpreaderParameterColumns {
     Enabled,
@@ -1433,6 +1434,7 @@ enum class ViperMessageType : uint8_t {
     VectorParameterUpdate,
 
     FAKDone,
+    TransferMMPosToRV,
 };
 
 enum class SoundId {Enabled = 0, Disable = 1, Shutdown = 2, CriticalMessage = 3, Fill = 4, NormalMessage = 5};

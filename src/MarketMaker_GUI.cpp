@@ -55,6 +55,7 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
             headerCell(MarketMakerParametersColumns::AskHedgeSize, "AskHedgeSize", true, proto::DataType::unsigned_type),
             headerCell(MarketMakerParametersColumns::WorsenPayupCondPercent, "WorsenPayupCond%", false, proto::DataType::double_type),
             headerCell(MarketMakerParametersColumns::QueueImportance, "QueueImportance", false, proto::DataType::enum_type, "queue_importance"),
+            headerCell(MarketMakerParametersColumns::TransferPositionToRV, "PassPosToRV", false, proto::DataType::button, ""),
     });
 
     for (uint32_t contractIndex = 0; contractIndex < _viperConfig._marketMakerConfigs.size(); ++contractIndex) {
@@ -71,6 +72,7 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
                 Cell(MarketMakerParametersColumns::MaxTicksWideDisable, std::to_string(config._maxTicksWideDisable)),
                 Cell(MarketMakerParametersColumns::MaxPayUpTicks, std::to_string(config._maxPayUpTicks)),
                 Cell(MarketMakerParametersColumns::Width, std::to_string(config._widthPercentage[toUInt(Shifts::__current_marker__)])),
+
         });
         for (uint32_t i = 0; i < toUInt(Shifts::__current_marker__); ++i) {
             guiThings.addCells(cells, internalId, {
@@ -93,6 +95,7 @@ void MarketMaker::populateGUIInitialization(::google::protobuf::RepeatedPtrField
                 Cell(MarketMakerParametersColumns::Commission, std::to_string(config._commission)),
                 Cell(MarketMakerParametersColumns::WorsenPayupCondPercent, std::to_string(config._worsenPayupCondPercent)),
                 Cell(MarketMakerParametersColumns::QueueImportance, std::to_string(config._queueImportance)),
+                Cell(MarketMakerParametersColumns::TransferPositionToRV, "PassPosToRV", toUInt(Color::TRANSPARENT)),
         });
         populateStateParameterCells(cells, internalId, _marketMakers[internalId]);
     }
@@ -146,6 +149,13 @@ proto::GridUpdate MarketMaker::getStateUpdate() const {
 }
 
 bool MarketMaker::processGridChange(GridUpdate& update) {
+    if (update._update.updatetype() == proto::GridUpdateType::CellButtonType) {
+        auto cellButton = update._update.cellbutton();
+        auto internalId = cellButton.row();
+        passPosToRV(internalId);
+        return true;
+    }
+
     if (update._update.gridid() == toUInt(WindowIds::MarketMakerParameters)) {
         bool valid = true;
         for (const proto::GridCell& cell : update._update.cells()) {
@@ -197,4 +207,15 @@ bool MarketMaker::processGridChange(GridUpdate& update) {
         onManualFills(update);
     }
     return true;
+}
+
+void MarketMaker::passPosToRV(uint32_t internalId) {
+    auto& mm = _marketMakers[internalId];
+    auto pos = mm._internallyInitiatedPosition + mm._externallyInitiatedPosition;
+    ManualFill fill;
+    fill._contract = internalId;
+    fill._size = -pos;
+    onManualFill(fill);
+    mm.onEndOfFills(mm._orderExecutionToken, true);
+    getStrategy(StrategyId::RelativeValue)->sendGenericMessage(ViperMessageType::TransferMMPosToRV, internalId, pos);
 }
