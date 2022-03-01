@@ -1,3 +1,6 @@
+#Version 1.55.5.1
+- Fix infinite loop
+
 #Version 1.55.5
 - Initialize GUIs with current Viper values, not the default value.
 - If MM instrument's quoteExternal is changed from GUI maxTicksWideStopExtQuoting unbreaching will not re-enable extQuoting.

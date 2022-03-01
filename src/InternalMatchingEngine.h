@@ -1480,6 +1480,7 @@ public:
                 Order* o = *orderIt;
                 if (o->_strategy == fill._strategy) {
                     // Not assign the fill to the same strategy
+                    ++orderIt;
                     continue;
                 }
                 if (bestStrategy == StrategyId::MAX) {
