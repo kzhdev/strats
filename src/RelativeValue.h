@@ -1136,9 +1136,7 @@ public:
                     auto value = boost::lexical_cast<double>(gridCell.value());
                     _skews.setValue(vectorId, value);
                     LOG(0, "RV Skew changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                    for (uint32_t vectorIndex = 0; vectorIndex < _positionsInVector._size; ++vectorIndex) {
-                        _vectorPositionsInTrade.setValue(vectorIndex, _positionsInVector.getValue(vectorIndex) - value);
-                    }
+                    _vectorPositionsInTrade.setValue(vectorId, _positionsInVector.getValue(vectorId) - value);
                     break;
                 }
                 default:
