@@ -4,6 +4,9 @@
 - Disable AS and AS quoteExternal only after hedge failed MaxTicksThroughMarket check 3 times on the same contract.
 - Split MaxPos factor parameter to MaxPosLong and MaxPosShort
 
+#Version 1.55.5.1
+- Fix infinite loop
+
 #Version 1.55.5
 - Initialize GUIs with current Viper values, not the default value.
 - If MM instrument's quoteExternal is changed from GUI maxTicksWideStopExtQuoting unbreaching will not re-enable extQuoting.
