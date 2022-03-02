@@ -169,6 +169,8 @@ void RelativeValue::populateVectorParameters(::google::protobuf::RepeatedPtrFiel
 
     guiThings.addHeader(definition, {
             headerCell(VectorParametersColumns::Position, "Position", true, proto::DataType::double_type),
+            headerCell(VectorParametersColumns::PositionInTrade, "PosInTrade", true, proto::DataType::double_type),
+            headerCell(VectorParametersColumns::Skew, "Skew", false, proto::DataType::double_type),
             headerCell(VectorParametersColumns::Mkt, "Mkt", true, proto::DataType::double_type),
             headerCell(VectorParametersColumns::STF, "STF", true, proto::DataType::double_type),
             headerCell(VectorParametersColumns::LTF, "LTF", false, proto::DataType::double_type),
@@ -192,6 +194,8 @@ void RelativeValue::populateVectorParameters(::google::protobuf::RepeatedPtrFiel
         guiThings.addRowHeaderCell(WindowIds::VectorParameters, rowHeader, vectorIndex, config._vectorName);
         guiThings.addCells(cells, vectorIndex, {
                 Cell(VectorParametersColumns::Position, std::to_string(_positionsInVector.getValue(vectorIndex))),
+                Cell(VectorParametersColumns::PositionInTrade, std::to_string(_vectorPositionsInTrade.getValue(vectorIndex))),
+                Cell(VectorParametersColumns::Skew, std::to_string(_skews.getValue(vectorIndex))),
                 Cell(VectorParametersColumns::Mkt, std::to_string(_currentVectorMarketPrices->getValue(vectorIndex))),
                 Cell(VectorParametersColumns::STF, std::to_string(_shortTermFairsInVector.getValue(vectorIndex))),
                 Cell(VectorParametersColumns::LTF, std::to_string(_longTermFairsInVector.getValue(vectorIndex))),
@@ -412,6 +416,7 @@ proto::GridUpdate RelativeValue::getVectorParametersUpdate() const {
         guiThings.setCell(cells, vectorIndex, VectorParametersColumns::STF, std::to_string(stf));
         double position = _positionsInVector.getValue(vectorIndex);
         guiThings.setCell(cells, vectorIndex, VectorParametersColumns::Position, std::to_string(position));
+        guiThings.setCell(cells, vectorIndex, VectorParametersColumns::PositionInTrade, std::to_string(_vectorPositionsInTrade.getValue(vectorIndex)));
     }
     return message;
 }

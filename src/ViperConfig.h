@@ -122,6 +122,7 @@ struct VectorConfig {
     uint32_t _chartNumberOfDecimalPlaces;
     bool _hedged;
     double _ltfDelta;
+    double _skew;
 };
 
 struct RelativeValueConfig {
@@ -1238,6 +1239,7 @@ struct ViperConfig {
             config._chartNumberOfDecimalPlaces = boost::lexical_cast<uint32_t>(values[i++]);
             config._hedged = values[i++] == "TRUE";
             config._ltfDelta = boost::lexical_cast<double>(values[i++]);
+            config._skew = boost::lexical_cast<double>(values[i++]);
             configs.push_back(config);
         };
         return parseBody(input, setter);
@@ -1581,6 +1583,10 @@ struct ViperConfig {
                 }
                 case VectorParametersColumns::LTF_Delta: {
                     config._ltfDelta = atof(gridCell.value().c_str());
+                    break;
+                }
+                case VectorParametersColumns::Skew: {
+                    config._skew = atof(gridCell.value().c_str());
                     break;
                 }
                 default:
@@ -2275,6 +2281,7 @@ struct ViperConfig {
             output << "," << config._chartNumberOfDecimalPlaces;
             output << "," << getWriteBoolValue(config._hedged);
             output << "," << config._ltfDelta;
+            output << "," << config._skew;
             fillInMissingCommas(output, _vectorConfigs.size());
         }
         writeEmptyLine(output);
@@ -2410,7 +2417,7 @@ struct ViperConfig {
     uint32_t _numberOfPricingContracts;
 
     std::vector<VectorConfig> _vectorConfigs;
-    std::vector<std::string> _vectorConfigHeader = {"range", "maxPosLong", "maxPosShort", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged", "LTFDelta"};
+    std::vector<std::string> _vectorConfigHeader = {"range", "maxPosLong", "maxPosShort", "ltf", "EMA", "EMALength(secs)", "EMAOnTime", "EMAOffTime", "SetToMarket", "ChartNumberOfDecimals", "Hedged", "LTFDelta", "Skew"};
 
     std::vector<RelativeValueConfig> _relativeValueConfigs;
     std::vector<int32_t> _positions[toUInt(StrategyId::MAX)];
