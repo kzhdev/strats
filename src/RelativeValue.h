@@ -1134,9 +1134,27 @@ public:
                 }
                 case VectorParametersColumns::Skew: {
                     auto value = boost::lexical_cast<double>(gridCell.value());
-                    _skews.setValue(vectorId, value);
-                    LOG(0, "RV Skew changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
-                    _vectorPositionsInTrade.setValue(vectorId, _positionsInVector.getValue(vectorId) - value);
+                    if (isEnabled()) {
+                        auto pos = _positionsInVector.getValue(vectorId) - value;
+                        double maxPos = getVectorMaxPosition(vectorId, pos);
+                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, maxPos, vectorId)) {
+                            _skews.setValue(vectorId, value);
+                            LOG(0, "RV Skew changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                            _vectorPositionsInTrade.setValue(vectorId, _positionsInVector.getValue(vectorId) - value);
+                            foundation = true;
+                            shortTermFairs = true;
+                        } else {
+                            LOG(0, "RV could not change Skew. Change would cause STF move over 5 percent of range. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                            sendErrorMessage(boost::str(boost::format("RV could not change Skew. Change would cause STF move over 5 percent of range. Skew=%1% Factor=%2%") % value % _vectorNames[vectorId]), ErrorType::Critical);
+                            gridCell.set_value(std::to_string(static_cast<int32_t>(_skews.getValue(vectorId))));
+                        }
+                    } else {
+                        _skews.setValue(vectorId, value);
+                        LOG(0, "RV Skew changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
+                        _vectorPositionsInTrade.setValue(vectorId, _positionsInVector.getValue(vectorId) - value);
+                        foundation = true;
+                        shortTermFairs = true;
+                    }
                     break;
                 }
                 default:
@@ -2782,7 +2800,11 @@ public:
     }
 
     double getVectorMaxPosition(uint32_t vectorIndex) const noexcept {
-        auto sign = Compare(_vectorPositionsInTrade.getValue(vectorIndex), .0);
+        return getVectorMaxPosition(vectorIndex, _vectorPositionsInTrade.getValue(vectorIndex));
+    }
+
+    double getVectorMaxPosition(uint32_t vectorIndex, double pos) const noexcept {
+        auto sign = Compare(pos, .0);
         if (sign == 0) {
             return std::min<double>(_vectorsMaxPositionLong.getValue(vectorIndex), _vectorsMaxPositionShort.getValue(vectorIndex));
         }
