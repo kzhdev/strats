@@ -35,6 +35,8 @@
 #include "RhoneRouter.h"
 #include "TimeUtils.h"
 #include "OrderPlexerSvc.h"
+#include "RelativeValue.h"
+#include "ArbieSpreader.h"
 
 namespace Python {
 
@@ -2595,13 +2597,15 @@ public:
         LOG(0, "EXE {C[i1]}. Sweep detected. extSeqNum={i2} diff={i3} qty={i4}", getContract(internalId), batch.extSequenceNumber, event.diff, event.qty);
         const auto &sweepLimits = _sweepDefinition[internalId];
         if (sweepLimits.sweepDetected(event)) {
+            _timeToReEnableAfterSweep = clockUtil::GetCycles() + GetCyclesFromSeconds(3, _frequency);
             foreachStrategy([this, &sweepLimits, internalId, &event](ViperStrategyBase* strategy) {
                 if (strategy->strategyId() != StrategyId::MarketMaker && strategy->isEnabled()) {
-                    LOG(0, "EXE {C[i1]}. Sweep detected, disabling strategy {i2}, disabling ExternalQuote. PriceLimit={i3} QtyLimit={i4} event.diff={i5} event.qty={i6}", getContract(internalId),
+                    LOG(0, "EXE {C[i1]}. Sweep detected. disabling strategy {i2}. disabling ExternalQuote. PriceLimit={i3} QtyLimit={i4} event.diff={i5} event.qty={i6}", getContract(internalId),
                         strategyName(strategy->strategyId()), sweepLimits._sweepTicksAtPrice, sweepLimits._tradedQty,
                         event.diff, event.qty)
                     strategy->disable();
                     strategy->disableQuoteExternal();
+                    _strategyEnabledWhenSweepOccurred.set(toUInt(strategy->strategyId()));
                     sendErrorMessage(boost::str(boost::format(
                             "Sweep info: disabling %1%, disabling %1% external quoting. Contract=%2% PriceLimit=%3% QtyLimit=%4% event.diff=%5% event.qty=%6%")
                             % toString(strategy->strategyId()) % getContractName(internalId)
@@ -3476,6 +3480,42 @@ public:
                 iter = _throttlers.find(port_gid);
             }
         }
+
+        if (_timeToReEnableAfterSweep && now >= _timeToReEnableAfterSweep) {
+            if (_strategyEnabledWhenSweepOccurred.test(toUInt(StrategyId::RelativeValue))) {
+                auto rv = getStrategy<RelativeValue>(StrategyId::RelativeValue);
+                auto contractId = rv->anyContractCrossed();
+                if (contractId != INVALID_INTERNAL_ID) {
+                    LOG(0, "EXE. Cannot Re-enable RV 3 sec after Sweep detected. {C[i1]} crossed.", contractId)
+                    sendErrorMessage(boost::str(boost::format(
+                            "Cannot Re-enable RV 3 sec after Sweep detected. %1% crossed")
+                                                % getContractName(contractId)), ErrorType::Critical);
+                } else {
+                    LOG(0, "EXE. Re-enable {i1} 3 sec after Sweep detected", strategyName(StrategyId::RelativeValue))
+                    rv->enableQuoteExternal();
+                    rv->enable();
+                    _strategyEnabledWhenSweepOccurred.reset(toUInt(StrategyId::RelativeValue));
+                    sendErrorMessage("Re-enable RV 3 sec after Sweep detected", ErrorType::Critical);
+                }
+            }
+
+            if (_strategyEnabledWhenSweepOccurred.test(toUInt(StrategyId::ArbieSpreader))) {
+                auto as = getStrategy<ArbieSpreader>(StrategyId::ArbieSpreader);
+                auto contractId = as->anyContractCrossed();
+                if (contractId != INVALID_INTERNAL_ID) {
+                    LOG(0, "EXE. Cannot Re-enable AS 3 sec after Sweep detected. {C[i1]} crossed.", contractId)
+                    sendErrorMessage(boost::str(boost::format(
+                            "Cannot Re-enable AS 3 sec after Sweep detected. %1% crossed")
+                                                % getContractName(contractId)), ErrorType::Critical);
+                } else {
+                    LOG(0, "EXE. Re-enable {i1} 3 sec after Sweep detected", strategyName(StrategyId::ArbieSpreader))
+                    as->enableQuoteExternal();
+                    as->enable();
+                    _strategyEnabledWhenSweepOccurred.reset(toUInt(StrategyId::ArbieSpreader));
+                    sendErrorMessage("Re-enable AS 3 sec after Sweep detected", ErrorType::Critical);
+                }
+            }
+        }
     }
 
     void expireTimer(TimerEntry& action) {
@@ -3697,6 +3737,8 @@ public:
         }
     };
     std::set<EconomicNumber*, EconomicNumberComparer> _economicNumbers;
+    uint64_t _timeToReEnableAfterSweep = 0;
+    std::bitset<toUInt(StrategyId::MAX)> _strategyEnabledWhenSweepOccurred;
 };
 
 }

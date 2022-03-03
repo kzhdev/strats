@@ -482,6 +482,8 @@ public:
     void populateGUIInitialization(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) override;
     void sendStateToGUI(std::function<void(proto::GridUpdate&, WindowIds)>&& sendingFunc, std::function<bool(WindowIds)>&& hasSubscription) const override;
 
+    uint32_t anyContractCrossed() const noexcept;
+
 private:
     void populateParameterCells(::google::protobuf::RepeatedPtrField< ::Python::proto::GridCell >* cells, const Contract& contract) const;
     void calculateRVSTFMove(Contract& contract, ShortTermFairOffset& stfOffset, bool force = false);
