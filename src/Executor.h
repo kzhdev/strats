@@ -3482,39 +3482,33 @@ public:
         }
 
         if (_timeToReEnableAfterSweep && now >= _timeToReEnableAfterSweep) {
-            if (_strategyEnabledWhenSweepOccurred.test(toUInt(StrategyId::RelativeValue))) {
-                auto rv = getStrategy<RelativeValue>(StrategyId::RelativeValue);
-                auto contractId = rv->anyContractCrossed();
-                if (contractId != INVALID_INTERNAL_ID) {
-                    LOG(0, "EXE. Cannot Re-enable RV 3 sec after Sweep detected. {C[i1]} crossed.", contractId)
-                    sendErrorMessage(boost::str(boost::format(
-                            "Cannot Re-enable RV 3 sec after Sweep detected. %1% crossed")
-                                                % getContractName(contractId)), ErrorType::Critical);
-                } else {
-                    LOG(0, "EXE. Re-enable {i1} 3 sec after Sweep detected", strategyName(StrategyId::RelativeValue))
-                    rv->enableQuoteExternal();
-                    rv->enable();
-                    _strategyEnabledWhenSweepOccurred.reset(toUInt(StrategyId::RelativeValue));
-                    sendErrorMessage("Re-enable RV 3 sec after Sweep detected", ErrorType::Critical);
+            foreachStrategy([this](ViperStrategyBase* strategy) {
+                auto strategyId = strategy->strategyId();
+                if (_strategyEnabledWhenSweepOccurred.test(toUInt(strategyId))) {
+                    if (strategyId == StrategyId::RelativeValue) {
+                        auto rv = reinterpret_cast<RelativeValue*>(strategy);
+                        auto contractId = rv->anyContractCrossed();
+                        if (contractId != INVALID_INTERNAL_ID) {
+                            LOG(0, "EXE. Cannot Re-enable RV 3 sec after Sweep detected. {C[i1]} crossed.", contractId)
+                            sendErrorMessage(boost::str(boost::format(
+                                    "Cannot Re-enable RV 3 sec after Sweep detected. %1% crossed")
+                                                        % getContractName(contractId)), ErrorType::Critical);
+                        } else {
+                            LOG(0, "EXE. Re-enable {i1} 3 sec after Sweep detected", strategyName(StrategyId::RelativeValue))
+                            rv->enableQuoteExternal();
+                            rv->enable();
+                            _strategyEnabledWhenSweepOccurred.reset(toUInt(StrategyId::RelativeValue));
+                            sendErrorMessage("Re-enable RV 3 sec after Sweep detected", ErrorType::Critical);
+                        }
+                    } else {
+                        LOG(0, "EXE. Re-enable {i1} 3 sec after Sweep detected", strategyName(StrategyId::ArbieSpreader))
+                        strategy->enableQuoteExternal();
+                        strategy->enable();
+                        _strategyEnabledWhenSweepOccurred.reset(toUInt(StrategyId::ArbieSpreader));
+                        sendErrorMessage("Re-enable AS 3 sec after Sweep detected", ErrorType::Critical);
+                    }
                 }
-            }
-
-            if (_strategyEnabledWhenSweepOccurred.test(toUInt(StrategyId::ArbieSpreader))) {
-                auto as = getStrategy<ArbieSpreader>(StrategyId::ArbieSpreader);
-                auto contractId = as->anyContractCrossed();
-                if (contractId != INVALID_INTERNAL_ID) {
-                    LOG(0, "EXE. Cannot Re-enable AS 3 sec after Sweep detected. {C[i1]} crossed.", contractId)
-                    sendErrorMessage(boost::str(boost::format(
-                            "Cannot Re-enable AS 3 sec after Sweep detected. %1% crossed")
-                                                % getContractName(contractId)), ErrorType::Critical);
-                } else {
-                    LOG(0, "EXE. Re-enable {i1} 3 sec after Sweep detected", strategyName(StrategyId::ArbieSpreader))
-                    as->enableQuoteExternal();
-                    as->enable();
-                    _strategyEnabledWhenSweepOccurred.reset(toUInt(StrategyId::ArbieSpreader));
-                    sendErrorMessage("Re-enable AS 3 sec after Sweep detected", ErrorType::Critical);
-                }
-            }
+            });
         }
     }
 

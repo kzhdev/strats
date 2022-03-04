@@ -507,24 +507,3 @@ void ArbieSpreader::sendHedgeOrder(uint32_t internalId,
             externalPrice, size, external, false, 0, 0, marketId, hedgeId);
     _orderRequestMgr.notifyOrderRequest(hedgeContractId, StrategyId::ArbieSpreader, _lastOrderRequests[hedgeContractId]);
 }
-
-uint32_t ArbieSpreader::anyContractCrossed() const noexcept {
-    for (auto& contract : _contracts) {
-        if (contract._usedInQuoting) {
-            auto& bidQuote = contract._quote[BID];
-            auto mktAskPrice = contract._markets[ASK][Market::External].getPrice();
-            if (bidQuote._externalSize && bidQuote._externalPrice != hf::NULL_PRICE && mktAskPrice != hf::NULL_PRICE &&
-                bidQuote._externalPrice >= mktAskPrice) {
-                return contract._def._internalId;
-            }
-
-            auto& askQuote = contract._quote[ASK];
-            auto mktBidPrice = contract._markets[BID][Market::External].getPrice();
-            if (askQuote._externalSize && askQuote._externalPrice != hf::NULL_PRICE && mktBidPrice != hf::NULL_PRICE &&
-                askQuote._externalPrice <= mktBidPrice) {
-                return contract._def._internalId;
-            }
-        }
-    }
-    return INVALID_INTERNAL_ID;
-}
