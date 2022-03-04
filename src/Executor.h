@@ -3509,6 +3509,7 @@ public:
                     }
                 }
             });
+            _timeToReEnableAfterSweep = 0;
         }
     }
 
