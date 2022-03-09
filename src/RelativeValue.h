@@ -3237,6 +3237,8 @@ public:
     proto::GridUpdate getParametersUpdate() const;
     proto::GridUpdate getVectorParametersUpdate() const;
 
+    uint32_t anyContractCrossed() const noexcept;
+
 private:
     void populateParametersGrid(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
     void populateVectorParameters(::google::protobuf::RepeatedPtrField< ::Python::proto::GridDefinition >* definitions) const;
