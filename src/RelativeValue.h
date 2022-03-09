@@ -978,7 +978,7 @@ public:
                             break;
                         }
 
-                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionLong.getValue(vectorId), vectorId)) {
+                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
                             _vectorsMaxPositionLong.setValue(vectorId, value);
                             _fareMoveForOneUnitPositionLong = _vectorsRange.divide(_vectorsMaxPositionLong);
                             foundation = true;
@@ -1011,7 +1011,7 @@ public:
                             break;
                         }
 
-                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _vectorsMaxPositionShort.getValue(vectorId), vectorId)) {
+                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, _longTermFairsInVector.getValue(vectorId), vectorId)) {
                             _vectorsMaxPositionShort.setValue(vectorId, value);
                             _fareMoveForOneUnitPositionShort = _vectorsRange.divide(_vectorsMaxPositionShort);
                             foundation = true;
@@ -1137,7 +1137,7 @@ public:
                     if (isEnabled()) {
                         auto pos = _positionsInVector.getValue(vectorId) - value;
                         double maxPos = getVectorMaxPosition(vectorId, pos);
-                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), value, maxPos, vectorId)) {
+                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), maxPos, _longTermFairsInVector.getValue(vectorId), vectorId)) {
                             _skews.setValue(vectorId, value);
                             LOG(0, "RV Skew changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                             _vectorPositionsInTrade.setValue(vectorId, _positionsInVector.getValue(vectorId) - value);
