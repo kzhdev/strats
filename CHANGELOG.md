@@ -2,7 +2,10 @@
 - Fixed GUI startup crashes by sending chart histories after receiving GUI initialization completed message from GUI.
 - When AS quote failed MaxTicksThroughMarket check, ban the quote for 1 second.
 - Disable AS and AS quoteExternal only after hedge failed MaxTicksThroughMarket check 3 times on the same contract.
-- Split MaxPos factor parameter to MaxPosLong and MaxPosShort
+- Split MaxPos factor parameter to MaxPosLong and MaxPosShort.
+- Added Skew Column in FactorParameters.
+- Auto re-enable 3 seconds after sweeps.
+- Add a cell button in MM grid to pass position to RV.
 
 #Version 1.55.5.1
 - Fix infinite loop
