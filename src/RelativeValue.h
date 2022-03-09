@@ -875,12 +875,16 @@ public:
     }
 
     bool isChangeWithinStfLimits(double originalRange, double range, double maxPosition, double ltf, uint32_t vectorIndex) {
+        return isChangeWithinStfLimits(originalRange, range, maxPosition, _vectorPositionsInTrade.getValue(vectorIndex), ltf, vectorIndex);
+    }
+
+    bool isChangeWithinStfLimits(double originalRange, double range, double maxPosition, double pos, double ltf, uint32_t vectorIndex) {
         if (isEnabled()) {
             const bool setToMarket = _setToMarket.getValue(vectorIndex);
             if (!setToMarket) {
                 double fareMove = range / maxPosition;
                 double currentStf = _shortTermFairsInVector.getValue(vectorIndex);
-                double newStf = ltf - (_vectorPositionsInTrade.getValue(vectorIndex)) * fareMove;
+                double newStf = ltf - pos * fareMove;
                 double change = std::abs(newStf - currentStf);
                 double limit = std::abs(0.05 * originalRange);
                 if (change > limit) {
@@ -1137,7 +1141,7 @@ public:
                     if (isEnabled()) {
                         auto pos = _positionsInVector.getValue(vectorId) - value;
                         double maxPos = getVectorMaxPosition(vectorId, pos);
-                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), maxPos, _longTermFairsInVector.getValue(vectorId), vectorId)) {
+                        if (isChangeWithinStfLimits(_vectorsRange.getValue(vectorId), _vectorsRange.getValue(vectorId), maxPos, pos, _longTermFairsInVector.getValue(vectorId), vectorId)) {
                             _skews.setValue(vectorId, value);
                             LOG(0, "RV Skew changed. Vector={V[i1]} Value={d1}", getVectorName(vectorId), value)
                             _vectorPositionsInTrade.setValue(vectorId, _positionsInVector.getValue(vectorId) - value);
