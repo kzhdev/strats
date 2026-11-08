@@ -3,7 +3,7 @@
 Every difference between the new engine (`new_impl/rv`) and the legacy strategy
 (`src/RelativeValue.h`) that the parity gates can see, with its classification and evidence.
 Required by PLAN.md §6.3: no unexplained diffs, and any change to these numbers needs a gate
-re-run.
+re-run. What the engine actually computes, and in which order, is described in `RV_STRATEGY.md`.
 
 Legend: **D** = deliberate deviation (PLAN §5.2), **F** = floating-point association,
 **O** = test-side defect.

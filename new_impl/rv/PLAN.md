@@ -199,6 +199,8 @@ multiplier/cost/ratio combinations and requires **zero** mismatches.
 
 ```
 new_impl/rv/
+  RV_STRATEGY.md       how the strategy actually works: the cycle, the formulas, the traps
+                       (read this first if you are new to the code)
   limits.hpp           compile-time caps (MAX_CONTRACTS, MAX_PRICING, MAX_VECTORS)
   types.hpp            POD config/state types, fixed-point helpers, fast_div + round_to_tick, side tags
   model.hpp/.cpp       class model: immutable-after-init operators + per-(contract, lean)

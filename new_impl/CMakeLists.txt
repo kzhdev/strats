@@ -111,6 +111,74 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
 endif()
 
+# ---------------------------------------------------------------------------
+# ArbieSpreader engine (new_impl/as) — see as/PLAN.md.
+#
+# Same flags as viper_rv. The cold config layer reuses rv's model-CSV/secdb reader, so
+# viper_as links viper_rv; the engine headers themselves never include rv (PLAN D7).
+# ---------------------------------------------------------------------------
+add_library(viper_as STATIC
+    as/config.cpp
+    as/config_model.cpp
+    as/hedger.cpp
+    as/host.cpp
+    as/model.cpp
+    as/paths.cpp
+    as/quotes.cpp
+    as/state.cpp
+)
+target_include_directories(viper_as PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/as)
+target_link_libraries(viper_as PUBLIC viper_rv Eigen3::Eigen)
+target_compile_options(viper_as PRIVATE -O3 -march=native -fno-math-errno -Wall -Wextra)
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(viper_as PRIVATE -Wno-unused-parameter)
+    # Same measured reason as rv/valuation.cpp: FMA contraction changes the last bit before the
+    # int64 truncation that produces a price, so the init-time derivations are pinned to
+    # sequential arithmetic (PARITY_NOTES F-AS1).
+    set_source_files_properties(as/config_model.cpp as/model.cpp
+        PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
+endif()
+
+# Phase-0 gate: primitives, config readers, init derivations, the frozen model's indices,
+# switch paths / spread substitution, and the recorded legacy quirks.
+add_executable(as_tests as/tests/as_tests.cpp)
+target_link_libraries(as_tests PRIVATE viper_as)
+
+# Phase-1 gate: the runtime state layer -- book updates, best-book selection (legacy
+# :313-341), path runtime/order, quotes, fairs and dirty tracking.
+add_executable(as_state_tests as/tests/as_state_tests.cpp)
+target_link_libraries(as_state_tests PRIVATE viper_as)
+
+# Phase-2 gate: the path calculation, the ranking and the update pass against an independent
+# transcription of legacy Path::calculate / PathSorter / Contract::updatePaths.
+add_executable(as_paths_tests as/tests/as_paths_tests.cpp)
+target_link_libraries(as_paths_tests PRIVATE viper_as)
+
+# Phase-3 gate: the incremental path update -- delta application, re-sort rules, size
+# asymmetry and fair-value propagation -- against the legacy transcription, plus the
+# arithmetic invariant (incremental price == recomputed price).
+add_executable(as_incremental_tests as/tests/as_incremental_tests.cpp)
+target_link_libraries(as_incremental_tests PRIVATE viper_as)
+
+# Phase-4 gate: the quote stage -- edge/commission arithmetic, tick rounding, the crossing size
+# clamp, the maxTicksThroughMarket bound and emission change detection.
+add_executable(as_quote_tests as/tests/as_quote_tests.cpp)
+target_link_libraries(as_quote_tests PRIVATE viper_as)
+
+# Phase-5 gate: the hedge stage -- aggressive-quote release order, the canHedge veto with its
+# forced recalculation, the per-lean orders and the switch-path transfer.
+add_executable(as_cycle_bench as/tests/as_cycle_bench.cpp)
+target_link_libraries(as_cycle_bench PRIVATE viper_as)
+
+add_executable(as_replay as/app/as_replay.cpp)
+target_link_libraries(as_replay PRIVATE viper_as)
+
+add_executable(as_host_test as/tests/as_host_test.cpp)
+target_link_libraries(as_host_test PRIVATE viper_as)
+
+add_executable(as_hedge_tests as/tests/as_hedge_tests.cpp)
+target_link_libraries(as_hedge_tests PRIVATE viper_as)
+
 add_executable(rv_tests rv/tests/rv_tests.cpp)
 target_link_libraries(rv_tests PRIVATE viper_rv)
 
@@ -165,6 +233,15 @@ target_link_libraries(mm_adapter_tests PRIVATE viper_mm)
 
 enable_testing()
 add_test(NAME rv_parity COMMAND rv_tests 20000)
+add_test(NAME as_unit COMMAND as_tests)
+add_test(NAME as_state COMMAND as_state_tests)
+add_test(NAME as_paths COMMAND as_paths_tests 2000 42)
+add_test(NAME as_incremental COMMAND as_incremental_tests 2000 42)
+add_test(NAME as_quote COMMAND as_quote_tests 2000 42)
+add_test(NAME as_host COMMAND as_host_test)
+add_test(NAME as_replay_smoke COMMAND as_replay config/minimal_cme 500 42)
+add_test(NAME as_bench_smoke COMMAND as_cycle_bench 20000 3)
+add_test(NAME as_hedge COMMAND as_hedge_tests 500 42)
 add_test(NAME rv_bench_smoke COMMAND rv_cycle_bench 20000 3)
 add_test(NAME rv_host COMMAND rv_host_test)
 add_test(NAME rv_replay_smoke COMMAND rv_replay config/minimal_cme 500 42)
@@ -177,5 +254,5 @@ add_test(NAME mm_bench_smoke COMMAND mm_cycle_bench 20000 3)
 add_test(NAME mm_replay_smoke COMMAND mm_replay config/backtest 20000 42)
 add_test(NAME mm_adapter COMMAND mm_adapter_tests)
 # The config-driven tests/benches resolve paths relative to the repository root.
-set_tests_properties(rv_parity rv_bench_smoke rv_replay_smoke mm_unit mm_state mm_quote mm_cycle mm_host mm_bench_smoke mm_replay_smoke mm_adapter
+set_tests_properties(rv_parity as_unit as_state as_paths as_incremental as_quote as_hedge as_host as_replay_smoke as_bench_smoke rv_bench_smoke rv_replay_smoke mm_unit mm_state mm_quote mm_cycle mm_host mm_bench_smoke mm_replay_smoke mm_adapter
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/..")
