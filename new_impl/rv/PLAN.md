@@ -325,6 +325,51 @@ to compile-time-size (`Matrix<double, MAX_VECTORS, MAX_PRICING>`) **only if** th
 >= 10 % (measured earlier on this repo: fixed-size 6x6 solve was 2.4x faster than dynamic, but that
 was an O(n³) solve, not an O(n²) matvec).
 
+### 4.3b Fixed point vs double: where the boundary is, and why it does not move
+
+The engine is **not** "all doubles". Prices are `int64` fixed point at 1e9 (`PRICE_SCALE`,
+`types.hpp`) and the cycle is integer-dominated; `double` occupies exactly one band:
+
+| Stage | Type | Why it cannot be integer |
+|---|---|---|
+| books, sizes, positions, thresholds, widths, commissions | `int64` / `uint64` | exact by construction; this is what the order message carries |
+| midpoint (`state.mid`) | `double` dollars | a midpoint is genuinely fractional (half a tick, and the weighted mid divides by a size sum). Legacy computes it in double and the parity gate is bit-exact against that |
+| ODM, `P`, `risk` operator tables | `double` | `P⁻¹` and `(AᵀW²A)⁻¹` are non-terminating rationals: no fixed-point representation is exact, so every use would carry a residual |
+| `pricing` / `factor` / `ltf` / `stf_vec` | `double` | products with those operators, plus the EMA (`exp(-α)`) which is transcendental |
+| short-term fair (`state.stf`) | `int64` | truncated back to price units as soon as the value is final (`to_rhone_price_saturated`) |
+| quote price, club, tick rounding, sizes | `int64` | all of quoting and hedging, i.e. 85 % of the cycle |
+
+Three reasons not to push the integers further into the middle:
+
+1. **On this hardware, 64-bit integer arithmetic is *slower* than double** for exactly the two
+   operations involved. Measured (`-O3 -march=native`, GCC 11.5, same loop shape, operands from
+   memory, variable divisor as in real tick sizes):
+
+   | Operation | int64 | double |
+   |---|---|---|
+   | division by a variable divisor | 3.7 ns | **2.1 ns** (`idiv` vs `divsd`) |
+   | matvec 4x10, `__int128` accumulate | 70 ns | **29 ns** (2.5x) |
+   | matvec 32x128, `__int128` accumulate | 6.25 us | **3.9 us** (1.6x) |
+
+   AVX2 has no 64-bit integer multiply (`vpmullq` is AVX-512DQ) and FMA retires four doubles per
+   instruction, so a fixed-point matvec cannot use the vector units at all. This is also why the one
+   integer division in the hot path is already gone (`fast_div`, magic-number `` `%` `` replacement).
+
+2. **Eigen cannot do the decomposition in fixed point.** `FullPivLU` / `inverse()` need a field;
+   integer division is not exact, so integer scalar types are only usable for coefficient-wise ops
+   and products. In any case that work happens once in `model::build`, so making it integer would buy
+   exactly zero per cycle.
+
+3. **The prize is small and the parity price is high.** The whole double band is 13 % of the cycle
+   (255 ns of 1968 ns). Eliminating it entirely would need int128 accumulation (see 1), changes every
+   rounding point, and breaks D1: the reference oracle is a literal double transcription, so an
+   integer pipeline diverges by more than a last bit. That is the trade this design deliberately
+   refuses.
+
+What *is* worth keeping integer is already integer: the tick grid (exact `round_to_tick`), quantities
+and order sizes, and the comparisons that decide quotes. `fast_div` exists because one such
+operation (tick division) sat in the inner loop at ~120 leans/cycle.
+
 ### 4.4 Pricing pipeline (hot path)
 
 The snippets in §4.4-§4.7 are the **design-phase sketches**. They are kept because they carry the
