@@ -8,6 +8,11 @@ MarketMaker strategy. The reference implementation being replaced is
 `src/SimpleMarketMaker.h` (1,803 lines) plus its resource wrappers
 (`src/MarketMaker.h/.cpp`, `_MD.cpp`, `_FillHandling.cpp`, `_MessageHandler.cpp`, `_GUI.cpp`).
 
+**How the strategy itself works** — pricing, the queue-position model, sizing, hedging, cross
+checks, fills and the safety gates, with worked examples — is documented separately in
+[`STRATEGY.md`](STRATEGY.md). This file is about the *implementation*: decisions, phases,
+performance targets and the parity gates.
+
 The goal is **lower per-cycle latency and a codebase that can be reasoned about**, not a
 rewrite of the Viper framework. Everything off the per-cycle path (GUI, protobuf, config
 grid plumbing, MD status handling, order transport) stays where it is.
