@@ -248,6 +248,12 @@ struct model_inputs {
     uint32_t n_vectors = 0;
     uint32_t first_traded = 0;
 
+    // Contract names in id order (PricingMatrix columns first, then RV-only contracts).
+    // Reports the ordering rule of config_model.cpp:46-80 so that a consumer which keys its
+    // own tables by contract id (e.g. the AS engine, whose path leans are given by name)
+    // cannot drift from it. Not used by the RV engine itself.
+    std::vector<std::string> names;
+
     std::vector<double> pricing_matrix;        // [n_vectors][n_pricing]
     std::vector<double> hedge_ratio;           // [n_all][n_all]
     std::vector<double> quote_size;            // [n_all][n_all]

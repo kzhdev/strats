@@ -82,6 +82,7 @@ model_inputs build_model_inputs(const rv_model_cfg& cfg,
     in.n_pricing = n_pricing;
     in.n_vectors = n_vectors;
     in.first_traded = n_pricing;  // first index that cannot be a pricing column
+    in.names = names;             // id order, for consumers that key by contract id
 
     std::unordered_map<std::string, const rv_pricing_cfg*> pricing_cfg;
     for (const auto& p : cfg.pricing_configs) pricing_cfg[p.name] = &p;
