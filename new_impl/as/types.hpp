@@ -64,7 +64,9 @@ inline double to_dollars(price_t value) noexcept {
 // ---------------------------------------------------------------------------
 
 enum class side : uint8_t { bid = 0, ask = 1 };
-inline constexpr uint32_t SIDE_COUNT = 2;
+// Process-wide (common/limits.hpp): a side is part of every module's vocabulary and of the
+// wire format, so it must not be a per-module guess.
+using tachyon::trade::SIDE_COUNT;
 
 constexpr uint32_t to_index(side s) noexcept { return static_cast<uint32_t>(s); }
 constexpr side other(side s) noexcept { return s == side::bid ? side::ask : side::bid; }

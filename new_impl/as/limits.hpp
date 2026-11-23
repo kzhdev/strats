@@ -2,12 +2,17 @@
 
 #include <cstdint>
 
+#include <common/limits.hpp>
+
 // Bounded sizes so that every hot array is a single fixed allocation and the per-cycle path
 // performs no heap traffic (PLAN.md D3). Exceeding a cap is an init-time failure with an
 // actionable message, never a runtime path.
 namespace tachyon::trade::as {
 
-inline constexpr uint32_t MAX_CONTRACTS = 128;            // all contracts (outrights + spreads)
+// All contracts (outrights + spreads). Process-wide: see common/limits.hpp.
+using tachyon::trade::MAX_CONTRACTS;
+using tachyon::trade::CONTRACT_WORDS;
+
 inline constexpr uint32_t MAX_PATHS_PER_CONTRACT = 16;    // configured paths of one quoting contract
 inline constexpr uint32_t MAX_PATH_DEFS = 512;            // configured paths, all contracts
 inline constexpr uint32_t MAX_PATH_SLOTS = 1024;          // defs * 2 sides

@@ -2,11 +2,16 @@
 
 #include <cstdint>
 
+#include <common/limits.hpp>
+
 // Bounded sizes so that every hot array is a single static allocation and the
 // per-cycle path performs no heap traffic. Exceeding a cap is an init-time error.
 namespace tachyon::trade::rv {
 
-inline constexpr uint32_t MAX_CONTRACTS = 128;  // n_all (outrights + spreads)
+// n_all (outrights + spreads). Process-wide, see common/limits.hpp.
+using tachyon::trade::MAX_CONTRACTS;
+using tachyon::trade::CONTRACT_WORDS;
+
 inline constexpr uint32_t MAX_PRICING = 32;     // n_pricing
 inline constexpr uint32_t MAX_VECTORS = 32;     // n_vectors
 inline constexpr uint32_t MAX_LEANS = 4096;     // total CSR edges

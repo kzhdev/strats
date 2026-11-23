@@ -461,7 +461,7 @@ public:
             _msgCursor += message._size;
             ++drainSize;
             switch (message._type) {
-                case ViperMessageType::RegisterOrderClient: {
+                case ViperMessageType::RegisterOrderClien_base: {
                     auto request = reinterpret_cast<RegisterOrderClient&>(message._data[0]);
                     registerOrderClient(request);
                     break;

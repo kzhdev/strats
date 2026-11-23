@@ -1193,7 +1193,47 @@ struct OrderRequestNotification {
     StrategyId _strategy;
 };
 
+// Constant-tick variant of RoundToTickSize: identical expressions, but `% TickSize`
+// with a compile-time divisor becomes a multiply/shift instead of a hardware idiv.
+template <hf::price_t TickSize>
+inline hf::price_t RoundToTickSizeConstant(hf::price_t price, uint32_t side) {
+    static_assert(TickSize > 0, "tick size must be positive");
+    const hf::price_t remainder = price % TickSize;
+    if (!remainder) {
+        return price;
+    }
+    const hf::price_t truncatedPrice = price - remainder;
+    if (side == BID) {
+        return (remainder > 0) ? truncatedPrice : truncatedPrice - TickSize;
+    }
+    return (remainder > 0) ? truncatedPrice + TickSize : truncatedPrice;
+}
+
 inline hf::price_t RoundToTickSize(hf::price_t price, hf::price_t tickSize, uint32_t side) {
+    // Fast paths for the tick sizes that actually appear in the configs. A divisor that
+    // is a compile-time constant lets the compiler emit a multiply/shift instead of a
+    // hardware idiv (~20-25 cycles), which matters because MM/AS/RV round per contract
+    // per side per cycle. Case list is frequency-ordered from config/*/secdb*.csv and
+    // covers ~99% of instruments by count; the generic path below handles anything else, so
+    // behaviour is unchanged for unknown tick sizes.
+    switch (tickSize) {
+        case 1000000:    return RoundToTickSizeConstant<1000000>(price, side);    // 0.01
+        case 100000:     return RoundToTickSizeConstant<100000>(price, side);     // 0.001
+        case 10000:      return RoundToTickSizeConstant<10000>(price, side);      // 0.0001
+        case 1562500:    return RoundToTickSizeConstant<1562500>(price, side);    // 1/64
+        case 5000000:    return RoundToTickSizeConstant<5000000>(price, side);    // 0.05
+        case 25000000:   return RoundToTickSizeConstant<25000000>(price, side);   // 0.25
+        case 1000:       return RoundToTickSizeConstant<1000>(price, side);       // 0.00001
+        case 500000:     return RoundToTickSizeConstant<500000>(price, side);     // 0.005
+        case 2500000:    return RoundToTickSizeConstant<2500000>(price, side);    // 0.025
+        case 100000000:  return RoundToTickSizeConstant<100000000>(price, side);  // 1.0
+        case 50000000:   return RoundToTickSizeConstant<50000000>(price, side);   // 0.5
+        case 781250:     return RoundToTickSizeConstant<781250>(price, side);     // 1/128
+        case 250000:     return RoundToTickSizeConstant<250000>(price, side);     // 0.0025
+        case 10000000:   return RoundToTickSizeConstant<10000000>(price, side);   // 0.1
+        default:         break;
+    }
+
     const hf::price_t rawPrice = price;
     const hf::price_t remainder = rawPrice % tickSize;
 

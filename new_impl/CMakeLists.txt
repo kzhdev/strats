@@ -139,6 +139,101 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
 endif()
 
+# ---------------------------------------------------------------------------
+# Executor + implied engine (new_impl/exec) — see exec/PLAN.md.
+#
+# Framework-free on purpose: the core links only viper_rv's `common/` headers, so the order
+# pipeline can be built and tested without a strategy. The strategy adapters (exec/adapters) are
+# header-only and are only pulled in by exec_adapter_tests, which links all three strategies.
+#
+# EXEC_QUEUE_SPSC=ON makes the default executor use the cross-thread mailbox (one thread per
+# strategy). The single-threaded mailbox needs no atomics and no fences, and both modes are
+# instantiated in every build (exec/executor.cpp), so neither can rot.
+option(EXEC_QUEUE_SPSC "Use the cross-thread (spsc) order mailbox by default" OFF)
+add_library(viper_exec STATIC
+    exec/implied_book.cpp
+    exec/implied_engine.cpp
+    exec/executor.cpp
+)
+target_include_directories(viper_exec PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/exec
+)
+target_include_directories(viper_exec PUBLIC ${VIPER_RV_STUBS_DIR})
+target_compile_options(viper_exec PRIVATE -O3 -march=native -Wall -Wextra)
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(viper_exec PRIVATE -Wno-unused-parameter)
+endif()
+if (EXEC_QUEUE_SPSC)
+    target_compile_definitions(viper_exec PUBLIC EXEC_QUEUE_SPSC=1)
+endif()
+
+# Phase-0 gate: the request POD, the per-key behaviour table and the mailbox in both modes.
+add_executable(exec_queue_tests exec/tests/exec_queue_tests.cpp)
+target_link_libraries(exec_queue_tests PRIVATE viper_exec)
+
+# Two-thread stress for the spsc mailbox (also the ThreadSanitizer target).
+add_executable(exec_spsc_stress exec/tests/exec_spsc_stress.cpp)
+target_link_libraries(exec_spsc_stress PRIVATE viper_exec pthread)
+
+# Phase-7 gate: external order management, phase 1 (the quote/hedge gates in front of the venue).
+add_executable(om_banner_tests om/tests/om_banner_tests.cpp)
+target_link_libraries(om_banner_tests PRIVATE viper_exec pthread)
+target_include_directories(om_banner_tests PRIVATE om)
+
+# Phase-6 gate: the return path (engine -> strategy), including routed == direct equivalence, the
+# enabled mirror, overflow reporting and a two-thread drain.
+add_executable(exec_feedback_tests exec/tests/exec_feedback_tests.cpp)
+target_link_libraries(exec_feedback_tests PRIVATE viper_exec pthread)
+
+# Phase-5 gate: the multi-threaded deployment shape -- one thread per strategy, one executor thread,
+# spsc mailboxes. Catches lost/reordered requests and reports the TSan recipe (PLAN.md §10).
+add_executable(exec_threaded_tests exec/tests/exec_threaded_tests.cpp)
+target_link_libraries(exec_threaded_tests PRIVATE viper_exec pthread)
+
+# Phase-1 gate: the internal book (apply/remove, price collisions, external-leg continuation, FAK).
+add_executable(exec_book_tests exec/tests/exec_book_tests.cpp)
+target_link_libraries(exec_book_tests PRIVATE viper_exec)
+
+# Phase-2/3 gate: the pipeline end to end (last request wins, cross, residual, publish, fills,
+# cancel, determinism, zero allocation).
+add_executable(exec_engine_tests exec/tests/exec_engine_tests.cpp)
+target_link_libraries(exec_engine_tests PRIVATE viper_exec)
+
+# Phase-4 gate: the strategy adapters, against the real mm/rv/as port types.
+add_executable(exec_adapter_tests exec/tests/exec_adapter_tests.cpp)
+target_link_libraries(exec_adapter_tests PRIVATE viper_exec viper_mm viper_as)
+target_include_directories(exec_adapter_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/mm
+    ${CMAKE_CURRENT_SOURCE_DIR}/rv
+    ${CMAKE_CURRENT_SOURCE_DIR}/as
+)
+
+# Phase-1b gate: the differential against an independent transcription of the legacy matching engine
+# (tests/match_oracle.hpp + .cpp). Both implementations share no code; one random request tape is
+# pushed through both and eleven observables are compared after every step (PLAN.md §8).
+add_executable(exec_match_tests exec/tests/exec_match_tests.cpp exec/tests/match_oracle.cpp)
+target_link_libraries(exec_match_tests PRIVATE viper_exec)
+
+# Cycle-level benchmark: ns per stage plus the zero-allocation invariant.
+add_executable(exec_bench exec/tests/exec_bench.cpp)
+target_link_libraries(exec_bench PRIVATE viper_exec)
+
+# Runnable driver: a deterministic request tape through the real pipeline, asserting the
+# deployment invariants (no silent loss, no crossed residual, no allocation).
+add_executable(exec_replay exec/app/exec_replay.cpp)
+target_link_libraries(exec_replay PRIVATE viper_exec)
+
+# Integration driver: the three REAL strategy engines (mm::adapter, rv::host, as::host) wired
+# through the adapters into the executor, with the engine's fills and internal book fed back in.
+add_executable(exec_pipeline exec/app/exec_pipeline.cpp)
+target_link_libraries(exec_pipeline PRIVATE viper_exec viper_mm viper_as)
+target_include_directories(exec_pipeline PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/mm
+    ${CMAKE_CURRENT_SOURCE_DIR}/rv
+    ${CMAKE_CURRENT_SOURCE_DIR}/as
+)
+
 # Phase-0 gate: primitives, config readers, init derivations, the frozen model's indices,
 # switch paths / spread substitution, and the recorded legacy quirks.
 add_executable(as_tests as/tests/as_tests.cpp)
@@ -253,6 +348,19 @@ add_test(NAME mm_host COMMAND mm_host_tests)
 add_test(NAME mm_bench_smoke COMMAND mm_cycle_bench 20000 3)
 add_test(NAME mm_replay_smoke COMMAND mm_replay config/backtest 20000 42)
 add_test(NAME mm_adapter COMMAND mm_adapter_tests)
+add_test(NAME exec_queue COMMAND exec_queue_tests)
+add_test(NAME exec_spsc COMMAND exec_spsc_stress 2000000)
+add_test(NAME exec_threaded COMMAND exec_threaded_tests 200000 8)
+add_test(NAME exec_feedback COMMAND exec_feedback_tests 500)
+add_test(NAME om_banner COMMAND om_banner_tests 200)
+add_test(NAME exec_book COMMAND exec_book_tests)
+add_test(NAME exec_match COMMAND exec_match_tests 20000 42)
+add_test(NAME exec_engine COMMAND exec_engine_tests)
+add_test(NAME exec_adapter COMMAND exec_adapter_tests)
+add_test(NAME exec_bench_smoke COMMAND exec_bench 20000 3 8 4)
+add_test(NAME exec_replay_smoke COMMAND exec_replay 4 2000 42)
+add_test(NAME exec_pipeline_smoke COMMAND exec_pipeline config/minimal_cme config/backtest 500 42)
 # The config-driven tests/benches resolve paths relative to the repository root.
 set_tests_properties(rv_parity as_unit as_state as_paths as_incremental as_quote as_hedge as_host as_replay_smoke as_bench_smoke rv_bench_smoke rv_replay_smoke mm_unit mm_state mm_quote mm_cycle mm_host mm_bench_smoke mm_replay_smoke mm_adapter
+    exec_queue exec_spsc exec_threaded exec_feedback om_banner exec_book exec_match exec_engine exec_adapter exec_bench_smoke exec_replay_smoke exec_pipeline_smoke
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/..")

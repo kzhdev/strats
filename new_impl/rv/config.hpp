@@ -67,8 +67,9 @@ struct rv_model_cfg {
     std::vector<rv_contract_cfg> rv_contracts;           // RVConfigs (traded contracts)
     std::vector<rv_pricing_cfg> pricing_configs;         // PricingConfigs (all contracts)
     std::vector<std::pair<std::string, std::vector<int32_t>>> leans;  // LeanMatrix rows
-    std::unordered_map<std::string, double> globals;     // GlobalConfigs (shift-resolved elsewhere)
-    std::unordered_map<std::string, std::vector<double>> global_columns;  // per-shift values
+    
+    
+    
 
     // RVWidthMultiplier for a shift (GlobalConfigs row, default = US column).
     double width_multiplier(shift_column shift = shift_column::us) const;

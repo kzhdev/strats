@@ -151,7 +151,7 @@ private:
     std::vector<order_queue> queues_;  // sized to the configured contracts at init
     uint32_t n_contracts_ = 0;
 
-    std::array<uint64_t, (MAX_CONTRACTS + 63) / 64> dirty_{};
+    std::array<uint64_t, CONTRACT_WORDS> dirty_{};
     std::array<uint32_t, MAX_CHANGED> changed_{};
     uint32_t changed_count_ = 0;
 };

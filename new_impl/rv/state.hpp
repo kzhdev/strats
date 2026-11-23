@@ -98,7 +98,7 @@ public:
     uint64_t last_ema_time = 0;
 
 private:
-    std::array<uint64_t, (MAX_CONTRACTS + 63) / 64> dirty_{};
+    std::array<uint64_t, CONTRACT_WORDS> dirty_{};
     std::array<uint32_t, MAX_CHANGED> changed_{};
     uint32_t changed_count_ = 0;
 };

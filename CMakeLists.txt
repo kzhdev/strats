@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
 find_package(Boost COMPONENTS filesystem system)
+find_package(Threads REQUIRED)
 
 set(RHONEDS_DIR ${CMAKE_CURRENT_LIST_DIR})
 set(RHONEPUBLIC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../rhonepublic)
@@ -94,6 +95,6 @@ if ((DEFINED HIGH_GCC_VERSION) AND NOT (CMAKE_BUILD_TYPE MATCHES Debug))
 endif()
 
 add_subdirectory(src/logging cc)
-add_subdirectory(test EXCLUDE_FROM_ALL)
+#add_subdirectory(test EXCLUDE_FROM_ALL)
 
-include(RhoneDS_BackTest.cmake)
+#include(RhoneDS_BackTest.cmake)

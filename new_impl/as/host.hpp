@@ -86,7 +86,8 @@ struct host_stats {
     bool disabled = false;
 };
 
-inline constexpr uint32_t MAX_TRACKED_HEDGES = 256;
+// Shared with rv: both track hedge ids handed out by the executor, from the same id space.
+using tachyon::trade::MAX_TRACKED_HEDGES;
 
 class host {
 public:

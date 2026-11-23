@@ -212,7 +212,7 @@ private:
     std::array<uint8_t, MAX_CONTRACTS * SIDE_COUNT> rv_quote_{};
     std::array<price_t, MAX_OFFSETS> offset_value_{};
     std::array<uint8_t, MAX_CONTRACTS> can_trade_{};
-    std::array<uint64_t, (MAX_CONTRACTS + 63) / 64> dirty_{};
+    std::array<uint64_t, CONTRACT_WORDS> dirty_{};
     std::array<uint32_t, MAX_DIRTY> dirty_list_{};
     uint32_t dirty_count_ = 0;
 };

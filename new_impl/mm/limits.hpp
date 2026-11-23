@@ -2,14 +2,19 @@
 
 #include <cstdint>
 
+#include <common/limits.hpp>
+
 // Bounded sizes so that every hot array is a single static allocation and the per-cycle
 // path performs no heap traffic (PLAN.md §3). Exceeding a cap is an init-time error, never
 // a runtime allocation.
 namespace tachyon::trade::mm {
 
 // Contracts the engine can track (market-made contracts, including those currently
-// disabled). Sized from the largest config in config/: 6 here, with plenty of headroom.
-inline constexpr uint32_t MAX_CONTRACTS = 128;
+// disabled). The cap is process-wide (common/limits.hpp), not an mm choice: a contract
+// index has to mean the same thing here, in the executor and in the ledger, and a local
+// copy could drift from those without any build error.
+using tachyon::trade::MAX_CONTRACTS;
+using tachyon::trade::CONTRACT_WORDS;
 
 // Depth of the market-data book. md::top_t::LEVEL_NUM == 10
 // (rhonepublic/neorhone/common/MarketDataTypes.h:31), and SimpleMarketMaker reads every

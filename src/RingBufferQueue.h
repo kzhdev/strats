@@ -8,7 +8,7 @@ namespace Python {
 static constexpr auto CACHE_LINE_SZ = 64;
 
 struct CacheLineBuf {
-    __attribute__((aligned(CACHE_LINE_SZ))) uint64_t data[8];
+    __attribute__((aligned(CACHE_LINE_SZ))) c data[8];
 
     static constexpr uint32_t calculateReserveSize(uint32_t size) {
         return 1 + (size - 1) / sizeof(CacheLineBuf);

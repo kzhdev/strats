@@ -22,11 +22,9 @@ target_include_directories(${BINARY_NAME} PUBLIC
 add_dependencies(${BINARY_NAME} Rhone)
 
 target_link_libraries(${BINARY_NAME} PUBLIC
-        ${RHONE_LIBS}
         protobuf
         stdc++fs
         -Wl,--whole-archive
         Rhone
         -Wl,--no-whole-archive
 )
-

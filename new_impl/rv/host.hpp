@@ -116,7 +116,7 @@ private:
         market_key key = 0;
         bool used = false;
     };
-    static constexpr uint32_t MAX_TRACKED_HEDGES = 256;
+    static constexpr uint32_t MAX_TRACKED_HEDGES = tachyon::trade::MAX_TRACKED_HEDGES;
 
     const model& m_;
     cycle_state& s_;
