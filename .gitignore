@@ -17,10 +17,3 @@ store
 rv_pos.csv
 mm_last_fill_price.csv
 .vscode
-
-config
-egchk
-scripts
-test
-src
-benchmarks

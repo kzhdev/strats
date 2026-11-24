@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(ViperRelativeValueBenchmarks LANGUAGES CXX)
+
+find_package(Eigen3 CONFIG REQUIRED)
+
+add_executable(relative_value_vector_market_price_benchmark
+    RelativeValueVectorMarketPriceBenchmark.cpp
+)
+
+target_compile_features(relative_value_vector_market_price_benchmark PRIVATE cxx_std_17)
+target_link_libraries(relative_value_vector_market_price_benchmark PRIVATE Eigen3::Eigen)
